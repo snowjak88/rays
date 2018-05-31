@@ -1,0 +1,38 @@
+buildscript {
+	ext {
+		springBootVersion = '2.0.2.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+	}
+}
+
+allprojects {
+	apply plugin: 'eclipse'
+}
+
+subprojects { p ->
+		
+	apply plugin: 'java'
+	
+	if( p.name != "core" ) {
+		apply plugin: 'org.springframework.boot'
+		
+		dependencies {
+			compile project(":core")
+		}
+	}
+	
+	apply plugin: 'io.spring.dependency-management'
+	
+	group = 'org.snowjak'
+	version = '0.0.1'
+	sourceCompatibility = 10
+	
+	repositories {
+		mavenCentral()
+	}
+}

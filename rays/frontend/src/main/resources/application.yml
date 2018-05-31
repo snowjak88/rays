@@ -1,0 +1,12 @@
+org:
+  snowjak:
+    rays:
+      security:
+        username-parameter: username
+        password-parameter: password
+server:
+  port: 8080
+logging:
+  level:
+    org.springframework.security: INFO
+    org.snowjak.rays: TRACE

@@ -1,0 +1,5 @@
+rootProject.name = 'rays'
+
+include 'core'
+include 'frontend'
+include 'worker'
