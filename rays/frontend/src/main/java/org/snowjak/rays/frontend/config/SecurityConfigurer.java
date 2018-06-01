@@ -7,7 +7,11 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 
 @EnableWebSecurity
 public class SecurityConfigurer extends WebSecurityConfigurerAdapter {
@@ -27,17 +31,28 @@ public class SecurityConfigurer extends WebSecurityConfigurerAdapter {
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
 		
 		//@formatter:off
-		auth.inMemoryAuthentication()
-			.passwordEncoder(NoOpPasswordEncoder.getInstance())
-			.withUser("user").password("password").authorities("ROLE_USER", "VIEW_ALL_RENDERS");
+		auth.userDetailsService(userDetailsService())
+			.passwordEncoder(passwordEncoder());
 		//@formatter:on
+	}
+	
+	@Bean
+	public UserDetailsService userDetailsService() {
+		
+		return new InMemoryUserDetailsManager(User.builder().username("user").password("password")
+				.authorities("ROLE_USER", "VIEW_ALL_RENDERS").build());
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		
+		return NoOpPasswordEncoder.getInstance();
 	}
 	
 	@Bean(name = BeanIds.AUTHENTICATION_MANAGER)
 	@Override
 	public AuthenticationManager authenticationManagerBean() throws Exception {
 		
-		// TODO Auto-generated method stub
 		return super.authenticationManagerBean();
 	}
 	

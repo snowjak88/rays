@@ -61,6 +61,9 @@ public class SecurityOperations {
 			throw new SecurityOperationException(e);
 		}
 		
+		LOG.debug("Storing the authenticated token in the SecurityContext ...");
+		SecurityContextHolder.getContext().setAuthentication(authenticatedToken);
+		
 		LOG.info("Completed log-in request.");
 		return authenticatedToken;
 	}
