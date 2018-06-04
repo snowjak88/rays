@@ -2,6 +2,7 @@ package org.snowjak.rays;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.Random;
 
 import com.google.common.math.DoubleMath;
 
@@ -18,6 +19,11 @@ public class Settings {
 	 * @see #getDoubleEqualityEpsilon()
 	 */
 	private static double DOUBLE_EQUALITY_EPSILON = 1e-8;
+	
+	/**
+	 * A shared {@link Random} instance.
+	 */
+	public static final Random RND = new Random(System.currentTimeMillis());
 	
 	//
 	//
