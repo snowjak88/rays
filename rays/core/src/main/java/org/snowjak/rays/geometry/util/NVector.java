@@ -1,5 +1,7 @@
 package org.snowjak.rays.geometry.util;
 
+import static org.apache.commons.math3.util.FastMath.*;
+
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.function.BinaryOperator;
@@ -196,6 +198,23 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
+	 * Returns the clamped form of this NVector.
+	 * 
+	 * <pre>
+	 * v := { -1, 0, 1, 2, 3 }
+	 * clamp(v, 0, 2) := { 0, 0, 1, 2, 2 }
+	 * </pre>
+	 * 
+	 * @param min
+	 * @param max
+	 * @return
+	 */
+	public T clamp(double min, double max) {
+		
+		return this.apply((d) -> min(max(d, min), max));
+	}
+	
+	/**
 	 * Adds this NVector to another, producing a third NVector as a result.
 	 * <p>
 	 * See {@link #apply(NVector, BinaryOperator)} for information about behavior
@@ -310,6 +329,30 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	public String toString() {
 		
 		return getClass().getSimpleName() + ":" + Arrays.toString(values);
+	}
+	
+	@Override
+	public int hashCode() {
+		
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + Arrays.hashCode(values);
+		return result;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		NVector<?> other = (NVector<?>) obj;
+		if (!Arrays.equals(values, other.values))
+			return false;
+		return true;
 	}
 	
 }

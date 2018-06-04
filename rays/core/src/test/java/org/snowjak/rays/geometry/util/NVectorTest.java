@@ -97,6 +97,19 @@ public class NVectorTest {
 	}
 	
 	@Test
+	public void testClamp() {
+		
+		final NVectorImpl v = new NVectorImpl(-1, 0, 1, 2, 3);
+		
+		final NVectorImpl u = v.clamp(0, 2);
+		assertEquals("u.get(0) not as expected!", 0d, u.get(0), 0.00001);
+		assertEquals("u.get(1) not as expected!", 0d, u.get(1), 0.00001);
+		assertEquals("u.get(2) not as expected!", 1d, u.get(2), 0.00001);
+		assertEquals("u.get(3) not as expected!", 2d, u.get(3), 0.00001);
+		assertEquals("u.get(4) not as expected!", 2d, u.get(4), 0.00001);
+	}
+	
+	@Test
 	public void testAddNVector() {
 		
 		final NVectorImpl v = new NVectorImpl(1, 2, 3);
