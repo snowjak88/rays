@@ -1,0 +1,7 @@
+dependencies {
+	compile('org.apache.commons:commons-math3:3.6.1')
+	compile('com.google.guava:guava:25.1-jre')
+	
+	testCompile('junit:junit:4.+')
+	
+}
