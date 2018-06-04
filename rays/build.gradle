@@ -12,18 +12,28 @@ buildscript {
 
 allprojects {
 	apply plugin: 'eclipse'
+	
+	wrapper {
+		gradleVersion = 4.6
+	}
 }
 
 subprojects { p ->
 		
 	apply plugin: 'java'
 	
-	if( p.name != "core" ) {
+	if( p.name == "core" ) {
+		test { reports.html.enabled = false }
+	}
+	else {
 		apply plugin: 'org.springframework.boot'
 		
 		dependencies {
 			compile project(":core")
 		}
+		
+		clean.dependsOn( project(":core").clean )
+		test.dependsOn( project(":core").test )
 	}
 	
 	apply plugin: 'io.spring.dependency-management'
@@ -35,4 +45,11 @@ subprojects { p ->
 	repositories {
 		mavenCentral()
 	}
+}
+
+task test(type: TestReport) {
+	destinationDir = file("$buildDir/reports/allTests")
+	
+	dependsOn subprojects.collect( { it.tasks.withType(Test) } ).flatten()
+	reportOn subprojects.collect( { it.tasks.withType(Test) } ).flatten()
 }
