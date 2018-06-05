@@ -5,6 +5,8 @@ import static org.apache.commons.math3.util.FastMath.pow;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map.Entry;
+import java.util.Collections;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,7 +42,8 @@ public class CIEXYZ implements Serializable {
 	
 	private static final long serialVersionUID = 6070836284173038489L;
 	
-	private static TreeMap<Double, Triplet> COLOR_MAPPING_FUNCTIONS = new XyzFileLoader().loadColorMappingFunctions();
+	public static final NavigableMap<Double, Triplet> COLOR_MAPPING_FUNCTIONS = Collections
+			.unmodifiableNavigableMap(new XyzFileLoader().loadColorMappingFunctions());
 	
 	//@formatter:off
 		private static final Matrix __CONVERSION_TO_RGB =
@@ -66,7 +69,7 @@ public class CIEXYZ implements Serializable {
 	 * Calculate the CIE XYZ tristimulus triplet associated with the given
 	 * wavelength (assumed to be expressed in nanometers). This method will
 	 * linearly-interpolate between neighboring nodes in the loaded color-mapping
-	 * function (e.g., at 1-nm increments)
+	 * function (given, e.g., at 1-nm increments)
 	 * 
 	 * @param wavelength
 	 *            a given wavelength (given in nanometers)
@@ -183,7 +186,7 @@ public class CIEXYZ implements Serializable {
 	 */
 	public static class XyzFileLoader {
 		
-		public TreeMap<Double, Triplet> loadColorMappingFunctions() {
+		public NavigableMap<Double, Triplet> loadColorMappingFunctions() {
 			
 			var xyzSaxHandler = new XyzSaxHandler();
 			try (var xmlInputStream = this.getClass().getClassLoader()
@@ -238,8 +241,8 @@ public class CIEXYZ implements Serializable {
 			LAMBDA, X, Y, Z
 		};
 		
-		private TreeMap<Double, Triplet> triplets = new TreeMap<>();
-		private TreeMap<Double, Triplet> __current_building_map = new TreeMap<>();
+		private NavigableMap<Double, Triplet> triplets = new TreeMap<>();
+		private NavigableMap<Double, Triplet> __current_building_map = new TreeMap<>();
 		
 		private Double __current_building_wavelength = null;
 		private Triplet __current_building_entry = null;
@@ -255,7 +258,7 @@ public class CIEXYZ implements Serializable {
 		 * @return the current Map of wavelengths to {@link Triplet}s, or an empty Map
 		 *         if no such XML file has been successfully loaded yet
 		 */
-		public TreeMap<Double, Triplet> getColorMappingFunctions() {
+		public NavigableMap<Double, Triplet> getColorMappingFunctions() {
 			
 			return triplets;
 		}
