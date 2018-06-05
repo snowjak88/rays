@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.Random;
 
+import org.snowjak.rays.spectrum.CIEXYZ;
+
 import com.google.common.math.DoubleMath;
 
 /**
@@ -19,6 +21,11 @@ public class Settings {
 	 * @see #getDoubleEqualityEpsilon()
 	 */
 	private static double DOUBLE_EQUALITY_EPSILON = 1e-8;
+	
+	/**
+	 * @see #getCieColorMappingFunctionsPath();
+	 */
+	private static String CIE_COLOR_MAPPING_FUNCTIONS_PATH = "./cie-data/CIE_XYZ_CMF_2-degree_1nm-step_2006.xml";
 	
 	/**
 	 * A shared {@link Random} instance.
@@ -41,6 +48,9 @@ public class Settings {
 			DOUBLE_EQUALITY_EPSILON = Double.parseDouble(coreSettings.getProperty(
 					"org.snowjak.rays.math.double-equality-epsilon", Double.toString(getDoubleEqualityEpsilon())));
 			
+			CIE_COLOR_MAPPING_FUNCTIONS_PATH = coreSettings.getProperty("org.snowjak.rays.cie-xyz-color-mapping-path",
+					getCieColorMappingFunctionsPath());
+			
 		} catch (IOException e) {
 			throw new CannotLoadSettingsException("Cannot load core settings!", e);
 		}
@@ -58,6 +68,18 @@ public class Settings {
 	public static double getDoubleEqualityEpsilon() {
 		
 		return DOUBLE_EQUALITY_EPSILON;
+	}
+	
+	/**
+	 * An XML file containing the CIE-XYZ color-mapping functions is expected at
+	 * this file-path.
+	 * 
+	 * @see CIEXYZ the CIE XYZ triplet definition
+	 * @see CIEXYZ.XyzSaxHandler the CIE-XYZ XML loader/handler
+	 */
+	public static String getCieColorMappingFunctionsPath() {
+		
+		return CIE_COLOR_MAPPING_FUNCTIONS_PATH;
 	}
 	
 	/**
