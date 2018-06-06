@@ -2,9 +2,11 @@ package org.snowjak.rays.geometry.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Arrays;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 
+import org.apache.commons.math3.util.FastMath;
 import org.junit.Test;
 import org.snowjak.rays.geometry.util.NVector;
 
@@ -97,6 +99,17 @@ public class NVectorTest {
 	}
 	
 	@Test
+	public void testNormalize() {
+		
+		final NVectorImpl v = new NVectorImpl(1, 2, 3);
+		
+		final NVectorImpl u = v.normalize(vect -> Arrays.stream(vect.getAll()).reduce(0d, FastMath::max));
+		assertEquals("u.get(0) not as expected!", 1d / 3d, u.get(0), 0.00001);
+		assertEquals("u.get(1) not as expected!", 2d / 3d, u.get(1), 0.00001);
+		assertEquals("u.get(2) not as expected!", 3d / 3d, u.get(2), 0.00001);
+	}
+	
+	@Test
 	public void testClamp() {
 		
 		final NVectorImpl v = new NVectorImpl(-1, 0, 1, 2, 3);
@@ -107,6 +120,18 @@ public class NVectorTest {
 		assertEquals("u.get(2) not as expected!", 1d, u.get(2), 0.00001);
 		assertEquals("u.get(3) not as expected!", 2d, u.get(3), 0.00001);
 		assertEquals("u.get(4) not as expected!", 2d, u.get(4), 0.00001);
+	}
+	
+	@Test
+	public void testLinearInterpolateTo() {
+		
+		final NVectorImpl u = new NVectorImpl(1, 2, 3);
+		final NVectorImpl v = new NVectorImpl(2, 2, 2);
+		
+		final NVectorImpl w = u.linearInterpolateTo(v, 0.5);
+		assertEquals("w.get(0) not as expected!", 1.5d, w.get(0), 0.00001);
+		assertEquals("w.get(1) not as expected!", 2.0d, w.get(1), 0.00001);
+		assertEquals("w.get(2) not as expected!", 2.5d, w.get(2), 0.00001);
 	}
 	
 	@Test

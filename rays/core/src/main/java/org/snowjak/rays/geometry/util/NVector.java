@@ -1,10 +1,12 @@
 package org.snowjak.rays.geometry.util;
 
-import static org.apache.commons.math3.util.FastMath.*;
+import static org.apache.commons.math3.util.FastMath.max;
+import static org.apache.commons.math3.util.FastMath.min;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 /**
@@ -195,6 +197,40 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	public T reciprocal() {
 		
 		return this.apply((d) -> 1d / d);
+	}
+	
+	/**
+	 * Normalize this NVector according to some magnitude-function (which evaluates
+	 * the absolute-magnitude of this NVector).
+	 * 
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public T normalize(Function<T, Double> magnitude) {
+		
+		return this.apply(d -> d / magnitude.apply((T) this));
+	}
+	
+	/**
+	 * Linearly interpolate from this NVector to another.
+	 * 
+	 * <pre>
+	 * v := { 1, 2, 3 }
+	 * u := { 2, 2, 2 }
+	 * 
+	 * linearlyInterpolate( v, u, 0.5 ) := { 1.5, 2, 2.5 }
+	 * </pre>
+	 * 
+	 * @param other
+	 * @param fraction
+	 * @return
+	 */
+	public T linearInterpolateTo(T other, double fraction) {
+		
+		assert (this.getN() == other.getN());
+		
+		return this.apply(other, (v1, v2) -> (v2 - v1) * fraction + v1);
+		
 	}
 	
 	/**
