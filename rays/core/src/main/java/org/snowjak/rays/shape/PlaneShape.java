@@ -50,7 +50,8 @@ public class PlaneShape extends Shape {
 		final double rayOriginY = localRay.getOrigin().getY();
 		final double rayDirectionY = localRay.getDirection().getY();
 		
-		return !(Settings.nearlyEqual(signum(rayOriginY), rayDirectionY)) && !(Settings.nearlyEqual(rayDirectionY, 0d));
+		return !(Settings.getInstance().nearlyEqual(signum(rayOriginY), rayDirectionY))
+				&& !(Settings.getInstance().nearlyEqual(rayDirectionY, 0d));
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -60,7 +61,8 @@ public class PlaneShape extends Shape {
 		final Ray localRay = worldToLocal(ray);
 		
 		final double t = -localRay.getOrigin().getY() / localRay.getDirection().getY();
-		if (t < Settings.getDoubleEqualityEpsilon() || Double.isNaN(t) || Settings.nearlyEqual(t, 0d))
+		if (t < Settings.getInstance().getDoubleEqualityEpsilon() || Double.isNaN(t)
+				|| Settings.getInstance().nearlyEqual(t, 0d))
 			return null;
 		
 		Ray intersectingRay = new Ray(localRay.getOrigin(), localRay.getDirection(), t, localRay.getDepth(), t, t);

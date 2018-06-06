@@ -20,26 +20,43 @@ public class Settings {
 	/**
 	 * @see #getDoubleEqualityEpsilon()
 	 */
-	private static double DOUBLE_EQUALITY_EPSILON = 1e-8;
+	private double DOUBLE_EQUALITY_EPSILON = 1e-8;
 	
 	/**
-	 * @see #getCieColorMappingFunctionsPath();
+	 * @see #getCieCsvColorMappingFunctionsPath()
 	 */
-	private static String CIE_COLOR_MAPPING_FUNCTIONS_PATH = "./cie-data/CIE_XYZ_CMF_2-degree_1nm-step_2006.xml";
+	private String CIE_CSV_COLOR_MAPPING_FUNCTIONS_PATH = "./cie-data/CIE_XYZ_CMF_2-degree_1nm-step_2006.csv";
+	
+	/**
+	 * @see #getCieCsvD65IlluminatorPath()
+	 */
+	private String CIE_CSV_D65_STANDARD_ILLUMINATOR_PATH = "./cie-data/illuminator_d65.csv";
 	
 	/**
 	 * A shared {@link Random} instance.
 	 */
 	public static final Random RND = new Random(System.currentTimeMillis());
 	
-	//
-	//
-	// Try to load the core-settings properties file.
-	{
+	private static Settings __INSTANCE = null;
+	
+	public static Settings getInstance() {
+		
+		if (__INSTANCE == null)
+			__INSTANCE = new Settings();
+		
+		return __INSTANCE;
+	}
+	
+	private Settings() {
+		//
+		//
+		// Try to load the core-settings properties file.
+		
 		try (var settingsStream = this.getClass().getClassLoader().getResourceAsStream("./core-settings.properties")) {
 			
 			var coreSettings = new Properties();
 			coreSettings.load(settingsStream);
+			System.getProperties().putAll(coreSettings);
 			
 			//
 			//
@@ -48,8 +65,11 @@ public class Settings {
 			DOUBLE_EQUALITY_EPSILON = Double.parseDouble(coreSettings.getProperty(
 					"org.snowjak.rays.math.double-equality-epsilon", Double.toString(getDoubleEqualityEpsilon())));
 			
-			CIE_COLOR_MAPPING_FUNCTIONS_PATH = coreSettings.getProperty("org.snowjak.rays.cie-xyz-color-mapping-path",
-					getCieColorMappingFunctionsPath());
+			CIE_CSV_COLOR_MAPPING_FUNCTIONS_PATH = coreSettings.getProperty(
+					"org.snowjak.rays.cie-csv-xyz-color-mapping-path", getCieCsvColorMappingFunctionsPath());
+			
+			CIE_CSV_D65_STANDARD_ILLUMINATOR_PATH = coreSettings.getProperty(
+					"org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path", getCieCsvD65IlluminatorPath());
 			
 		} catch (IOException e) {
 			throw new CannotLoadSettingsException("Cannot load core settings!", e);
@@ -65,21 +85,29 @@ public class Settings {
 	 * 
 	 * @see #nearlyEqual(double, double)
 	 */
-	public static double getDoubleEqualityEpsilon() {
+	public double getDoubleEqualityEpsilon() {
 		
 		return DOUBLE_EQUALITY_EPSILON;
 	}
 	
 	/**
-	 * An XML file containing the CIE-XYZ color-mapping functions is expected at
-	 * this file-path.
+	 * A CSV file containing the CIE-XYZ color-mapping functions is expected at this
+	 * file-path.
 	 * 
 	 * @see CIEXYZ the CIE XYZ triplet definition
-	 * @see CIEXYZ.XyzSaxHandler the CIE-XYZ XML loader/handler
 	 */
-	public static String getCieColorMappingFunctionsPath() {
+	public String getCieCsvColorMappingFunctionsPath() {
 		
-		return CIE_COLOR_MAPPING_FUNCTIONS_PATH;
+		return CIE_CSV_COLOR_MAPPING_FUNCTIONS_PATH;
+	}
+	
+	/**
+	 * A CSV file containing the CIE-XYZ values corresponding to the D65 standard
+	 * illuminator is expected at this file-path.
+	 */
+	public String getCieCsvD65IlluminatorPath() {
+		
+		return CIE_CSV_D65_STANDARD_ILLUMINATOR_PATH;
 	}
 	
 	/**
@@ -93,7 +121,7 @@ public class Settings {
 	 *         {@link #DOUBLE_EQUALITY_EPSILON} of each other
 	 * @see #DOUBLE_EQUALITY_EPSILON
 	 */
-	public static boolean nearlyEqual(double d1, double d2) {
+	public boolean nearlyEqual(double d1, double d2) {
 		
 		return DoubleMath.fuzzyEquals(d1, d2, getDoubleEqualityEpsilon());
 	}
@@ -123,4 +151,5 @@ public class Settings {
 		}
 		
 	}
+	
 }

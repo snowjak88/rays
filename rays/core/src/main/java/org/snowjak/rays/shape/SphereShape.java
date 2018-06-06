@@ -107,12 +107,13 @@ public class SphereShape extends Shape {
 				return t1;
 		}
 		
-		if (t0 < Settings.getDoubleEqualityEpsilon() && t1 < Settings.getDoubleEqualityEpsilon())
+		if (t0 < Settings.getInstance().getDoubleEqualityEpsilon()
+				&& t1 < Settings.getInstance().getDoubleEqualityEpsilon())
 			return null;
 		
-		if (t0 < Settings.getDoubleEqualityEpsilon())
+		if (t0 < Settings.getInstance().getDoubleEqualityEpsilon())
 			return t1;
-		else if (t1 < Settings.getDoubleEqualityEpsilon())
+		else if (t1 < Settings.getInstance().getDoubleEqualityEpsilon())
 			return t0;
 		else if (t0 < t1)
 			return t0;

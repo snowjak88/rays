@@ -9,6 +9,8 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
+import org.apache.commons.math3.util.FastMath;
+
 /**
  * Represents a vector of <code>n</code> values.
  * 
@@ -197,6 +199,23 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	public T reciprocal() {
 		
 		return this.apply((d) -> 1d / d);
+	}
+	
+	/**
+	 * Normalize this NVector, choosing for absolute-magnitude the
+	 * maximally-abolute-valued component (according to {@link FastMath#abs(double)}
+	 * + {@link FastMath#max(double, double)}).
+	 * 
+	 * <pre>
+	 * v := { -1, 2, -3 }
+	 * normalize(v) := { -1/3, 2/3, -3/3 }
+	 * </pre>
+	 * 
+	 * @return
+	 */
+	public T normalize() {
+		
+		return this.normalize(vect -> Arrays.stream(vect.getAll()).map(FastMath::abs).reduce(0d, FastMath::max));
 	}
 	
 	/**

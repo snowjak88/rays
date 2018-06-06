@@ -1,28 +1,24 @@
 package org.snowjak.rays.spectrum;
 
+import static org.apache.commons.math3.util.FastMath.min;
 import static org.apache.commons.math3.util.FastMath.pow;
 
-import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.Serializable;
-import java.util.Map.Entry;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
+import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParserFactory;
-
+import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Matrix;
 import org.snowjak.rays.geometry.util.Triplet;
-import org.xml.sax.Attributes;
-import org.xml.sax.ContentHandler;
-import org.xml.sax.Locator;
-import org.xml.sax.SAXException;
-import org.xml.sax.SAXParseException;
-import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * Represents a CIE XYZ tristimulus triplet (i.e., see
@@ -42,18 +38,22 @@ public class CIEXYZ implements Serializable {
 	
 	private static final long serialVersionUID = 6070836284173038489L;
 	
-	public static final NavigableMap<Double, Triplet> COLOR_MAPPING_FUNCTIONS = Collections
-			.unmodifiableNavigableMap(new XyzFileLoader().loadColorMappingFunctions());
+	public static final NavigableMap<Double, Triplet> COLOR_MAPPING_FUNCTIONS = Collections.unmodifiableNavigableMap(
+			new XyzCsvFileLoader().load_lxyz(Settings.getInstance().getCieCsvColorMappingFunctionsPath()));
+	
+	public static final NavigableMap<Double, Double> D65_STANDARD_ILLUMINATOR_SPECTRUM = Collections
+			.unmodifiableNavigableMap(
+					new XyzCsvFileLoader().load_lx(Settings.getInstance().getCieCsvD65IlluminatorPath(), true));
 	
 	//@formatter:off
-		private static final Matrix __CONVERSION_TO_RGB =
-				new Matrix(new double[][] {
-					{ 3.2406d,-1.5372d,-0.4986d, 0d },
-					{-0.9689d, 1.8758d, 0.0415d, 0d },
-					{ 0.0557d,-0.2040d, 1.0570d, 0d },
-					{ 0d,      0d,      0d,      0d }
-				});
-		//@formatter:on
+	private static final Matrix __CONVERSION_TO_RGB =
+			new Matrix(new double[][] {
+				{ 3.2406d,-1.5372d,-0.4986d, 0d },
+				{-0.9689d, 1.8758d, 0.0415d, 0d },
+				{ 0.0557d,-0.2040d, 1.0570d, 0d },
+				{ 0d,      0d,      0d,      0d }
+			});
+	//@formatter:on
 	
 	//@formatter:off
 	private static final Matrix __CONVERSION_FROM_RGB =
@@ -64,6 +64,47 @@ public class CIEXYZ implements Serializable {
 				{ 0d,      0d,      0d,      0d }
 			});
 	//@formatter:on
+	
+	/**
+	 * Calculate the CIE XYZ tristimulus triplet derived from the given spectrum
+	 * power-distribution (given as a map of wavelengths (nm) to spectral radiance
+	 * (W/sr*m^2)).
+	 * 
+	 * @param spectrum
+	 * @return
+	 */
+	public static CIEXYZ fromSpectrum(NavigableMap<Double, Double> spectrum) {
+		
+		final double cmfHighLambda = COLOR_MAPPING_FUNCTIONS.lastKey();
+		final double cmfLowLambda = COLOR_MAPPING_FUNCTIONS.firstKey();
+		final double cmfStepSize = (cmfHighLambda - cmfLowLambda) / (double) (COLOR_MAPPING_FUNCTIONS.size() - 1);
+		
+		final double specHighLambda = spectrum.lastKey();
+		final double specLowLambda = spectrum.firstKey();
+		final double specStepSize = (specHighLambda - specLowLambda) / (double) (spectrum.size() - 1);
+		
+		final double stepSize = min(cmfStepSize, specStepSize);
+		
+		final var result = COLOR_MAPPING_FUNCTIONS.keySet().stream().map(lambda -> {
+			
+			var lowCmfEntry = COLOR_MAPPING_FUNCTIONS.floorEntry(lambda);
+			var highCmfEntry = COLOR_MAPPING_FUNCTIONS.ceilingEntry(lambda);
+			var cmfFraction = (lambda - lowCmfEntry.getKey())
+					/ (highCmfEntry.getKey() - lowCmfEntry.getKey() + Double.MIN_VALUE);
+			final var cmf = lowCmfEntry.getValue().linearInterpolateTo(highCmfEntry.getValue(), cmfFraction);
+			
+			var lowSpecEntry = spectrum.floorEntry(lambda);
+			var highSpecEntry = spectrum.ceilingEntry(lambda);
+			var specFraction = (lambda - lowSpecEntry.getKey())
+					/ (highSpecEntry.getKey() - lowSpecEntry.getKey() + Double.MIN_VALUE);
+			final double spec = linearInterpolate(specFraction, lowSpecEntry.getValue(), highSpecEntry.getValue());
+			
+			return cmf.multiply(spec);
+		}).reduce(new Triplet(), Triplet::add).multiply(stepSize);
+		
+		return new CIEXYZ(result);
+		
+	}
 	
 	/**
 	 * Calculate the CIE XYZ tristimulus triplet associated with the given
@@ -79,20 +120,35 @@ public class CIEXYZ implements Serializable {
 	public static CIEXYZ fromWavelength(double wavelength) {
 		
 		if (wavelength < COLOR_MAPPING_FUNCTIONS.firstKey())
-			return new CIEXYZ(COLOR_MAPPING_FUNCTIONS.get(COLOR_MAPPING_FUNCTIONS.firstKey()));
+			return new CIEXYZ(COLOR_MAPPING_FUNCTIONS.firstEntry().getValue());
 		
 		if (wavelength > COLOR_MAPPING_FUNCTIONS.lastKey())
-			return new CIEXYZ(COLOR_MAPPING_FUNCTIONS.get(COLOR_MAPPING_FUNCTIONS.lastKey()));
+			return new CIEXYZ(COLOR_MAPPING_FUNCTIONS.lastEntry().getValue());
 		
-		final Entry<Double, Triplet> lower = COLOR_MAPPING_FUNCTIONS.floorEntry(wavelength),
-				upper = COLOR_MAPPING_FUNCTIONS.ceilingEntry(wavelength);
+		final var lower = COLOR_MAPPING_FUNCTIONS.floorEntry(wavelength);
+		final var upper = COLOR_MAPPING_FUNCTIONS.ceilingEntry(wavelength);
 		
 		final double fraction = (wavelength - lower.getKey()) / (upper.getKey() - lower.getKey());
 		
-		final Triplet lowerTriplet = lower.getValue(), upperTriplet = upper.getValue();
+		return new CIEXYZ(lower.getValue().linearInterpolateTo(upper.getValue(), fraction));
 		
-		return new CIEXYZ(upperTriplet.subtract(lowerTriplet).multiply(fraction).add(lowerTriplet));
+	}
+	
+	/**
+	 * Linearly interpolate (by <code>fraction</code>) between <code>p1</code> and
+	 * <code>p2</code>.
+	 * 
+	 * @param fraction
+	 *            a fraction specifying the distance from <code>p1</code> to
+	 *            <code>p2</code>
+	 * @param p1
+	 *            the value to interpolate from
+	 * @param p2
+	 *            the value to interpolate to
+	 */
+	protected static double linearInterpolate(double fraction, double p1, double p2) {
 		
+		return ((p2 - p1) * fraction) + p1;
 	}
 	
 	/**
@@ -176,230 +232,72 @@ public class CIEXYZ implements Serializable {
 		xyz = new Triplet(getX(), getY(), z);
 	}
 	
-	/**
-	 * Loader helper-class, encapsulating the functionality needed to load an XML
-	 * file containing CIE XYZ color-mapping-function data.
-	 * 
-	 * @author snowjak88
-	 * @see XyzSaxHandler XyzSaxHandler for details on XML file-structure
-	 *
-	 */
-	public static class XyzFileLoader {
+	public Triplet getTriplet() {
 		
-		public NavigableMap<Double, Triplet> loadColorMappingFunctions() {
-			
-			var xyzSaxHandler = new XyzSaxHandler();
-			try (var xmlInputStream = this.getClass().getClassLoader()
-					.getResourceAsStream(Settings.getCieColorMappingFunctionsPath())) {
-				
-				SAXParserFactory.newInstance().newSAXParser().parse(xmlInputStream, xyzSaxHandler);
-				return xyzSaxHandler.getColorMappingFunctions();
-				
-			} catch (IOException | ParserConfigurationException | SAXException e) {
-				throw new RuntimeException("Could not load CIE-XYZ color-mapping functions.", e);
-			}
-		}
+		return xyz;
 	}
 	
 	/**
-	 * SAX {@link ContentHandler} implementation that converts a given XML file
-	 * containing CIE XYZ color-mapping-function readings into a Map from
-	 * wavelengths to {@link Triplet}s.
-	 * 
-	 * <p>
-	 * The XML file is expected to be of the form:
-	 * 
-	 * <pre>
-	 * &lt;Root&gt;
-	 *   &lt;Structure&gt;
-	 *     &lt;Field&gt;
-	 *       &lt;Field_Name&gt;...&lt;/Field_Name&gt;
-	 *       ...
-	 *   &lt;/Structure&gt;
-	 *   &lt;Records&gt;
-	 *     &lt;Record&gt;
-	 *       &lt;Field1&gt;<em>wavelength</em>&lt;/Field1&gt;
-	 *       &lt;Field2&gt;<em>X</em>&lt;/Field2&gt;
-	 *       &lt;Field3&gt;<em>Y</em>&lt;/Field3&gt;
-	 *       &lt;Field4&gt;<em>Z</em>&lt;/Field4&gt;
-	 *     &lt;/Record&gt;
-	 *     &lt;Record&gt;
-	 *       ...
-	 * </pre>
-	 * </p>
+	 * Loader helper-class
 	 * 
 	 * @author snowjak88
 	 *
 	 */
-	public static class XyzSaxHandler extends DefaultHandler {
+	public static class XyzCsvFileLoader {
 		
-		private enum XyzSection {
-			STRUCTURE, RECORDS
-		};
-		
-		private enum XyzField {
-			LAMBDA, X, Y, Z
-		};
-		
-		private NavigableMap<Double, Triplet> triplets = new TreeMap<>();
-		private NavigableMap<Double, Triplet> __current_building_map = new TreeMap<>();
-		
-		private Double __current_building_wavelength = null;
-		private Triplet __current_building_entry = null;
-		private XyzSection __currentSection = null;
-		private XyzField __currentField = null;
-		private StringBuilder __currentFieldBuilder = null;
-		
-		private Pattern fieldNamePattern = Pattern.compile("Field(\\d+)");
-		
-		private Locator documentLocator;
-		
-		/**
-		 * @return the current Map of wavelengths to {@link Triplet}s, or an empty Map
-		 *         if no such XML file has been successfully loaded yet
-		 */
-		public NavigableMap<Double, Triplet> getColorMappingFunctions() {
+		public NavigableMap<Double, Triplet> load_lxyz(String filePath) {
 			
-			return triplets;
+			return load(filePath, 3, (xyz) -> new Triplet(xyz.get(0), xyz.get(1), xyz.get(2)));
 		}
 		
-		@Override
-		public void startElement(String uri, String localName, String qName, Attributes attributes)
-				throws SAXException {
+		public NavigableMap<Double, Double> load_lx(String filePath, boolean normalize) {
 			
-			Matcher fieldNameMatcher;
+			final var result = load(filePath, 1, (x) -> x.get(0));
 			
-			if (qName.equals("Structure")) {
-				__currentSection = XyzSection.STRUCTURE;
-				
-			} else if (qName.equals("Records")) {
-				if (__currentSection == XyzSection.RECORDS)
-					throw new SAXParseException("Encountered a <Records/> nested inside of a <Records/>",
-							this.documentLocator);
-				else if (__currentSection == XyzSection.STRUCTURE)
-					throw new SAXParseException("Encountered a <Records/> nested inside of a <Structure/>",
-							this.documentLocator);
-				__currentSection = XyzSection.RECORDS;
-				
-			} else if (qName.equals("Record")) {
-				if (__currentSection != XyzSection.RECORDS)
-					throw new SAXParseException("Encountered a <Record/> outside of a <Records/>",
-							this.documentLocator);
-				
-				__current_building_entry = new Triplet();
-				
-			} else if ((fieldNameMatcher = fieldNamePattern.matcher(qName)).matches()) {
-				if (__currentSection == XyzSection.RECORDS) {
-					
-					__currentFieldBuilder = new StringBuilder();
-					
-					// Figure out what field we're currently building.
-					switch (fieldNameMatcher.group(1)) {
-					case "1":
-						__currentField = XyzField.LAMBDA;
-						break;
-					case "2":
-						__currentField = XyzField.X;
-						break;
-					case "3":
-						__currentField = XyzField.Y;
-						break;
-					case "4":
-						__currentField = XyzField.Z;
-						break;
-					default:
-						throw new SAXParseException(
-								"Encountered an unrecognized <Field.../> variant: \"" + qName + "\"", documentLocator);
-					}
-					
-				} else if (__currentSection == XyzSection.STRUCTURE) {
-					// Ignore all given "Structure"/"Field" entries
-				} else {
-					throw new SAXParseException("Encountered a <Field/> outside of a <Records/> or <Structure/>",
-							this.documentLocator);
-				}
+			if (normalize) {
+				final var maxValue = result.values().stream().reduce(FastMath::max).orElse(1d);
+				result.keySet().forEach(key -> result.compute(key, (k, v) -> v / maxValue));
 			}
 			
+			return result;
 		}
 		
-		@Override
-		public void characters(char[] ch, int start, int length) throws SAXException {
+		private <T> NavigableMap<Double, T> load(String filePath, int dimensionsExpected,
+				Function<List<Double>, T> supplier) {
 			
-			if (__currentFieldBuilder != null)
-				__currentFieldBuilder.append(ch, start, length);
-		}
-		
-		@Override
-		public void endElement(String uri, String localName, String qName) throws SAXException {
+			final var cmf = new TreeMap<Double, T>();
 			
-			if (qName.equals("Structure") || qName.equals("Records")) {
-				__currentSection = null;
+			try (var reader = new BufferedReader(
+					new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream(filePath)))) {
 				
-			} else if (fieldNamePattern.matcher(qName).matches()) {
-				
-				final String currentFieldValue = __currentFieldBuilder.toString();
-				
-				switch (__currentField) {
-				case LAMBDA:
-					try {
-						__current_building_wavelength = Double.parseDouble(currentFieldValue);
-					} catch (NumberFormatException e) {
-						throw new SAXParseException(
-								"Cannot parse given wavelength, \"" + currentFieldValue + "\", as a double-value!",
-								documentLocator);
-					}
-					break;
-				case X:
-					try {
-						__current_building_entry = new Triplet(Double.parseDouble(currentFieldValue),
-								__current_building_entry.get(1), __current_building_entry.get(2));
-					} catch (NumberFormatException e) {
-						throw new SAXParseException(
-								"Cannot parse given X, \"" + currentFieldValue + "\", as a double-value!",
-								documentLocator);
-					}
-					break;
-				case Y:
-					try {
-						__current_building_entry = new Triplet(__current_building_entry.get(0),
-								Double.parseDouble(currentFieldValue), __current_building_entry.get(2));
-					} catch (NumberFormatException e) {
-						throw new SAXParseException(
-								"Cannot parse given Y, \"" + currentFieldValue + "\", as a double-value!",
-								documentLocator);
-					}
-					break;
-				case Z:
-					try {
-						__current_building_entry = new Triplet(__current_building_entry.get(0),
-								__current_building_entry.get(1), Double.parseDouble(currentFieldValue));
-					} catch (NumberFormatException e) {
-						throw new SAXParseException(
-								"Cannot parse given Z, \"" + currentFieldValue + "\", as a double-value!",
-								documentLocator);
-					}
-					break;
+				while (reader.ready()) {
+					//
+					// While reading in lines -- break each line into pieces, strip surrounding
+					// double-quotes off each piece, and convert it to a double value.
+					//
+					final var quotesMatcher = Pattern.compile("\"(.*)\"");
+					final var pieces = Arrays.asList(reader.readLine().split(",")).stream().map(s -> {
+						var m = quotesMatcher.matcher(s);
+						if (m.matches())
+							return m.group(1);
+						return s;
+					}).map(s -> Double.parseDouble(s)).collect(Collectors.toList());
+					
+					cmf.put(pieces.get(0), supplier.apply(pieces.subList(1, pieces.size())));
 				}
 				
-				__currentField = null;
-				__currentFieldBuilder = null;
-				
-			} else if (qName.equals("Record")) {
-				__current_building_map.put(__current_building_wavelength, __current_building_entry);
+			} catch (Throwable t) {
+				throw new RuntimeException("Could not load data from \"" + filePath + "\"!", t);
 			}
-		}
-		
-		@Override
-		public void endDocument() throws SAXException {
 			
-			this.triplets = __current_building_map;
+			return cmf;
 		}
-		
-		@Override
-		public void setDocumentLocator(Locator locator) {
-			
-			this.documentLocator = locator;
-		}
-		
 	}
+	
+	@Override
+	public String toString() {
+		
+		return "CIEXYZ [X=" + getX() + ", Y=" + getY() + ", Z=" + getZ() + "]";
+	}
+	
 }

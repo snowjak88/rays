@@ -162,7 +162,7 @@ public class Matrix {
 		
 		double[] result = this.multiply(triplet.get(0), triplet.get(1), triplet.get(2), w);
 		
-		if (Settings.nearlyEqual(result[3], 0d))
+		if (Settings.getInstance().nearlyEqual(result[3], 0d))
 			return new Triplet(result[0], result[1], result[2]);
 		else
 			return new Triplet(result[0] / result[3], result[1] / result[3], result[2] / result[3]);
