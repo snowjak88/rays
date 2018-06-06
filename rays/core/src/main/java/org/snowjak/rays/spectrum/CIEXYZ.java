@@ -95,9 +95,13 @@ public class CIEXYZ implements Serializable {
 			
 			var lowSpecEntry = spectrum.floorEntry(lambda);
 			var highSpecEntry = spectrum.ceilingEntry(lambda);
-			var specFraction = (lambda - lowSpecEntry.getKey())
-					/ (highSpecEntry.getKey() - lowSpecEntry.getKey() + Double.MIN_VALUE);
-			final double spec = linearInterpolate(specFraction, lowSpecEntry.getValue(), highSpecEntry.getValue());
+			
+			double spec = (highSpecEntry == null) ? lowSpecEntry.getValue() : highSpecEntry.getValue();
+			if (lowSpecEntry != null && highSpecEntry != null) {
+				var specFraction = (lambda - lowSpecEntry.getKey())
+						/ (highSpecEntry.getKey() - lowSpecEntry.getKey() + Double.MIN_VALUE);
+				spec = linearInterpolate(specFraction, lowSpecEntry.getValue(), highSpecEntry.getValue());
+			}
 			
 			return cmf.multiply(spec);
 		}).reduce(new Triplet(), Triplet::add).multiply(stepSize);
