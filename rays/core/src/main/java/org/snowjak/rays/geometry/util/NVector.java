@@ -172,6 +172,17 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	public abstract T apply(T other, BinaryOperator<Double> operator);
 	
 	/**
+	 * Reduce this NVector to a single quantity by some operation.
+	 * 
+	 * @param reduce
+	 * @return
+	 */
+	public double reduce(Function<double[], Double> reduce) {
+		
+		return reduce.apply(this.values);
+	}
+	
+	/**
 	 * Returns the negated form of this NVector.
 	 * 
 	 * <pre>

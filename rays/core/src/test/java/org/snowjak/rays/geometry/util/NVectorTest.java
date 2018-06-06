@@ -77,6 +77,16 @@ public class NVectorTest {
 	}
 	
 	@Test
+	public void testReduce() {
+		
+		final NVectorImpl v = new NVectorImpl(1, 2, 3);
+		
+		final double u = FastMath
+				.sqrt(v.reduce(ds -> Arrays.stream(ds).map(d -> d * d).reduce(0d, (d1, d2) -> d1 + d2)));
+		assertEquals("v.reduce not as expected!", 3.74165d, u, 0.00001);
+	}
+	
+	@Test
 	public void testNegate() {
 		
 		final NVectorImpl v = new NVectorImpl(1, 2, 3);
