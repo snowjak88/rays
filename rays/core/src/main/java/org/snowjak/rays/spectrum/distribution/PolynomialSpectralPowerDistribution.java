@@ -13,34 +13,34 @@ import java.util.stream.IntStream;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.Pair;
 
-public class Polynomial1DDistribution implements Distribution<Double> {
+public class PolynomialSpectralPowerDistribution implements SpectralPowerDistribution {
 	
 	private List<Double> coefficients;
 	
 	/**
-	 * Construct a new {@link Polynomial1DDistribution} with the given coefficients
-	 * (ordered from 0-exponent onward).
+	 * Construct a new {@link PolynomialSpectralPowerDistribution} with the given
+	 * coefficients (ordered from 0-exponent onward).
 	 * 
 	 * @param coefficients
 	 */
-	public Polynomial1DDistribution(Double... coefficients) {
+	public PolynomialSpectralPowerDistribution(Double... coefficients) {
 		
 		this(Arrays.asList(coefficients));
 	}
 	
 	/**
-	 * Construct a new {@link Polynomial1DDistribution} with the given coefficients
-	 * (ordered from 0-exponent onward).
+	 * Construct a new {@link PolynomialSpectralPowerDistribution} with the given
+	 * coefficients (ordered from 0-exponent onward).
 	 * 
 	 * @param coefficients
 	 */
-	public Polynomial1DDistribution(List<Double> coefficients) {
+	public PolynomialSpectralPowerDistribution(List<Double> coefficients) {
 		
 		this.coefficients = coefficients;
 	}
 	
 	/**
-	 * Compute a tabulated form of this Polynomial1DDistribution.
+	 * Compute a tabulated form of this PolynomialSpectralPowerDistribution.
 	 * 
 	 * @param rangeStart
 	 *            the first key to include

@@ -4,12 +4,12 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-public class Polynomial1DDistributionTest {
+public class PolynomialSpectralPowerDistributionTest {
 	
 	@Test
 	public void testGet() {
 		
-		final var p = new Polynomial1DDistribution(1d, 2d, 3d);
+		final var p = new PolynomialSpectralPowerDistribution(1d, 2d, 3d);
 		
 		assertEquals("p(0) is not as expected!", 1d, p.get(0d), 0.00001);
 		assertEquals("p(1) is not as expected!", 6d, p.get(1d), 0.00001);
@@ -19,7 +19,7 @@ public class Polynomial1DDistributionTest {
 	@Test
 	public void testToTable() {
 		
-		final var p = new Polynomial1DDistribution(1d, 2d, 3d);
+		final var p = new PolynomialSpectralPowerDistribution(1d, 2d, 3d);
 		final var t = p.toTable(0.0, 2.0, 1.0);
 		
 		assertNotNull(t);
