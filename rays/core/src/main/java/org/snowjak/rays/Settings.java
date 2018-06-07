@@ -5,6 +5,11 @@ import java.util.Properties;
 import java.util.Random;
 
 import org.snowjak.rays.spectrum.CIEXYZ;
+import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctionDistribution;
+import org.snowjak.rays.spectrum.distribution.ColorMappingFunctionDistribution;
+import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
+import org.snowjak.rays.spectrum.distribution.TabulatedColorMappingFunctionDistribution;
+import org.snowjak.rays.spectrum.distribution.TabulatedSpectralPowerDistribution;
 
 import com.google.common.math.DoubleMath;
 
@@ -20,17 +25,22 @@ public class Settings {
 	/**
 	 * @see #getDoubleEqualityEpsilon()
 	 */
-	private double DOUBLE_EQUALITY_EPSILON = 1e-8;
+	private double doubleEqualityEpsilon = 1e-8;
 	
 	/**
-	 * @see #getCieCsvColorMappingFunctionsPath()
+	 * @see #getColorMappingFunctionDistribution()
 	 */
-	private String CIE_CSV_COLOR_MAPPING_FUNCTIONS_PATH = "./cie-data/CIE_XYZ_CMF_2-degree_1nm-step_2006.csv";
+	private ColorMappingFunctionDistribution colorMappingFunctionDistribution = new AnalyticColorMappingFunctionDistribution();
 	
 	/**
-	 * @see #getCieCsvD65IlluminatorPath()
+	 * @see #getIlluminatorSpectralPowerDistribution()
 	 */
-	private String CIE_CSV_D65_STANDARD_ILLUMINATOR_PATH = "./cie-data/illuminator_d65.csv";
+	private SpectralPowerDistribution illuminatorSpectralPowerDistribution = null;
+	
+	/**
+	 * @see #getCieXyzIntegrationStepSize()
+	 */
+	private double cieXyzIntegrationStepSize = 5.0;
 	
 	/**
 	 * A shared {@link Random} instance.
@@ -62,14 +72,28 @@ public class Settings {
 			//
 			// Now that we've loaded the core-settings into a Properties object,
 			// we can start initializing those fields we care about.
-			DOUBLE_EQUALITY_EPSILON = Double.parseDouble(coreSettings.getProperty(
+			doubleEqualityEpsilon = Double.parseDouble(coreSettings.getProperty(
 					"org.snowjak.rays.math.double-equality-epsilon", Double.toString(getDoubleEqualityEpsilon())));
 			
-			CIE_CSV_COLOR_MAPPING_FUNCTIONS_PATH = coreSettings.getProperty(
-					"org.snowjak.rays.cie-csv-xyz-color-mapping-path", getCieCsvColorMappingFunctionsPath());
+			colorMappingFunctionDistribution = (coreSettings
+					.containsKey("org.snowjak.rays.cie-csv-xyz-color-mapping-path"))
+							? TabulatedColorMappingFunctionDistribution.loadFromCSV(
+									TabulatedColorMappingFunctionDistribution::new,
+									Settings.class.getClassLoader()
+											.getResourceAsStream(coreSettings
+													.getProperty("org.snowjak.rays.cie-csv-xyz-color-mapping-path")))
+							: getColorMappingFunctionDistribution();
 			
-			CIE_CSV_D65_STANDARD_ILLUMINATOR_PATH = coreSettings.getProperty(
-					"org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path", getCieCsvD65IlluminatorPath());
+			illuminatorSpectralPowerDistribution = (coreSettings
+					.containsKey("org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path"))
+							? TabulatedSpectralPowerDistribution.loadFromCSV(TabulatedSpectralPowerDistribution::new,
+									Settings.class.getClassLoader()
+											.getResourceAsStream(coreSettings.getProperty(
+													"org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path")))
+							: getIlluminatorSpectralPowerDistribution();
+			
+			cieXyzIntegrationStepSize = Double.parseDouble(coreSettings.getProperty(
+					"org.snowjak.rays.cie-xyz-integration-step-size", Double.toString(getCieXyzIntegrationStepSize())));
 			
 		} catch (IOException e) {
 			throw new CannotLoadSettingsException("Cannot load core settings!", e);
@@ -87,27 +111,35 @@ public class Settings {
 	 */
 	public double getDoubleEqualityEpsilon() {
 		
-		return DOUBLE_EQUALITY_EPSILON;
+		return doubleEqualityEpsilon;
 	}
 	
 	/**
-	 * A CSV file containing the CIE-XYZ color-mapping functions is expected at this
-	 * file-path.
-	 * 
-	 * @see CIEXYZ the CIE XYZ triplet definition
+	 * The distribution of color-mapping-functions (for calculating {@link CIEXYZ}
+	 * triplets from spectra).
 	 */
-	public String getCieCsvColorMappingFunctionsPath() {
+	public ColorMappingFunctionDistribution getColorMappingFunctionDistribution() {
 		
-		return CIE_CSV_COLOR_MAPPING_FUNCTIONS_PATH;
+		return colorMappingFunctionDistribution;
 	}
 	
 	/**
-	 * A CSV file containing the CIE-XYZ values corresponding to the D65 standard
-	 * illuminator is expected at this file-path.
+	 * The spectral power-distribution associated with the standard illuminator.
+	 * (Used to calculate {@link CIEXYZ} triplets from spectra.)
 	 */
-	public String getCieCsvD65IlluminatorPath() {
+	public SpectralPowerDistribution getIlluminatorSpectralPowerDistribution() {
 		
-		return CIE_CSV_D65_STANDARD_ILLUMINATOR_PATH;
+		return illuminatorSpectralPowerDistribution;
+	}
+	
+	/**
+	 * When calculating a CIE XYZ triplet from a {@link SpectralPowerDistribution},
+	 * we need to compute a definite integral across a range of wavelengths. What
+	 * step-size (nm) should we use when calculating that definite integral?
+	 */
+	public double getCieXyzIntegrationStepSize() {
+		
+		return cieXyzIntegrationStepSize;
 	}
 	
 	/**
@@ -118,8 +150,8 @@ public class Settings {
 	 * @param d2
 	 *            another <code>double</code> value
 	 * @return <code>true</code> if these two values are within
-	 *         {@link #DOUBLE_EQUALITY_EPSILON} of each other
-	 * @see #DOUBLE_EQUALITY_EPSILON
+	 *         {@link #doubleEqualityEpsilon} of each other
+	 * @see #doubleEqualityEpsilon
 	 */
 	public boolean nearlyEqual(double d1, double d2) {
 		

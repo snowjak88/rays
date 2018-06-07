@@ -1,24 +1,14 @@
 package org.snowjak.rays.spectrum;
 
-import static org.apache.commons.math3.util.FastMath.min;
 import static org.apache.commons.math3.util.FastMath.pow;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 
-import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Matrix;
 import org.snowjak.rays.geometry.util.Triplet;
+import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 /**
  * Represents a CIE XYZ tristimulus triplet (i.e., see
@@ -37,13 +27,6 @@ import org.snowjak.rays.geometry.util.Triplet;
 public class CIEXYZ implements Serializable {
 	
 	private static final long serialVersionUID = 6070836284173038489L;
-	
-	public static final NavigableMap<Double, Triplet> COLOR_MAPPING_FUNCTIONS = Collections.unmodifiableNavigableMap(
-			new XyzCsvFileLoader().load_lxyz(Settings.getInstance().getCieCsvColorMappingFunctionsPath()));
-	
-	public static final NavigableMap<Double, Double> D65_STANDARD_ILLUMINATOR_SPECTRUM = Collections
-			.unmodifiableNavigableMap(
-					new XyzCsvFileLoader().load_lx(Settings.getInstance().getCieCsvD65IlluminatorPath(), true));
 	
 	//@formatter:off
 	private static final Matrix __CONVERSION_TO_RGB =
@@ -73,38 +56,17 @@ public class CIEXYZ implements Serializable {
 	 * @param spectrum
 	 * @return
 	 */
-	public static CIEXYZ fromSpectrum(NavigableMap<Double, Double> spectrum) {
+	public static CIEXYZ fromSpectrum(SpectralPowerDistribution spectrum) {
 		
-		final double cmfHighLambda = COLOR_MAPPING_FUNCTIONS.lastKey();
-		final double cmfLowLambda = COLOR_MAPPING_FUNCTIONS.firstKey();
-		final double cmfStepSize = (cmfHighLambda - cmfLowLambda) / (double) (COLOR_MAPPING_FUNCTIONS.size() - 1);
+		final var cmf = Settings.getInstance().getColorMappingFunctionDistribution();
 		
-		final double specHighLambda = spectrum.lastKey();
-		final double specLowLambda = spectrum.firstKey();
-		final double specStepSize = (specHighLambda - specLowLambda) / (double) (spectrum.size() - 1);
+		final double cmfLowLambda = cmf.getLowestWavelength();
+		final double cmfHighLambda = cmf.getHighestWavelength();
+		final double stepSize = Settings.getInstance().getCieXyzIntegrationStepSize();
 		
-		final double stepSize = min(cmfStepSize, specStepSize);
-		
-		final var result = COLOR_MAPPING_FUNCTIONS.keySet().stream().map(lambda -> {
-			
-			var lowCmfEntry = COLOR_MAPPING_FUNCTIONS.floorEntry(lambda);
-			var highCmfEntry = COLOR_MAPPING_FUNCTIONS.ceilingEntry(lambda);
-			var cmfFraction = (lambda - lowCmfEntry.getKey())
-					/ (highCmfEntry.getKey() - lowCmfEntry.getKey() + Double.MIN_VALUE);
-			final var cmf = lowCmfEntry.getValue().linearInterpolateTo(highCmfEntry.getValue(), cmfFraction);
-			
-			var lowSpecEntry = spectrum.floorEntry(lambda);
-			var highSpecEntry = spectrum.ceilingEntry(lambda);
-			
-			double spec = (highSpecEntry == null) ? lowSpecEntry.getValue() : highSpecEntry.getValue();
-			if (lowSpecEntry != null && highSpecEntry != null) {
-				var specFraction = (lambda - lowSpecEntry.getKey())
-						/ (highSpecEntry.getKey() - lowSpecEntry.getKey() + Double.MIN_VALUE);
-				spec = linearInterpolate(specFraction, lowSpecEntry.getValue(), highSpecEntry.getValue());
-			}
-			
-			return cmf.multiply(spec);
-		}).reduce(new Triplet(), Triplet::add).multiply(stepSize);
+		final var result = DoubleStream.iterate(cmfLowLambda, (d) -> (d <= cmfHighLambda), (d) -> (d += stepSize))
+				.mapToObj(lambda -> cmf.getCMF(lambda).multiply(spectrum.getPower(lambda)))
+				.reduce(new Triplet(), Triplet::add).multiply(stepSize);
 		
 		return new CIEXYZ(result);
 		
@@ -112,9 +74,7 @@ public class CIEXYZ implements Serializable {
 	
 	/**
 	 * Calculate the CIE XYZ tristimulus triplet associated with the given
-	 * wavelength (assumed to be expressed in nanometers). This method will
-	 * linearly-interpolate between neighboring nodes in the loaded color-mapping
-	 * function (given, e.g., at 1-nm increments)
+	 * wavelength (assumed to be expressed in nanometers).
 	 * 
 	 * @param wavelength
 	 *            a given wavelength (given in nanometers)
@@ -123,36 +83,8 @@ public class CIEXYZ implements Serializable {
 	 */
 	public static CIEXYZ fromWavelength(double wavelength) {
 		
-		if (wavelength < COLOR_MAPPING_FUNCTIONS.firstKey())
-			return new CIEXYZ(COLOR_MAPPING_FUNCTIONS.firstEntry().getValue());
+		return new CIEXYZ(Settings.getInstance().getColorMappingFunctionDistribution().getCMF(wavelength));
 		
-		if (wavelength > COLOR_MAPPING_FUNCTIONS.lastKey())
-			return new CIEXYZ(COLOR_MAPPING_FUNCTIONS.lastEntry().getValue());
-		
-		final var lower = COLOR_MAPPING_FUNCTIONS.floorEntry(wavelength);
-		final var upper = COLOR_MAPPING_FUNCTIONS.ceilingEntry(wavelength);
-		
-		final double fraction = (wavelength - lower.getKey()) / (upper.getKey() - lower.getKey());
-		
-		return new CIEXYZ(lower.getValue().linearInterpolateTo(upper.getValue(), fraction));
-		
-	}
-	
-	/**
-	 * Linearly interpolate (by <code>fraction</code>) between <code>p1</code> and
-	 * <code>p2</code>.
-	 * 
-	 * @param fraction
-	 *            a fraction specifying the distance from <code>p1</code> to
-	 *            <code>p2</code>
-	 * @param p1
-	 *            the value to interpolate from
-	 * @param p2
-	 *            the value to interpolate to
-	 */
-	protected static double linearInterpolate(double fraction, double p1, double p2) {
-		
-		return ((p2 - p1) * fraction) + p1;
 	}
 	
 	/**
@@ -239,63 +171,6 @@ public class CIEXYZ implements Serializable {
 	public Triplet getTriplet() {
 		
 		return xyz;
-	}
-	
-	/**
-	 * Loader helper-class
-	 * 
-	 * @author snowjak88
-	 *
-	 */
-	public static class XyzCsvFileLoader {
-		
-		public NavigableMap<Double, Triplet> load_lxyz(String filePath) {
-			
-			return load(filePath, 3, (xyz) -> new Triplet(xyz.get(0), xyz.get(1), xyz.get(2)));
-		}
-		
-		public NavigableMap<Double, Double> load_lx(String filePath, boolean normalize) {
-			
-			final var result = load(filePath, 1, (x) -> x.get(0));
-			
-			if (normalize) {
-				final var maxValue = result.values().stream().reduce(FastMath::max).orElse(1d);
-				result.keySet().forEach(key -> result.compute(key, (k, v) -> v / maxValue));
-			}
-			
-			return result;
-		}
-		
-		private <T> NavigableMap<Double, T> load(String filePath, int dimensionsExpected,
-				Function<List<Double>, T> supplier) {
-			
-			final var cmf = new TreeMap<Double, T>();
-			
-			try (var reader = new BufferedReader(
-					new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream(filePath)))) {
-				
-				while (reader.ready()) {
-					//
-					// While reading in lines -- break each line into pieces, strip surrounding
-					// double-quotes off each piece, and convert it to a double value.
-					//
-					final var quotesMatcher = Pattern.compile("\"(.*)\"");
-					final var pieces = Arrays.asList(reader.readLine().split(",")).stream().map(s -> {
-						var m = quotesMatcher.matcher(s);
-						if (m.matches())
-							return m.group(1);
-						return s;
-					}).map(s -> Double.parseDouble(s)).collect(Collectors.toList());
-					
-					cmf.put(pieces.get(0), supplier.apply(pieces.subList(1, pieces.size())));
-				}
-				
-			} catch (Throwable t) {
-				throw new RuntimeException("Could not load data from \"" + filePath + "\"!", t);
-			}
-			
-			return cmf;
-		}
 	}
 	
 	@Override

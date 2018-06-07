@@ -3,14 +3,9 @@ package org.snowjak.rays.spectrum;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
+import org.snowjak.rays.Settings;
 
 public class CIEXYZTest {
-	
-	@Test
-	public void testColorMappingFunctionSize() {
-		
-		assertEquals("CMF table-size is not as expected!", 471, CIEXYZ.COLOR_MAPPING_FUNCTIONS.size());
-	}
 	
 	@Test
 	public void testFromWavelength_lowWavelength() {
@@ -35,7 +30,8 @@ public class CIEXYZTest {
 	@Test
 	public void testFromSpectrum_standardIlluminator() {
 		
-		final CIEXYZ xyz_beforeNormalization = CIEXYZ.fromSpectrum(CIEXYZ.D65_STANDARD_ILLUMINATOR_SPECTRUM);
+		final CIEXYZ xyz_beforeNormalization = CIEXYZ
+				.fromSpectrum(Settings.getInstance().getIlluminatorSpectralPowerDistribution());
 		final CIEXYZ xyz = new CIEXYZ(xyz_beforeNormalization.getTriplet().divide(xyz_beforeNormalization.getY()));
 		
 		assertEquals("XYZ (X) is not as expected!", 0.95047, xyz.getX() / xyz.getY(), 0.0001);
@@ -101,15 +97,6 @@ public class CIEXYZTest {
 		assertEquals("RGB (G) is not as expected!", 0.72230, rgb.getGreen(), 0.0001);
 		assertEquals("RGB (B) is not as expected!", 0.71092, rgb.getBlue(), 0.0001);
 		
-	}
-	
-	@Test
-	public void testLinearInterpolate() {
-		
-		assertEquals("Linear interpolation is not as expected!", 1.0, CIEXYZ.linearInterpolate(0.0, 1, 2), 0.00001);
-		assertEquals("Linear interpolation is not as expected!", 2.5, CIEXYZ.linearInterpolate(0.5, 2, 3), 0.00001);
-		assertEquals("Linear interpolation is not as expected!", 1.5, CIEXYZ.linearInterpolate(-0.5, 2, 3), 0.00001);
-		assertEquals("Linear interpolation is not as expected!", 3.5, CIEXYZ.linearInterpolate(1.5, 2, 3), 0.00001);
 	}
 	
 }
