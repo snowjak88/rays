@@ -266,4 +266,11 @@ public class RGB implements Serializable {
 		return true;
 	}
 	
+	@Override
+	public String toString() {
+		
+		return "RGB [red=" + Double.toString(rgb.get(0)) + ", green=" + Double.toString(rgb.get(1)) + ", blue="
+				+ Double.toString(rgb.get(2)) + "]";
+	}
+	
 }
