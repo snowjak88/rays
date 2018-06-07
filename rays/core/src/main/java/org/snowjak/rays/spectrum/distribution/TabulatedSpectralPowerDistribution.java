@@ -6,6 +6,7 @@ import java.io.OutputStreamWriter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -29,7 +30,7 @@ public class TabulatedSpectralPowerDistribution extends TabulatedDistribution<Do
 	 */
 	public TabulatedSpectralPowerDistribution() {
 		
-		this(Collections.emptyNavigableMap());
+		this(Collections.emptyMap());
 	}
 	
 	/**
@@ -43,7 +44,7 @@ public class TabulatedSpectralPowerDistribution extends TabulatedDistribution<Do
 	 * 
 	 * @param distribution
 	 */
-	public TabulatedSpectralPowerDistribution(NavigableMap<Double, Double> distribution) {
+	public TabulatedSpectralPowerDistribution(Map<Double, Double> distribution) {
 		
 		super(distribution);
 	}
@@ -60,7 +61,7 @@ public class TabulatedSpectralPowerDistribution extends TabulatedDistribution<Do
 	 * @param distribution
 	 * @param blend
 	 */
-	public TabulatedSpectralPowerDistribution(NavigableMap<Double, Double> distribution, BlendMethod<Double> blend) {
+	public TabulatedSpectralPowerDistribution(Map<Double, Double> distribution, BlendMethod<Double> blend) {
 		
 		super(distribution, blend);
 	}
