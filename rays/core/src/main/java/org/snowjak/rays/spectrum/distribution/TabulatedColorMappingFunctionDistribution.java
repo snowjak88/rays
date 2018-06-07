@@ -37,4 +37,11 @@ public class TabulatedColorMappingFunctionDistribution extends TabulatedDistribu
 		}
 	}
 	
+	@Override
+	public String writeEntry(Double key, Triplet entry) {
+		
+		return Arrays.asList(key, entry.get(0), entry.get(1), entry.get(2)).stream().map(d -> Double.toString(d))
+				.collect(Collectors.joining(","));
+	}
+	
 }

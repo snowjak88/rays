@@ -106,4 +106,10 @@ public class TabulatedSpectralPowerDistribution extends TabulatedDistribution<Do
 		}
 	}
 	
+	@Override
+	public String writeEntry(Double key, Double entry) {
+		
+		return Arrays.asList(key, entry).stream().map(d -> Double.toString(d)).collect(Collectors.joining(","));
+	}
+	
 }

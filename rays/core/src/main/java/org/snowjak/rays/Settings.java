@@ -1,6 +1,5 @@
 package org.snowjak.rays;
 
-import java.io.IOException;
 import java.util.Properties;
 import java.util.Random;
 
@@ -95,8 +94,8 @@ public class Settings {
 			cieXyzIntegrationStepSize = Double.parseDouble(coreSettings.getProperty(
 					"org.snowjak.rays.cie-xyz-integration-step-size", Double.toString(getCieXyzIntegrationStepSize())));
 			
-		} catch (IOException e) {
-			throw new CannotLoadSettingsException("Cannot load core settings!", e);
+		} catch (Throwable t) {
+			throw new CannotLoadSettingsException("Cannot load core settings!", t);
 		}
 	}
 	

@@ -1,14 +1,19 @@
 package org.snowjak.rays.spectrum.distribution;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.TriFunction;
@@ -51,6 +56,32 @@ public abstract class TabulatedDistribution<V> implements Distribution<V> {
 	}
 	
 	/**
+	 * Write this {@link TabulatedDistribution}, formatted as a CSV file, to the
+	 * given {@link OutputStream}.
+	 * 
+	 * @param distribution
+	 * @param csv
+	 * @throws IOException
+	 */
+	public void saveToCSV(OutputStream csv) throws IOException {
+		
+		try (var writer = new BufferedWriter(new OutputStreamWriter(csv))) {
+			
+			boolean isFirstLineDone = false;
+			for (String line : this.getAll().stream().map(p -> this.writeEntry(p.getKey(), p.getValue()))
+					.collect(Collectors.toList())) {
+				if (isFirstLineDone)
+					writer.newLine();
+				
+				writer.write(line);
+				
+				isFirstLineDone = true;
+			}
+		}
+		
+	}
+	
+	/**
 	 * Construct a new (empty) {@link TabulatedDistribution}, using the default
 	 * linear-interpolation {@link LinearBlendMethod}.
 	 */
@@ -88,6 +119,15 @@ public abstract class TabulatedDistribution<V> implements Distribution<V> {
 	public V get(Double k) {
 		
 		return this.blendMethod.get(this, k);
+	}
+	
+	/**
+	 * @return all entries stored in this {@link TabulatedDistribution}
+	 */
+	public Collection<Pair<Double, V>> getAll() {
+		
+		return this.table.entrySet().stream().map(e -> new Pair<>(e.getKey(), e.getValue()))
+				.collect(Collectors.toList());
 	}
 	
 	@Override
@@ -145,6 +185,16 @@ public abstract class TabulatedDistribution<V> implements Distribution<V> {
 	 * @return
 	 */
 	public abstract Pair<Double, V> parseEntry(String csvLine);
+	
+	/**
+	 * Given a single key/value pair from this distribution, format it into a line
+	 * of CSV data.
+	 * 
+	 * @param key
+	 * @param entry
+	 * @return
+	 */
+	public abstract String writeEntry(Double key, V entry);
 	
 	/**
 	 * Defines the method whereby we derive intermediate values (between stored
