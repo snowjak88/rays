@@ -16,4 +16,17 @@ public class Polynomial1DDistributionTest {
 		assertEquals("p(2) is not as expected!", 17d, p.get(2d), 0.00001);
 	}
 	
+	@Test
+	public void testToTable() {
+		
+		final var p = new Polynomial1DDistribution(1d, 2d, 3d);
+		final var t = p.toTable(0.0, 2.0, 1.0);
+		
+		assertNotNull(t);
+		assertEquals(3, t.getAll().size());
+		assertEquals(1.d, t.get(0.0), 0.00001);
+		assertEquals(6.d, t.get(1.0), 0.00001);
+		assertEquals(17.d, t.get(2.0), 0.00001);
+		
+	}
 }

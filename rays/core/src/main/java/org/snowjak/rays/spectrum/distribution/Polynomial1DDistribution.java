@@ -1,7 +1,13 @@
 package org.snowjak.rays.spectrum.distribution;
 
+import static org.apache.commons.math3.util.FastMath.max;
+import static org.apache.commons.math3.util.FastMath.min;
+import static org.apache.commons.math3.util.FastMath.signum;
+
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
 import org.apache.commons.math3.util.FastMath;
@@ -31,6 +37,31 @@ public class Polynomial1DDistribution implements Distribution<Double> {
 	public Polynomial1DDistribution(List<Double> coefficients) {
 		
 		this.coefficients = coefficients;
+	}
+	
+	/**
+	 * Compute a tabulated form of this Polynomial1DDistribution.
+	 * 
+	 * @param rangeStart
+	 *            the first key to include
+	 * @param rangeEnd
+	 *            the last key to include
+	 * @param interval
+	 *            the interval between keys
+	 * @return
+	 */
+	public TabulatedDistribution<Double> toTable(double rangeStart, double rangeEnd, double interval) {
+		
+		final double start = min(rangeStart, rangeEnd);
+		final double end = max(rangeStart, rangeEnd);
+		final double interv = signum(rangeEnd - rangeStart) * interval;
+		
+		//@formatter:off
+		return new TabulatedSpectralPowerDistribution(
+				DoubleStream.iterate(start, (d) -> d <= end, (d) -> d += interv)
+					.mapToObj(k -> new Pair<Double, Double>(k, this.get(k)))
+					.collect(Collectors.toMap(Pair::getKey, Pair::getValue)));
+		//@formatter:on
 	}
 	
 	/**
