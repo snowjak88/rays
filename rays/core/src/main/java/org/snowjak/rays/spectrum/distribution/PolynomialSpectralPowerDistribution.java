@@ -1,96 +1,57 @@
 package org.snowjak.rays.spectrum.distribution;
 
-import static org.apache.commons.math3.util.FastMath.max;
-import static org.apache.commons.math3.util.FastMath.min;
-import static org.apache.commons.math3.util.FastMath.signum;
-
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.DoubleStream;
-import java.util.stream.IntStream;
 
-import org.apache.commons.math3.util.FastMath;
-import org.apache.commons.math3.util.Pair;
-
-public class PolynomialSpectralPowerDistribution implements SpectralPowerDistribution {
-	
-	private List<Double> coefficients;
+/**
+ * Represents a {@link SpectralPowerDistribution} backed by a
+ * {@link PolynomialDistribution}.
+ * <p>
+ * <strong>Note:</strong> when computing spectral-power, the given wavelength is
+ * converted to a decimal fraction on the interval [360nm, 830nm].
+ * </p>
+ * 
+ * @author snowjak88
+ *
+ */
+public class PolynomialSpectralPowerDistribution extends PolynomialDistribution implements SpectralPowerDistribution {
 	
 	/**
-	 * Construct a new {@link PolynomialSpectralPowerDistribution} with the given
-	 * coefficients (ordered from 0-exponent onward).
-	 * 
-	 * @param coefficients
+	 * {@inheritDoc}
 	 */
 	public PolynomialSpectralPowerDistribution(Double... coefficients) {
 		
-		this(Arrays.asList(coefficients));
+		super(coefficients);
 	}
 	
 	/**
-	 * Construct a new {@link PolynomialSpectralPowerDistribution} with the given
-	 * coefficients (ordered from 0-exponent onward).
-	 * 
-	 * @param coefficients
+	 * {@inheritDoc}
 	 */
 	public PolynomialSpectralPowerDistribution(List<Double> coefficients) {
 		
-		this.coefficients = coefficients;
-	}
-	
-	/**
-	 * Compute a tabulated form of this PolynomialSpectralPowerDistribution.
-	 * 
-	 * @param rangeStart
-	 *            the first key to include
-	 * @param rangeEnd
-	 *            the last key to include
-	 * @param interval
-	 *            the interval between keys
-	 * @return
-	 */
-	public TabulatedDistribution<Double> toTable(double rangeStart, double rangeEnd, double interval) {
-		
-		final double start = min(rangeStart, rangeEnd);
-		final double end = max(rangeStart, rangeEnd);
-		final double interv = signum(rangeEnd - rangeStart) * interval;
-		
-		//@formatter:off
-		return new TabulatedSpectralPowerDistribution(
-				DoubleStream.iterate(start, (d) -> d <= end, (d) -> d += interv)
-					.mapToObj(k -> new Pair<Double, Double>(k, this.get(k)))
-					.collect(Collectors.toMap(Pair::getKey, Pair::getValue)));
-		//@formatter:on
-	}
-	
-	/**
-	 * Evaluate this polynomial for the given parameter.
-	 */
-	@Override
-	public Double get(Double key) {
-		
-		if (coefficients == null || coefficients.isEmpty())
-			return 0d;
-		
-		//@formatter:off
-		return IntStream.range(0, coefficients.size())
-				.mapToObj(i -> new Pair<>(i, coefficients.get(i)))
-				.map(p -> p.getValue() * FastMath.pow(key, p.getKey()))
-				.reduce(0d, (d1, d2) -> d1 + d2);
-		//@formatter:on
+		super(coefficients);
 	}
 	
 	@Override
 	public Double getLowKey() {
 		
-		return null;
+		return 360d;
 	}
 	
 	@Override
 	public Double getHighKey() {
 		
-		return null;
+		return 830d;
+	}
+	
+	@Override
+	public Double get(Double key) {
+		
+		return super.get(fractionizeWavelength(key));
+	}
+	
+	private double fractionizeWavelength(double lambda) {
+		
+		return (lambda - getLowestWavelength()) / (getHighestWavelength() / getLowestWavelength());
 	}
 	
 }
