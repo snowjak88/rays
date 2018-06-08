@@ -1,5 +1,6 @@
 rootProject.name = 'rays'
 
 include 'core'
+include 'spectrum-generator'
 include 'frontend'
 include 'worker'
