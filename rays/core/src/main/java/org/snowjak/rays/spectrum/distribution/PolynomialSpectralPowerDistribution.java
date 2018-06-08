@@ -18,6 +18,14 @@ public class PolynomialSpectralPowerDistribution extends PolynomialDistribution 
 	/**
 	 * {@inheritDoc}
 	 */
+	public PolynomialSpectralPowerDistribution(double... coefficients) {
+		
+		super(coefficients);
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
 	public PolynomialSpectralPowerDistribution(Double... coefficients) {
 		
 		super(coefficients);

@@ -42,6 +42,17 @@ public class PolynomialDistribution implements Distribution<Double> {
 	 * 
 	 * @param coefficients
 	 */
+	public PolynomialDistribution(double... coefficients) {
+		
+		this(Arrays.stream(coefficients).boxed().collect(Collectors.toList()));
+	}
+	
+	/**
+	 * Construct a new {@link PolynomialDistribution} with the given coefficients
+	 * (ordered from 0-exponent onward).
+	 * 
+	 * @param coefficients
+	 */
 	public PolynomialDistribution(Double... coefficients) {
 		
 		this(Arrays.asList(coefficients));
