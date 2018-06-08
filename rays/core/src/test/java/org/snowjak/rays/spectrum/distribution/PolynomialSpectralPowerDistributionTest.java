@@ -7,7 +7,7 @@ import org.junit.Test;
 
 public class PolynomialSpectralPowerDistributionTest {
 	
-	private final SpectralPowerDistribution d = new PolynomialSpectralPowerDistribution(1d, 2d, 3d);
+	private final SpectralPowerDistribution d = new PolynomialSpectralPowerDistribution(new double[] { 1d, 2d, 3d });
 	
 	@Test
 	public void testGet_550nm() {
