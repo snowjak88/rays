@@ -3,6 +3,7 @@ package org.snowjak.rays;
 import java.util.Properties;
 import java.util.Random;
 
+import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.spectrum.CIEXYZ;
 import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctionDistribution;
 import org.snowjak.rays.spectrum.distribution.ColorMappingFunctionDistribution;
@@ -139,6 +140,16 @@ public class Settings {
 	public double getCieXyzIntegrationStepSize() {
 		
 		return cieXyzIntegrationStepSize;
+	}
+	
+	/**
+	 * Given {@link #getCieXyzIntegrationStepSize()}, how many total steps will each
+	 * integration consist of?
+	 */
+	public int getCieXyzIntegrationStepCount() {
+		
+		return (int) FastMath.ceil((830.0 - 360.0) / getCieXyzIntegrationStepSize());
+		
 	}
 	
 	/**

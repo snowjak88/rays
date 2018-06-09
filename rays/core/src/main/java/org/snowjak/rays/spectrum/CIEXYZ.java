@@ -3,9 +3,9 @@ package org.snowjak.rays.spectrum;
 import static org.apache.commons.math3.util.FastMath.pow;
 
 import java.io.Serializable;
-import java.util.stream.DoubleStream;
 
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.Util;
 import org.snowjak.rays.geometry.util.Matrix;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
@@ -62,11 +62,12 @@ public class CIEXYZ implements Serializable {
 		
 		final double cmfLowLambda = cmf.getLowestWavelength();
 		final double cmfHighLambda = cmf.getHighestWavelength();
-		final double stepSize = Settings.getInstance().getCieXyzIntegrationStepSize();
 		
-		final var result = DoubleStream.iterate(cmfLowLambda, (d) -> (d <= cmfHighLambda), (d) -> (d += stepSize))
-				.mapToObj(lambda -> cmf.getCMF(lambda).multiply(spectrum.getPower(lambda)))
-				.reduce(new Triplet(), Triplet::add).multiply(stepSize);
+		final var result = Util
+				.integrateTriplet(cmfLowLambda, cmfHighLambda, Settings.getInstance().getCieXyzIntegrationStepCount(),
+						(lambda) -> cmf.getCMF(lambda).multiply(spectrum.get(lambda)))
+				.divide(Util.integrate(cmfLowLambda, cmfHighLambda,
+						Settings.getInstance().getCieXyzIntegrationStepCount(), (lambda) -> cmf.getCMF(lambda).get(1)));
 		
 		return new CIEXYZ(result);
 		
