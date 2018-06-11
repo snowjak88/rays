@@ -46,7 +46,7 @@ public interface Spectrum extends Serializable {
 	public double getAmplitude();
 
 	/**
-	 * Convert this Spectrum to a RGB-trio for subsequent display.
+	 * Convert this Spectrum to a RGBColorspace-trio for subsequent display.
 	 */
 	public RGB toRGB();
 }

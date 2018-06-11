@@ -192,8 +192,7 @@ public class BruteForceSearchSpectrumGeneratorJob {
 				
 				final var evaluatedTriplet = CIEXYZ.fromSpectrum(candidateSpectrum).getTriplet();
 				
-				final var distance = target.getTriplet().subtract(evaluatedTriplet).apply(c -> pow(c, 2))
-						.reduce(ds -> ds[0] + ds[1] + ds[2]);
+				final var distance = target.getTriplet().subtract(evaluatedTriplet).apply(c -> pow(c, 2)).summarize();
 				
 				if (distance <= tolerance) {
 					queue.put(new Pair<>(distance, value));

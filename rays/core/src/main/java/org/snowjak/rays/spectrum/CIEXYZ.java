@@ -7,6 +7,7 @@ import java.io.Serializable;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.Util;
 import org.snowjak.rays.geometry.util.Matrix;
+import org.snowjak.rays.geometry.util.Pair;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
@@ -89,16 +90,16 @@ public class CIEXYZ implements Serializable {
 	}
 	
 	/**
-	 * Construct a new CIE XYZ triplet from a {@link RGB} triplet (where the RGB
+	 * Construct a new CIE XYZ triplet from a {@link RGBColorspace} triplet (where the RGBColorspace
 	 * triplet is assumed to be in the
 	 * <a href="https://en.wikipedia.org/wiki/SRGB">sRGB color-space</a>).
 	 * <p>
-	 * <strong>Note</strong> that each component of the RGB triplet is clamped to
+	 * <strong>Note</strong> that each component of the RGBColorspace triplet is clamped to
 	 * <code>[0,1]</code> as part of conversion.
 	 * </p>
 	 * 
 	 * @param rgb
-	 *            an RGB triplet, assumed to lie in the sRGB color-space
+	 *            an RGBColorspace triplet, assumed to lie in the sRGB color-space
 	 * @return a CIE XYZ triplet representing the equivalent color in the CIE 1931
 	 *         color-space
 	 */
@@ -108,6 +109,20 @@ public class CIEXYZ implements Serializable {
 				.apply(c -> (c <= 0.04045d) ? (c / 12.92d) : (pow((c + 0.055d) / 1.055d, 2.4d)));
 		
 		return new CIEXYZ(__CONVERSION_FROM_RGB.multiply(linear, 0d));
+	}
+	
+	/**
+	 * Construct a new CIE XYZ triplet from an XY chromaticity pair and a desired
+	 * brightness value -- i.e., what is usually described as an xyY triplet.
+	 * 
+	 * @param xy
+	 * @return
+	 */
+	public static CIEXYZ fromXY(Pair xy, double brightness) {
+		
+		final double x = (brightness / xy.get(1)) * xy.get(0),
+				z = (brightness / xy.get(1)) * (1D - xy.get(0) - xy.get(1));
+		return new CIEXYZ(x, brightness, z);
 	}
 	
 	private Triplet xyz;
@@ -128,7 +143,7 @@ public class CIEXYZ implements Serializable {
 	}
 	
 	/**
-	 * Convert this CIE XYZ triplet to an {@link RGB} triplet (assumed to be in the
+	 * Convert this CIE XYZ triplet to an {@link RGBColorspace} triplet (assumed to be in the
 	 * sRGB color-space).
 	 * 
 	 * @return
@@ -137,6 +152,22 @@ public class CIEXYZ implements Serializable {
 		
 		return new RGB(__CONVERSION_TO_RGB.multiply(xyz, 0d)
 				.apply(c -> (c <= 0.0031308d) ? (12.92d * c) : (1.055d * pow(c, 1d / 2.4d) - 0.055d)));
+	}
+	
+	/**
+	 * Convert this XYZ triplet to a XY pair (expressing the brightness-independent
+	 * chromaticity of this particular triplet).
+	 * 
+	 * <pre>
+	 * xy := [ x:= X / (X + Y + Z), y:= Y / (X + Y + Z) ]
+	 * </pre>
+	 * 
+	 * @return
+	 */
+	public Pair toXY() {
+		
+		final double sum = xyz.summarize();
+		return new Pair(xyz.get(0) / sum, xyz.get(1) / sum);
 	}
 	
 	public double getX() {

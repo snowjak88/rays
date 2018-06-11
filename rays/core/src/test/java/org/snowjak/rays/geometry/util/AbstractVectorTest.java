@@ -8,11 +8,11 @@ import java.util.function.UnaryOperator;
 
 import org.apache.commons.math3.util.FastMath;
 import org.junit.Test;
-import org.snowjak.rays.geometry.util.NVector;
+import org.snowjak.rays.geometry.util.AbstractVector;
 
-public class NVectorTest {
+public class AbstractVectorTest {
 	
-	public static class NVectorImpl extends NVector<NVectorImpl> {
+	public static class NVectorImpl extends AbstractVector<NVectorImpl> {
 		
 		private static final long serialVersionUID = -2601655708396984774L;
 		
@@ -24,13 +24,13 @@ public class NVectorTest {
 		@Override
 		public NVectorImpl apply(UnaryOperator<Double> operator) {
 			
-			return new NVectorImpl(NVector.apply(getAll(), operator));
+			return new NVectorImpl(AbstractVector.apply(getAll(), operator));
 		}
 		
 		@Override
 		public NVectorImpl apply(NVectorImpl other, BinaryOperator<Double> operator) {
 			
-			return new NVectorImpl(NVector.apply(getAll(), other.getAll(), operator));
+			return new NVectorImpl(AbstractVector.apply(getAll(), other.getAll(), operator));
 		}
 		
 	}
@@ -234,6 +234,15 @@ public class NVectorTest {
 		assertEquals("u.get(0) not as expected!", 1d / -2d, u.get(0), 0.00001);
 		assertEquals("u.get(1) not as expected!", 2d / -2d, u.get(1), 0.00001);
 		assertEquals("u.get(2) not as expected!", 3d / -2d, u.get(2), 0.00001);
+	}
+	
+	@Test
+	public void testSummarize() {
+		
+		final NVectorImpl v = new NVectorImpl(1, 2, 3);
+		
+		assertEquals("v.summarize() is not as expected!", 6d, v.summarize(), 0.00001);
+		
 	}
 	
 }

@@ -16,50 +16,50 @@ import org.apache.commons.math3.util.FastMath;
  * 
  * @author snowjak88
  */
-public abstract class NVector<T extends NVector<?>> implements Serializable {
+public abstract class AbstractVector<T extends AbstractVector<?>> implements Serializable {
 	
 	private static final long serialVersionUID = 2663668375502365368L;
 	
 	private final double[] values;
 	
-	public NVector(int n) {
+	public AbstractVector(int n) {
 		
 		this.values = new double[n];
 	}
 	
 	/**
-	 * Create a new NVector with order <code>n</code> implicitly given by the length
+	 * Create a new AbstractVector with order <code>n</code> implicitly given by the length
 	 * of the given array.
 	 * <p>
 	 * Please note that this constructor will <strong>not</strong> copy the given
 	 * array of values before using it. This means that, if you pass in an array
-	 * reference without first copying it manually, your immutable NVector could
+	 * reference without first copying it manually, your immutable AbstractVector could
 	 * turn out to be very mutable indeed (when your code starts modifying the
 	 * original array).
 	 * </p>
 	 * 
 	 * @param values
 	 */
-	public NVector(double... values) {
+	public AbstractVector(double... values) {
 		
 		this.values = values;
 	}
 	
 	/**
-	 * Create a new NVector, taking the first <code>n</code> values from the given
+	 * Create a new AbstractVector, taking the first <code>n</code> values from the given
 	 * list of <code>values</code>. If <code>n > values.length</code>, 0-pad this
-	 * NVector to make up the length.
+	 * AbstractVector to make up the length.
 	 * 
 	 * @param n
 	 * @param values
 	 */
-	public NVector(int n, double... values) {
+	public AbstractVector(int n, double... values) {
 		
 		this.values = Arrays.copyOf(values, n);
 	}
 	
 	/**
-	 * @return the length of this NVector
+	 * @return the length of this AbstractVector
 	 */
 	public int getN() {
 		
@@ -67,7 +67,7 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Return a copy of this NVector's values.
+	 * Return a copy of this AbstractVector's values.
 	 * 
 	 * @return
 	 */
@@ -77,13 +77,13 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Return the <code>i</code>th element of this NVector, where <code>i</code> is
+	 * Return the <code>i</code>th element of this AbstractVector, where <code>i</code> is
 	 * in [0, {@link #getN()}-1].
 	 * 
 	 * @param i
 	 * @return
 	 * @throws ArrayIndexOutOfBoundsException
-	 *             if i is not within the bounds of this NVector
+	 *             if i is not within the bounds of this AbstractVector
 	 * @see #getN()
 	 */
 	public double get(int i) {
@@ -134,8 +134,8 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Apply the given {@link UnaryOperator} to this NVector, producing another
-	 * NVector as a result.
+	 * Apply the given {@link UnaryOperator} to this AbstractVector, producing another
+	 * AbstractVector as a result.
 	 * 
 	 * @param operator
 	 * @return
@@ -143,8 +143,8 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	public abstract T apply(UnaryOperator<Double> operator);
 	
 	/**
-	 * Apply the given {@link BinaryOperator} to this and another NVector, producing
-	 * a third NVector as a result.
+	 * Apply the given {@link BinaryOperator} to this and another AbstractVector, producing
+	 * a third AbstractVector as a result.
 	 * <h1>Processing NVectors of different lengths</h1>
 	 * <p>
 	 * When applying an operation to two NVectors of differing lengths, the shorter
@@ -161,7 +161,7 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	 * </pre>
 	 * 
 	 * applying <code>operation</code> to <code>v<sub>1</sub></code> and
-	 * <code>v<sub>2</sub></code> produces a third NVector
+	 * <code>v<sub>2</sub></code> produces a third AbstractVector
 	 * <code>v<sub>3</sub> = { (1+1), (2+2), (3+0) } = { 2, 4, 3 }</code>
 	 * </p>
 	 * 
@@ -172,7 +172,7 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	public abstract T apply(T other, BinaryOperator<Double> operator);
 	
 	/**
-	 * Reduce this NVector to a single quantity by some operation.
+	 * Reduce this AbstractVector to a single quantity by some operation.
 	 * 
 	 * @param reduce
 	 * @return
@@ -183,7 +183,7 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Returns the negated form of this NVector.
+	 * Returns the negated form of this AbstractVector.
 	 * 
 	 * <pre>
 	 * v := { 1, 2, 3 }
@@ -198,7 +198,7 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Returns the reciprocal form of this NVector.
+	 * Returns the reciprocal form of this AbstractVector.
 	 * 
 	 * <pre>
 	 * v := { 1, 2, 3 }
@@ -213,7 +213,7 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Normalize this NVector, choosing for absolute-magnitude the
+	 * Normalize this AbstractVector, choosing for absolute-magnitude the
 	 * maximally-abolute-valued component (according to {@link FastMath#abs(double)}
 	 * + {@link FastMath#max(double, double)}).
 	 * 
@@ -230,8 +230,8 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Normalize this NVector according to some magnitude-function (which evaluates
-	 * the absolute-magnitude of this NVector).
+	 * Normalize this AbstractVector according to some magnitude-function (which evaluates
+	 * the absolute-magnitude of this AbstractVector).
 	 * 
 	 * @return
 	 */
@@ -242,7 +242,7 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Linearly interpolate from this NVector to another.
+	 * Linearly interpolate from this AbstractVector to another.
 	 * 
 	 * <pre>
 	 * v := { 1, 2, 3 }
@@ -264,7 +264,7 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Returns the clamped form of this NVector.
+	 * Returns the clamped form of this AbstractVector.
 	 * 
 	 * <pre>
 	 * v := { -1, 0, 1, 2, 3 }
@@ -281,9 +281,9 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Adds this NVector to another, producing a third NVector as a result.
+	 * Adds this AbstractVector to another, producing a third AbstractVector as a result.
 	 * <p>
-	 * See {@link #apply(NVector, BinaryOperator)} for information about behavior
+	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about behavior
 	 * when adding NVectors of differing lengths.
 	 * </p>
 	 * 
@@ -296,8 +296,8 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Adds a constant value to every element in this NVector, producing another
-	 * NVector as a result.
+	 * Adds a constant value to every element in this AbstractVector, producing another
+	 * AbstractVector as a result.
 	 * 
 	 * @param addend
 	 * @return
@@ -308,10 +308,10 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Subtract another NVector from this NVector, producing a third NVector as a
+	 * Subtract another AbstractVector from this AbstractVector, producing a third AbstractVector as a
 	 * result.
 	 * <p>
-	 * See {@link #apply(NVector, BinaryOperator)} for information about behavior
+	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about behavior
 	 * when subtracting NVectors of differing lengths.
 	 * </p>
 	 * 
@@ -324,8 +324,8 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Subtract a constant value from every element in this NVector, producing
-	 * another NVector as a result.
+	 * Subtract a constant value from every element in this AbstractVector, producing
+	 * another AbstractVector as a result.
 	 * 
 	 * @param subtrahend
 	 * @return
@@ -336,10 +336,10 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Multiply this NVector by another NVector, producing a third NVector as a
+	 * Multiply this AbstractVector by another AbstractVector, producing a third AbstractVector as a
 	 * result.
 	 * <p>
-	 * See {@link #apply(NVector, BinaryOperator)} for information about behavior
+	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about behavior
 	 * when multiplying NVectors of differing lengths.
 	 * </p>
 	 * 
@@ -352,8 +352,8 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Multiply every element in this NVector by a constant value, producing another
-	 * NVector as a result.
+	 * Multiply every element in this AbstractVector by a constant value, producing another
+	 * AbstractVector as a result.
 	 * 
 	 * @param multiplicand
 	 * @return
@@ -364,10 +364,10 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Divide this NVector by another NVector, producing a third NVector as a
+	 * Divide this AbstractVector by another AbstractVector, producing a third AbstractVector as a
 	 * result.
 	 * <p>
-	 * See {@link #apply(NVector, BinaryOperator)} for information about behavior
+	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about behavior
 	 * when dividing NVectors of differing lengths.
 	 * </p>
 	 * 
@@ -380,8 +380,8 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	}
 	
 	/**
-	 * Divide every element in this NVector by a constant value, producing another
-	 * NVector as a result.
+	 * Divide every element in this AbstractVector by a constant value, producing another
+	 * AbstractVector as a result.
 	 * 
 	 * @param divisor
 	 * @return
@@ -389,6 +389,16 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 	public T divide(double divisor) {
 		
 		return this.apply(d -> d / divisor);
+	}
+	
+	/**
+	 * Compute the sum of this AbstractVector's components.
+	 * 
+	 * @return
+	 */
+	public double summarize() {
+		
+		return this.reduce(ds -> Arrays.stream(ds).reduce(0d, (d1, d2) -> d1 + d2));
 	}
 	
 	@Override
@@ -415,7 +425,7 @@ public abstract class NVector<T extends NVector<?>> implements Serializable {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		NVector<?> other = (NVector<?>) obj;
+		AbstractVector<?> other = (AbstractVector<?>) obj;
 		if (!Arrays.equals(values, other.values))
 			return false;
 		return true;

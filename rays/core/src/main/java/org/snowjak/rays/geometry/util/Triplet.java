@@ -10,7 +10,7 @@ import java.util.function.UnaryOperator;
  * 
  * @author snowjak88
  */
-public class Triplet extends NVector<Triplet> implements Serializable {
+public class Triplet extends AbstractVector<Triplet> implements Serializable {
 
 	private static final long serialVersionUID = 709936070558428071L;
 
@@ -46,13 +46,13 @@ public class Triplet extends NVector<Triplet> implements Serializable {
 	@Override
 	public Triplet apply(UnaryOperator<Double> operator) {
 
-		return new Triplet(NVector.apply(getAll(), operator));
+		return new Triplet(AbstractVector.apply(getAll(), operator));
 	}
 
 	@Override
 	public Triplet apply(Triplet other, BinaryOperator<Double> operator) {
 
-		return new Triplet(NVector.apply(getAll(), other.getAll(), operator));
+		return new Triplet(AbstractVector.apply(getAll(), other.getAll(), operator));
 	}
 
 }

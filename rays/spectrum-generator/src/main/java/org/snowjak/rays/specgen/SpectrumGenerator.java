@@ -45,13 +45,13 @@ public class SpectrumGenerator implements CommandLineRunner {
 		LOG.info("Starting from " + rgb.toString());
 		LOG.info("CIE XYZ = " + xyz.toString());
 		
-		final var result = new BruteForceSearchSpectrumGeneratorJob(BruteForceSearchSpectrumGeneratorJob.TABLE, xyz, 8,
-				0d, +1d, 0.1d, Double.MAX_VALUE, 16).generate();
+		final var result = new BruteForceSearchSpectrumGeneratorJob(BruteForceSearchSpectrumGeneratorJob.TABLE, xyz, 6,
+				0d, +1d, 0.01d, 0.01, 16).generate();
 		
 		final var resultingXYZ = CIEXYZ.fromSpectrum(result);
 		
 		LOG.info("Found XYZ = " + resultingXYZ.toString());
-		LOG.info("-> RGB = " + resultingXYZ.toRGB().toString());
+		LOG.info("-> RGBColorspace = " + resultingXYZ.toRGB().toString());
 		
 	}
 	

@@ -9,7 +9,7 @@ import java.io.Serializable;
 import org.snowjak.rays.geometry.util.Triplet;
 
 /**
- * Simple holder for a trio of RGB values.
+ * Simple holder for a trio of RGBColorspace values.
  * <p>
  * <strong>Note</strong> that these components are not clamped in any way --
  * they may take any value, positive or negative.
@@ -22,30 +22,30 @@ public class RGB implements Serializable {
 	private static final long serialVersionUID = 9081734196618975104L;
 	
 	/**
-	 * <code>RGB(0,0,0)</code>
+	 * <code>RGBColorspace(0,0,0)</code>
 	 */
 	public static final RGB BLACK = new RGB(0d, 0d, 0d);
 	/**
-	 * <code>RGB(1,0,0)</code>
+	 * <code>RGBColorspace(1,0,0)</code>
 	 */
 	public static final RGB RED = new RGB(1d, 0d, 0d);
 	/**
-	 * <code>RGB(0,1,0)</code>
+	 * <code>RGBColorspace(0,1,0)</code>
 	 */
 	public static final RGB GREEN = new RGB(0d, 1d, 0d);
 	/**
-	 * <code>RGB(0,0,1)</code>
+	 * <code>RGBColorspace(0,0,1)</code>
 	 */
 	public static final RGB BLUE = new RGB(0d, 0d, 1d);
 	/**
-	 * <code>RGB(1,1,1)</code>
+	 * <code>RGBColorspace(1,1,1)</code>
 	 */
 	public static final RGB WHITE = new RGB(1d, 1d, 1d);
 	
 	private Triplet rgb;
 	
 	/**
-	 * Construct a new RGB trio from an HSL trio.
+	 * Construct a new RGBColorspace trio from an HSL trio.
 	 * 
 	 * @param hue
 	 *            hue-angle, given in <strong>degrees</strong>
@@ -100,7 +100,7 @@ public class RGB implements Serializable {
 	}
 	
 	/**
-	 * Given an integer containing a packed ARGB quadruple, unpack it into an RGB
+	 * Given an integer containing a packed ARGB quadruple, unpack it into an RGBColorspace
 	 * instance.
 	 * 
 	 * @param packedRGB
@@ -120,7 +120,7 @@ public class RGB implements Serializable {
 	}
 	
 	/**
-	 * Given an RGB instance, transform it to a packed ARGB quadruple.
+	 * Given an RGBColorspace instance, transform it to a packed ARGB quadruple.
 	 * 
 	 * @param rgb
 	 * @return
@@ -137,10 +137,10 @@ public class RGB implements Serializable {
 	}
 	
 	/**
-	 * Pack this RGB instance into an ARGB quadruple.
+	 * Pack this RGBColorspace instance into an ARGB quadruple.
 	 * 
 	 * @return
-	 * @see #toPacked(RGB)
+	 * @see #toPacked(RGBColorspace)
 	 */
 	public int toPacked() {
 		
@@ -193,7 +193,7 @@ public class RGB implements Serializable {
 	}
 	
 	/**
-	 * @return a new RGB trio with each component clamped to <code>[0,1]</code>
+	 * @return a new RGBColorspace trio with each component clamped to <code>[0,1]</code>
 	 */
 	public RGB clamp() {
 		
@@ -232,7 +232,7 @@ public class RGB implements Serializable {
 	
 	/**
 	 * <strong>Note</strong> that the <code>double</code> array returned here is the
-	 * backing array of this RGB object. Modifying this array directly is considered
+	 * backing array of this RGBColorspace object. Modifying this array directly is considered
 	 * to be unsafe, as it breaks the "value-object" paradigm.
 	 * 
 	 * @return an array of 3 <code>double</code>s: <code>{ red, green, blue }</code>
@@ -269,7 +269,7 @@ public class RGB implements Serializable {
 	@Override
 	public String toString() {
 		
-		return "RGB [red=" + Double.toString(rgb.get(0)) + ", green=" + Double.toString(rgb.get(1)) + ", blue="
+		return "RGBColorspace [red=" + Double.toString(rgb.get(0)) + ", green=" + Double.toString(rgb.get(1)) + ", blue="
 				+ Double.toString(rgb.get(2)) + "]";
 	}
 	

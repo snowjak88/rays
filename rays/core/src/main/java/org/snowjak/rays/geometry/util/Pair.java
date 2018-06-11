@@ -10,7 +10,7 @@ import java.util.function.UnaryOperator;
  * 
  * @author snowjak88
  */
-public class Pair extends NVector<Pair> implements Serializable {
+public class Pair extends AbstractVector<Pair> implements Serializable {
 	
 	private static final long serialVersionUID = 8826976880964290469L;
 	
@@ -50,13 +50,13 @@ public class Pair extends NVector<Pair> implements Serializable {
 	@Override
 	public Pair apply(UnaryOperator<Double> operator) {
 		
-		return new Pair(NVector.apply(getAll(), operator));
+		return new Pair(AbstractVector.apply(getAll(), operator));
 	}
 	
 	@Override
 	public Pair apply(Pair other, BinaryOperator<Double> operator) {
 		
-		return new Pair(NVector.apply(getAll(), other.getAll(), operator));
+		return new Pair(AbstractVector.apply(getAll(), other.getAll(), operator));
 	}
 	
 }

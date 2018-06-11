@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.geometry.util.Pair;
 
 public class CIEXYZTest {
 	
@@ -79,13 +80,26 @@ public class CIEXYZTest {
 		assertEquals("XYZ (Z) is not as expected!", 0.95050, xyz.getZ(), 0.0001);
 	}
 	
+	@Test
+	public void testFromXyY() {
+		
+		final CIEXYZ xyz = CIEXYZ.fromRGB(RGB.GREEN);
+		final Pair xy = xyz.toXY();
+		final CIEXYZ reconstructed = CIEXYZ.fromXY(xy, xyz.getY());
+		
+		assertEquals("XYZ (X) is not as expected!", xyz.getX(), reconstructed.getX(), 0.00001);
+		assertEquals("XYZ (Y) is not as expected!", xyz.getY(), reconstructed.getY(), 0.00001);
+		assertEquals("XYZ (Z) is not as expected!", xyz.getZ(), reconstructed.getZ(), 0.00001);
+		
+	}
+	
 	public void testToRGB_1() {
 		
 		final RGB rgb = new CIEXYZ(0.10, 0.10, 0.10).toRGB();
 		
-		assertEquals("RGB (R) is not as expected!", 0.38182, rgb.getRed(), 0.0001);
-		assertEquals("RGB (G) is not as expected!", 0.34035, rgb.getGreen(), 0.0001);
-		assertEquals("RGB (B) is not as expected!", 0.33341, rgb.getBlue(), 0.0001);
+		assertEquals("RGBColorspace (R) is not as expected!", 0.38182, rgb.getRed(), 0.0001);
+		assertEquals("RGBColorspace (G) is not as expected!", 0.34035, rgb.getGreen(), 0.0001);
+		assertEquals("RGBColorspace (B) is not as expected!", 0.33341, rgb.getBlue(), 0.0001);
 		
 	}
 	
@@ -93,9 +107,9 @@ public class CIEXYZTest {
 		
 		final RGB rgb = new CIEXYZ(0.30, 0.40, 0.50).toRGB();
 		
-		assertEquals("RGB (R) is not as expected!", 0.36239, rgb.getRed(), 0.0001);
-		assertEquals("RGB (G) is not as expected!", 0.72230, rgb.getGreen(), 0.0001);
-		assertEquals("RGB (B) is not as expected!", 0.71092, rgb.getBlue(), 0.0001);
+		assertEquals("RGBColorspace (R) is not as expected!", 0.36239, rgb.getRed(), 0.0001);
+		assertEquals("RGBColorspace (G) is not as expected!", 0.72230, rgb.getGreen(), 0.0001);
+		assertEquals("RGBColorspace (B) is not as expected!", 0.71092, rgb.getBlue(), 0.0001);
 		
 	}
 	

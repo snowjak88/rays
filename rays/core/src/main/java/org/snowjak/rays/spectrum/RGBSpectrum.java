@@ -4,7 +4,7 @@ import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 
 /**
- * Represents a {@link Spectrum} using a simple RGB trio.
+ * Represents a {@link Spectrum} using a simple RGBColorspace trio.
  * 
  * @author snowjak88
  */
@@ -17,7 +17,7 @@ public class RGBSpectrum implements Spectrum {
 	 */
 	public static final RGBSpectrum BLACK = new RGBSpectrum(RGB.BLACK);
 	/**
-	 * Represents a 1.0-energy Spectrum. (i.e., equivalent to {@link RGB#WHITE})
+	 * Represents a 1.0-energy Spectrum. (i.e., equivalent to {@link RGBColorspace#WHITE})
 	 */
 	public static final RGBSpectrum WHITE = new RGBSpectrum(RGB.WHITE);
 	
@@ -25,7 +25,7 @@ public class RGBSpectrum implements Spectrum {
 	private double amplitude = -1d;
 	
 	/**
-	 * Construct a new {@link RGBSpectrum} instance encapsulating {@link RGB#BLACK}.
+	 * Construct a new {@link RGBSpectrum} instance encapsulating {@link RGBColorspace#BLACK}.
 	 */
 	public RGBSpectrum() {
 		
@@ -78,7 +78,7 @@ public class RGBSpectrum implements Spectrum {
 		
 		if (amplitude < 0d) {
 			//
-			// Compute amplitude of this RGB trio by partially converting it to
+			// Compute amplitude of this RGBColorspace trio by partially converting it to
 			// an HSL trio -- calculating "L", at least.
 			//
 			final double minComponent = min(min(rgb.getRed(), rgb.getGreen()), rgb.getBlue());
