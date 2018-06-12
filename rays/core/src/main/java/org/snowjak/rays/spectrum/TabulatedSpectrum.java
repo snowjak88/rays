@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.DoubleBinaryOperator;
+import java.util.function.DoubleUnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 
@@ -23,7 +24,7 @@ import org.snowjak.rays.spectrum.distribution.TabulatedSpectralPowerDistribution
  * @author snowjak88
  *
  */
-public class TabulatedSpectrum extends TabulatedSpectralPowerDistribution implements Spectrum<TabulatedSpectrum> {
+public class TabulatedSpectrum extends TabulatedSpectralPowerDistribution implements Spectrum {
 	
 	private static final long serialVersionUID = 5238589914392913471L;
 	
@@ -32,18 +33,17 @@ public class TabulatedSpectrum extends TabulatedSpectralPowerDistribution implem
 		super();
 	}
 	
-	public <R extends TabulatedDistribution<Double> & SpectralPowerDistribution> TabulatedSpectrum(R spd) {
-		
-		super();
-		spd.getAll().forEach(p -> this.addEntry(p.getKey(), p.getValue()));
-	}
-	
+	@SuppressWarnings("unchecked")
 	public TabulatedSpectrum(SpectralPowerDistribution spd) {
 		
 		super();
-		spd.toTabulatedForm(TabulatedSpectralPowerDistribution::new, spd.getLowestWavelength(),
-				spd.getHighestWavelength(), Settings.getInstance().getCieXyzIntegrationStepCount()).getAll()
-				.forEach(p -> this.addEntry(p.getKey(), p.getValue()));
+		
+		if (TabulatedDistribution.class.isAssignableFrom(spd.getClass()))
+			((TabulatedDistribution<Double>) spd).getAll().forEach(p -> this.addEntry(p.getKey(), p.getValue()));
+		else
+			spd.toTabulatedForm(TabulatedSpectralPowerDistribution::new, spd.getLowestWavelength(),
+					spd.getHighestWavelength(), Settings.getInstance().getCieXyzIntegrationStepCount()).getAll()
+					.forEach(p -> this.addEntry(p.getKey(), p.getValue()));
 	}
 	
 	public TabulatedSpectrum(Map<Double, Double> distribution, BlendMethod<Double> blend) {
@@ -60,6 +60,12 @@ public class TabulatedSpectrum extends TabulatedSpectralPowerDistribution implem
 	public boolean isBlack() {
 		
 		return !(getAll().stream().anyMatch(p -> p.getValue() > Settings.getInstance().getDoubleEqualityEpsilon()));
+	}
+	
+	private TabulatedSpectrum apply(DoubleUnaryOperator operator) {
+		
+		return new TabulatedSpectrum(this.getTable().entrySet().stream()
+				.collect(Collectors.toMap(e -> e.getKey(), e -> operator.applyAsDouble(e.getValue()))));
 	}
 	
 	private TabulatedSpectrum apply(TabulatedSpectrum other, DoubleBinaryOperator operator, double defaultIfMissing) {
@@ -116,22 +122,21 @@ public class TabulatedSpectrum extends TabulatedSpectralPowerDistribution implem
 	}
 	
 	@Override
-	public TabulatedSpectrum add(TabulatedSpectrum addend) {
+	public TabulatedSpectrum add(Spectrum addend) {
 		
-		return this.apply(addend, (d1, d2) -> d1 + d2, 0d);
+		return this.apply(new TabulatedSpectrum(addend), (d1, d2) -> d1 + d2, 0d);
 	}
 	
 	@Override
-	public TabulatedSpectrum multiply(TabulatedSpectrum multiplicand) {
+	public TabulatedSpectrum multiply(Spectrum multiplicand) {
 		
-		return this.apply(multiplicand, (d1, d2) -> d1 * d2, 0d);
+		return this.apply(new TabulatedSpectrum(multiplicand), (d1, d2) -> d1 * d2, 0d);
 	}
 	
 	@Override
 	public TabulatedSpectrum multiply(double scalar) {
 		
-		return new TabulatedSpectrum(this.getAll().stream().map(p -> new Pair(p.getKey(), p.getValue() * scalar))
-				.collect(Collectors.toMap((Pair p) -> p.get(0), (Pair p) -> p.get(1))));
+		return this.apply(d -> d * scalar);
 	}
 	
 	@Override

@@ -3,6 +3,7 @@ package org.snowjak.rays.spectrum;
 import java.io.Serializable;
 
 import org.snowjak.rays.spectrum.colorspace.RGB;
+import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 /**
  * Represents a measurement of radiant energy distributed across several
@@ -10,7 +11,7 @@ import org.snowjak.rays.spectrum.colorspace.RGB;
  * 
  * @author snowjak88
  */
-public interface Spectrum<S extends Spectrum<S>> extends Serializable {
+public interface Spectrum extends Serializable, SpectralPowerDistribution {
 	
 	/**
 	 * @return <code>true</code> if this Spectrum has 0 (or even very close to 0)
@@ -21,13 +22,13 @@ public interface Spectrum<S extends Spectrum<S>> extends Serializable {
 	/**
 	 * Compute the result of adding this Spectrum's energy with another.
 	 */
-	public S add(S addend);
+	public Spectrum add(Spectrum addend);
 	
 	/**
 	 * Compute the result of multiplying this Spectrum's energy with another.
 	 * (Usually used to model filtering or fractional selection of radiant energy.)
 	 */
-	public S multiply(S multiplicand);
+	public Spectrum multiply(Spectrum multiplicand);
 	
 	/**
 	 * Compute the result of multiplying this Spectrum's energy by a scalar factor
@@ -36,7 +37,7 @@ public interface Spectrum<S extends Spectrum<S>> extends Serializable {
 	 * @param scalar
 	 * @return
 	 */
-	public S multiply(double scalar);
+	public Spectrum multiply(double scalar);
 	
 	/**
 	 * Compute this Spectrum's amplitude -- a measure of its average intensity over
