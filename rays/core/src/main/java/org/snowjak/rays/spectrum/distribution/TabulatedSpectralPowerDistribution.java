@@ -34,6 +34,16 @@ public class TabulatedSpectralPowerDistribution extends TabulatedDistribution<Do
 	}
 	
 	/**
+	 * Copy an existing {@link TabulatedSpectralPowerDistribution}.
+	 * 
+	 * @param toCopy
+	 */
+	public <T extends TabulatedSpectralPowerDistribution> TabulatedSpectralPowerDistribution(T toCopy) {
+		
+		super(toCopy);
+	}
+	
+	/**
 	 * Construct a new TabulatedSpectralPowerDistribution, using a linear
 	 * {@link BlendMethod}. We assume that the given <code>distribution</code> is
 	 * composed of:
@@ -111,6 +121,56 @@ public class TabulatedSpectralPowerDistribution extends TabulatedDistribution<Do
 	public String writeEntry(Double key, Double entry) {
 		
 		return Arrays.asList(key, entry).stream().map(d -> Double.toString(d)).collect(Collectors.joining(","));
+	}
+	
+	public TabulatedSpectralPowerDistribution normalize() {
+		
+		return this.normalize(map -> new TabulatedSpectralPowerDistribution(map), (d) -> d, (d, f) -> d * f);
+	}
+	
+	@Override
+	public Double averageOver(Double intervalStart, Double intervalEnd) {
+		
+		final double start, end;
+		if (intervalStart > intervalEnd) {
+			start = intervalEnd;
+			end = intervalStart;
+		} else {
+			start = intervalStart;
+			end = intervalEnd;
+		}
+		
+		if ((end < getTable().firstKey()) || (start > getTable().lastKey()))
+			return 0d;
+		
+		final var intervalStartingEntry = getTable().ceilingEntry(start);
+		final var intervalEndingEntry = getTable().floorEntry(end);
+		
+		final var beforeIntervalEntry = getTable().lowerEntry(start);
+		final var afterIntervalEntry = getTable().higherEntry(end);
+		
+		var currentKey = intervalStartingEntry.getKey();
+		var nextKey = getTable().higherKey(currentKey);
+		
+		double totalArea = 0d;
+		
+		if (beforeIntervalEntry != null && intervalStartingEntry.getKey() > intervalStart)
+			totalArea += (0.5d * (get(intervalStart) + intervalStartingEntry.getValue()))
+					* (intervalStartingEntry.getKey() - intervalStart);
+		
+		while (nextKey != null && nextKey <= intervalEndingEntry.getKey()) {
+			
+			totalArea += (0.5d * (get(currentKey) + get(nextKey))) * (nextKey - currentKey);
+			
+			currentKey = nextKey;
+			nextKey = getTable().higherKey(currentKey);
+		}
+		
+		if (afterIntervalEntry != null && intervalEndingEntry.getKey() < intervalEnd)
+			totalArea += (0.5d * (intervalEndingEntry.getValue() + get(intervalEnd)))
+					* (intervalEnd - intervalEndingEntry.getKey());
+		
+		return totalArea / (intervalEnd - intervalStart);
 	}
 	
 }

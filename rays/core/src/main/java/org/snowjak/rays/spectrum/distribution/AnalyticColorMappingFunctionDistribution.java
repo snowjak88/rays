@@ -3,6 +3,8 @@ package org.snowjak.rays.spectrum.distribution;
 import static org.apache.commons.math3.util.FastMath.exp;
 import static org.apache.commons.math3.util.FastMath.pow;
 
+import org.snowjak.rays.Settings;
+import org.snowjak.rays.Util;
 import org.snowjak.rays.geometry.util.Triplet;
 
 /**
@@ -45,6 +47,16 @@ public class AnalyticColorMappingFunctionDistribution implements ColorMappingFun
 		final double t1 = (lambda - 437.0d) * ((lambda < 437.0d) ? 0.0845d : 0.0278d);
 		final double t2 = (lambda - 459.0d) * ((lambda < 459.0d) ? 0.0385d : 0.0725d);
 		return 1.217d * exp(-0.5d * pow(t1, 2)) + 0.681d * exp(-0.5f * pow(t2, 2));
+	}
+	
+	@Override
+	public Triplet averageOver(Double intervalStart, Double intervalEnd) {
+		
+		final double start = (intervalEnd > intervalStart) ? intervalStart : intervalEnd;
+		final double end = (intervalEnd > intervalStart) ? intervalEnd : intervalStart;
+		
+		return Util.integrateTriplet(start, end, Settings.getInstance().getCieXyzIntegrationStepCount(), (d) -> get(d))
+				.divide(end - start);
 	}
 	
 }

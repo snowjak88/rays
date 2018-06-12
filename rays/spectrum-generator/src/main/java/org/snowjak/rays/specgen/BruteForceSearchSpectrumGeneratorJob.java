@@ -21,8 +21,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snowjak.rays.spectrum.CIEXYZ;
-import org.snowjak.rays.spectrum.distribution.PolynomialSpectralPowerDistribution;
+import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.spectrum.distribution.TabulatedSpectralPowerDistribution;
 
@@ -30,8 +29,6 @@ public class BruteForceSearchSpectrumGeneratorJob {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(BruteForceSearchSpectrumGeneratorJob.class);
 	
-	public static final Function<double[], SpectralPowerDistribution> POLYNOMIAL = (
-			ds) -> new PolynomialSpectralPowerDistribution((double[]) ds);
 	public static final Function<double[], SpectralPowerDistribution> TABLE = (ds) -> {
 		final double low = 360d, high = 830d;
 		final Map<Double, Double> table = new HashMap<>();
@@ -49,7 +46,7 @@ public class BruteForceSearchSpectrumGeneratorJob {
 	private final AtomicLong searchJobsRunning;
 	
 	private final Function<double[], SpectralPowerDistribution> spdType;
-	private final CIEXYZ target;
+	private final XYZ target;
 	private final int binCount;
 	private final double searchMinValue;
 	private final double searchMaxValue;
@@ -57,7 +54,7 @@ public class BruteForceSearchSpectrumGeneratorJob {
 	private final double tolerance;
 	private final int resultsRetentionLimit;
 	
-	public BruteForceSearchSpectrumGeneratorJob(Function<double[], SpectralPowerDistribution> spdType, CIEXYZ target,
+	public BruteForceSearchSpectrumGeneratorJob(Function<double[], SpectralPowerDistribution> spdType, XYZ target,
 			int binCount, double searchMinValue, double searchMaxValue, double searchStepSize, double tolerance,
 			int resultsRetentionLimit) {
 		
@@ -169,12 +166,12 @@ public class BruteForceSearchSpectrumGeneratorJob {
 		
 		private final Function<double[], SpectralPowerDistribution> spdType;
 		private final double[] value;
-		private final CIEXYZ target;
+		private final XYZ target;
 		private final double tolerance;
 		
 		public BruteForceComputeTask(Function<double[], SpectralPowerDistribution> spdType,
-				BlockingQueue<Pair<Double, double[]>> queue, AtomicLong jobRunningCounter, double[] value,
-				CIEXYZ target, double tolerance) {
+				BlockingQueue<Pair<Double, double[]>> queue, AtomicLong jobRunningCounter, double[] value, XYZ target,
+				double tolerance) {
 			
 			this.spdType = spdType;
 			this.queue = queue;
@@ -190,9 +187,9 @@ public class BruteForceSearchSpectrumGeneratorJob {
 			try {
 				final var candidateSpectrum = spdType.apply(value);
 				
-				final var evaluatedTriplet = CIEXYZ.fromSpectrum(candidateSpectrum).getTriplet();
+				final var evaluatedTriplet = XYZ.fromSpectrum(candidateSpectrum).get();
 				
-				final var distance = target.getTriplet().subtract(evaluatedTriplet).apply(c -> pow(c, 2)).summarize();
+				final var distance = target.get().subtract(evaluatedTriplet).apply(c -> pow(c, 2)).summarize();
 				
 				if (distance <= tolerance) {
 					queue.put(new Pair<>(distance, value));

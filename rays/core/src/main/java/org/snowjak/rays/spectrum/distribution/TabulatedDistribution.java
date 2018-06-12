@@ -12,6 +12,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -40,7 +42,7 @@ public abstract class TabulatedDistribution<V> implements Distribution<V> {
 	 * @return
 	 * @throws IOException
 	 */
-	public static <R extends TabulatedDistribution<V>, V> R loadFromCSV(Supplier<R> supplier, InputStream csv)
+	public static <V, R extends TabulatedDistribution<V>> R loadFromCSV(Supplier<R> supplier, InputStream csv)
 			throws IOException {
 		
 		final var distribution = supplier.get();
@@ -91,6 +93,16 @@ public abstract class TabulatedDistribution<V> implements Distribution<V> {
 	}
 	
 	/**
+	 * Copy an existing {@link TabulatedDistribution}.
+	 * 
+	 * @param toCopy
+	 */
+	public <T extends TabulatedDistribution<V>> TabulatedDistribution(T toCopy) {
+		
+		this(toCopy.getTable(), toCopy.getBlendMethod());
+	}
+	
+	/**
 	 * Construct a new {@link TabulatedDistribution}, using the default
 	 * linear-interpolation {@link LinearBlendMethod}.
 	 * 
@@ -119,6 +131,14 @@ public abstract class TabulatedDistribution<V> implements Distribution<V> {
 	public V get(Double k) {
 		
 		return this.blendMethod.get(this, k);
+	}
+	
+	/**
+	 * @return the {@link NavigableMap} backing this {@link TabulatedDistribution}
+	 */
+	protected NavigableMap<Double, V> getTable() {
+		
+		return this.table;
 	}
 	
 	/**
@@ -175,8 +195,42 @@ public abstract class TabulatedDistribution<V> implements Distribution<V> {
 	/**
 	 * Defines the linear-interpolation {@link TriFunction} to use, should the user
 	 * desire to use a {@link LinearBlendMethod}.
+	 * <p>
+	 * The function must be of the form:
+	 * 
+	 * <pre>
+	 * f(intervalStart, intervalEnd, fractionAcrossInterval)
+	 * </pre>
+	 * </p>
 	 */
 	public abstract TriFunction<V, V, Double, V> getLinearInterpolationFunction();
+	
+	/**
+	 * Normalize this tabulated distribution -- i.e., computing the maximum value of
+	 * any single entry, and scaling all entries relative to that maximum value.
+	 * 
+	 * @param constructor
+	 *            a constructor for a {@link TabulatedDistribution} implementation
+	 * @param metric
+	 *            calculates the "extent" or "value" of this distribution's type
+	 * @param scaler
+	 *            scales an entry in this distribution according to some fraction
+	 *            (e.g., for a Double-valued Distribution, simple multiplication
+	 *            will work)
+	 */
+	@SuppressWarnings("unchecked")
+	public <D extends TabulatedDistribution<V>> D normalize(Function<Map<Double, V>, D> constructor,
+			Function<V, Double> metric, BiFunction<V, Double, V> scaler) {
+		
+		final var maxValue = this.getAll().stream().mapToDouble(p -> metric.apply(p.getValue())).max();
+		
+		if (!maxValue.isPresent())
+			return (D) this;
+		
+		return constructor.apply(this.getAll().stream()
+				.map(p -> new Pair<>(p.getKey(), scaler.apply(p.getValue(), 1d / maxValue.getAsDouble())))
+				.collect(Collectors.toMap((Pair<Double, V> p) -> p.getKey(), (Pair<Double, V> p) -> p.getValue())));
+	}
 	
 	/**
 	 * Given a single line of CSV data, parse a single distribution-entry.
@@ -223,11 +277,11 @@ public abstract class TabulatedDistribution<V> implements Distribution<V> {
 		@Override
 		public V get(TabulatedDistribution<V> table, Double key) {
 			
-			if (table.table == null || table.table.isEmpty())
+			if (table.getTable() == null || table.getTable().isEmpty())
 				return null;
 			
-			final var lower = table.table.floorEntry(key);
-			final var upper = table.table.ceilingEntry(key);
+			final var lower = table.getTable().floorEntry(key);
+			final var upper = table.getTable().ceilingEntry(key);
 			
 			if (lower == null && upper == null)
 				return null;
@@ -252,6 +306,14 @@ public abstract class TabulatedDistribution<V> implements Distribution<V> {
 		 * Construct a new {@link LinearBlendMethod}. You must provide an implementation
 		 * of linear-interpolation for your chosen value-type.
 		 * 
+		 * <p>
+		 * The function must be of the form:
+		 * 
+		 * <pre>
+		 * f(intervalStart, intervalEnd, fractionAcrossInterval)
+		 * </pre>
+		 * </p>
+		 * 
 		 * @param interpolation
 		 */
 		public LinearBlendMethod(TriFunction<V, V, Double, V> interpolation) {
@@ -262,11 +324,11 @@ public abstract class TabulatedDistribution<V> implements Distribution<V> {
 		@Override
 		public V get(TabulatedDistribution<V> table, Double key) {
 			
-			if (table.table == null || table.table.isEmpty())
+			if (table.getTable() == null || table.getTable().isEmpty())
 				return null;
 			
-			final var lower = table.table.floorEntry(key);
-			final var upper = table.table.ceilingEntry(key);
+			final var lower = table.getTable().floorEntry(key);
+			final var upper = table.getTable().ceilingEntry(key);
 			
 			if (lower == null && upper == null)
 				return null;

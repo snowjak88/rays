@@ -3,12 +3,15 @@ package org.snowjak.rays.spectrum;
 import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 
+import org.snowjak.rays.geometry.util.Triplet;
+import org.snowjak.rays.spectrum.colorspace.RGB;
+
 /**
- * Represents a {@link Spectrum} using a simple RGBColorspace trio.
+ * Represents a {@link Spectrum} using a simple RGB trio.
  * 
  * @author snowjak88
  */
-public class RGBSpectrum implements Spectrum {
+public class RGBSpectrum implements Spectrum<RGBSpectrum> {
 	
 	private static final long serialVersionUID = -4926041992553421158L;
 	
@@ -17,7 +20,7 @@ public class RGBSpectrum implements Spectrum {
 	 */
 	public static final RGBSpectrum BLACK = new RGBSpectrum(RGB.BLACK);
 	/**
-	 * Represents a 1.0-energy Spectrum. (i.e., equivalent to {@link RGBColorspace#WHITE})
+	 * Represents a 1.0-energy Spectrum. (i.e., equivalent to {@link RGB#WHITE})
 	 */
 	public static final RGBSpectrum WHITE = new RGBSpectrum(RGB.WHITE);
 	
@@ -25,22 +28,21 @@ public class RGBSpectrum implements Spectrum {
 	private double amplitude = -1d;
 	
 	/**
-	 * Construct a new {@link RGBSpectrum} instance encapsulating {@link RGBColorspace#BLACK}.
+	 * Construct a new {@link RGBSpectrum} instance encapsulating {@link RGB#BLACK}.
 	 */
 	public RGBSpectrum() {
 		
 		this(RGB.BLACK);
 	}
 	
+	public RGBSpectrum(Triplet rgb) {
+		
+		this(new RGB(rgb));
+	}
+	
 	public RGBSpectrum(RGB rgb) {
 		
 		this.rgb = rgb;
-	}
-	
-	protected void setRGB(RGB rgb) {
-		
-		this.rgb = rgb;
-		this.amplitude = -1d;
 	}
 	
 	public RGB getRGB() {
@@ -56,21 +58,21 @@ public class RGBSpectrum implements Spectrum {
 	}
 	
 	@Override
-	public Spectrum add(Spectrum addend) {
+	public RGBSpectrum add(RGBSpectrum addend) {
 		
-		return new RGBSpectrum(rgb.add(addend.toRGB()));
+		return new RGBSpectrum(rgb.get().add(addend.toRGB().get()));
 	}
 	
 	@Override
-	public Spectrum multiply(Spectrum multiplicand) {
+	public RGBSpectrum multiply(RGBSpectrum multiplicand) {
 		
-		return new RGBSpectrum(rgb.multiply(multiplicand.toRGB()));
+		return new RGBSpectrum(rgb.get().multiply(multiplicand.toRGB().get()));
 	}
 	
 	@Override
-	public Spectrum multiply(double scalar) {
+	public RGBSpectrum multiply(double scalar) {
 		
-		return new RGBSpectrum(rgb.multiply(scalar));
+		return new RGBSpectrum(rgb.get().multiply(scalar));
 	}
 	
 	@Override
@@ -78,7 +80,7 @@ public class RGBSpectrum implements Spectrum {
 		
 		if (amplitude < 0d) {
 			//
-			// Compute amplitude of this RGBColorspace trio by partially converting it to
+			// Compute amplitude of this RGB trio by partially converting it to
 			// an HSL trio -- calculating "L", at least.
 			//
 			final double minComponent = min(min(rgb.getRed(), rgb.getGreen()), rgb.getBlue());

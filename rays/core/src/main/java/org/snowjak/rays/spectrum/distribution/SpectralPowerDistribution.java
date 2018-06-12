@@ -36,5 +36,4 @@ public interface SpectralPowerDistribution extends Distribution<Double> {
 		
 		return this.getHighKey();
 	}
-	
 }

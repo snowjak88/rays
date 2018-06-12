@@ -2,8 +2,8 @@ package org.snowjak.rays.specgen;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snowjak.rays.spectrum.CIEXYZ;
-import org.snowjak.rays.spectrum.RGB;
+import org.snowjak.rays.spectrum.colorspace.RGB;
+import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -39,8 +39,8 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		
-		final var rgb = new RGB(0.5, 0.5, 0.5);
-		final var xyz = CIEXYZ.fromRGB(rgb);
+		final var rgb = new org.snowjak.rays.spectrum.colorspace.RGB(0.5, 0.5, 0.5);
+		final var xyz = rgb.to(XYZ.class);
 		
 		LOG.info("Starting from " + rgb.toString());
 		LOG.info("CIE XYZ = " + xyz.toString());
@@ -48,10 +48,10 @@ public class SpectrumGenerator implements CommandLineRunner {
 		final var result = new BruteForceSearchSpectrumGeneratorJob(BruteForceSearchSpectrumGeneratorJob.TABLE, xyz, 6,
 				0d, +1d, 0.01d, 0.01, 16).generate();
 		
-		final var resultingXYZ = CIEXYZ.fromSpectrum(result);
+		final var resultingXYZ = XYZ.fromSpectrum(result);
 		
 		LOG.info("Found XYZ = " + resultingXYZ.toString());
-		LOG.info("-> RGBColorspace = " + resultingXYZ.toRGB().toString());
+		LOG.info("-> RGB = " + resultingXYZ.to(RGB.class).toString());
 		
 	}
 	

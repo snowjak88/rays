@@ -1,17 +1,16 @@
 package org.snowjak.rays.spectrum.distribution;
 
-import static org.apache.commons.math3.util.FastMath.max;
-import static org.apache.commons.math3.util.FastMath.min;
-import static org.apache.commons.math3.util.FastMath.signum;
-
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
 import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.Pair;
+import org.snowjak.rays.Settings;
+import org.snowjak.rays.Util;
 
 /**
  * Represents a {@link Distribution} backed by a polynomial.
@@ -70,31 +69,6 @@ public class PolynomialDistribution implements Distribution<Double> {
 	}
 	
 	/**
-	 * Compute a tabulated form of this PolynomialDistribution.
-	 * 
-	 * @param rangeStart
-	 *            the first key to include
-	 * @param rangeEnd
-	 *            the last key to include
-	 * @param interval
-	 *            the interval between keys
-	 * @return
-	 */
-	public TabulatedDistribution<Double> toTable(double rangeStart, double rangeEnd, double interval) {
-		
-		final double start = min(rangeStart, rangeEnd);
-		final double end = max(rangeStart, rangeEnd);
-		final double interv = signum(rangeEnd - rangeStart) * interval;
-		
-		//@formatter:off
-		return new TabulatedSpectralPowerDistribution(
-				DoubleStream.iterate(start, (d) -> d <= end, (d) -> d += interv)
-					.mapToObj(k -> new Pair<Double, Double>(k, this.get(k)))
-					.collect(Collectors.toMap(Pair::getKey, Pair::getValue)));
-		//@formatter:on
-	}
-	
-	/**
 	 * Evaluate this polynomial for the given parameter.
 	 */
 	@Override
@@ -121,6 +95,39 @@ public class PolynomialDistribution implements Distribution<Double> {
 	public Double getHighKey() {
 		
 		return null;
+	}
+	
+	@Override
+	public <R extends TabulatedDistribution<Double>> R toTabulatedForm(Supplier<R> supplier, Double lowKey,
+			Double highKey, int sampleCount) {
+		
+		final var table = supplier.get();
+		
+		if (sampleCount <= 0)
+			return table;
+		
+		if (sampleCount == 1) {
+			final var k = (highKey + lowKey) / 2d;
+			table.addEntry(k, this.get(k));
+			return table;
+		}
+		
+		final var sampleStepSize = (highKey - lowKey) / ((double) sampleCount - 1d);
+		DoubleStream.iterate(lowKey, d -> d <= highKey, d -> d + sampleStepSize)
+				.mapToObj(d -> new Pair<>(d, this.get(d))).forEach(p -> table.addEntry(p.getKey(), p.getValue()));
+		
+		return table;
+		
+	}
+	
+	@Override
+	public Double averageOver(Double intervalStart, Double intervalEnd) {
+		
+		final double start = (intervalEnd > intervalStart) ? intervalStart : intervalEnd;
+		final double end = (intervalEnd > intervalStart) ? intervalEnd : intervalStart;
+		
+		return Util.integrate(start, end, Settings.getInstance().getCieXyzIntegrationStepCount(), (x) -> this.get(x))
+				/ (end - start);
 	}
 	
 }

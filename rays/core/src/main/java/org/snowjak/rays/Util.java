@@ -1,5 +1,6 @@
 package org.snowjak.rays;
 
+import java.util.Arrays;
 import java.util.function.DoubleFunction;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.DoubleStream;
@@ -38,11 +39,11 @@ public class Util {
 	 */
 	public static double integrate(double intervalStart, double intervalEnd, int intervalCount, DoubleUnaryOperator f) {
 		
-		final double intervalStep = (intervalEnd - intervalStart) / ((double) intervalCount);
+		final double start = (intervalEnd > intervalStart) ? intervalStart : intervalEnd;
+		final double end = (intervalEnd > intervalStart) ? intervalEnd : intervalStart;
+		final double intervalStep = (end - start) / ((double) intervalCount);
 		
-		return DoubleStream
-				.iterate(intervalStart + intervalStep / 2d, d -> d <= intervalEnd - intervalStep / 2d,
-						d -> d + intervalStep)
+		return DoubleStream.iterate(start + intervalStep / 2d, d -> d <= end - intervalStep / 2d, d -> d + intervalStep)
 				.map(d -> f.applyAsDouble(d)).reduce(0d, (d1, d2) -> d1 + d2) * intervalStep;
 	}
 	
@@ -72,4 +73,32 @@ public class Util {
 				integrate(intervalStart, intervalEnd, intervalCount, zF));
 	}
 	
+	/**
+	 * Compute the average of a collection of Double values.
+	 * 
+	 * @param doubles
+	 * @return
+	 */
+	public static Double average(Double... doubles) {
+		
+		if (doubles == null || doubles.length < 1)
+			return 0d;
+		
+		return Arrays.stream(doubles).reduce(0d, (d1, d2) -> d1 + d2) / doubles.length;
+	}
+	
+	/**
+	 * Compute the average of a collection of Triplets (by averaging each component
+	 * separately).
+	 * 
+	 * @param doubles
+	 * @return
+	 */
+	public static Triplet average(Triplet... triplets) {
+		
+		if (triplets == null || triplets.length < 1)
+			return new Triplet(0, 0, 0);
+		
+		return Arrays.stream(triplets).reduce(new Triplet(), (t1, t2) -> t1.add(t2)).divide(triplets.length);
+	}
 }

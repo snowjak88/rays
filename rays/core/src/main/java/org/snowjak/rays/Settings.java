@@ -4,7 +4,6 @@ import java.util.Properties;
 import java.util.Random;
 
 import org.apache.commons.math3.util.FastMath;
-import org.snowjak.rays.spectrum.CIEXYZ;
 import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctionDistribution;
 import org.snowjak.rays.spectrum.distribution.ColorMappingFunctionDistribution;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
@@ -86,10 +85,12 @@ public class Settings {
 			
 			illuminatorSpectralPowerDistribution = (coreSettings
 					.containsKey("org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path"))
-							? TabulatedSpectralPowerDistribution.loadFromCSV(TabulatedSpectralPowerDistribution::new,
-									Settings.class.getClassLoader()
+							? TabulatedSpectralPowerDistribution
+									.loadFromCSV(TabulatedSpectralPowerDistribution::new, Settings.class
+											.getClassLoader()
 											.getResourceAsStream(coreSettings.getProperty(
 													"org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path")))
+									.normalize()
 							: getIlluminatorSpectralPowerDistribution();
 			
 			cieXyzIntegrationStepSize = Double.parseDouble(coreSettings.getProperty(

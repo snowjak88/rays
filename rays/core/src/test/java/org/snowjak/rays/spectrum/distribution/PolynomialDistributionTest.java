@@ -2,7 +2,9 @@ package org.snowjak.rays.spectrum.distribution;
 
 import static org.junit.Assert.*;
 
+import org.apache.commons.math3.util.Pair;
 import org.junit.Test;
+import org.snowjak.rays.TriFunction;
 
 public class PolynomialDistributionTest {
 	
@@ -17,16 +19,52 @@ public class PolynomialDistributionTest {
 	}
 	
 	@Test
-	public void testToTable() {
+	public void testToTabulatedForm() {
 		
 		final var p = new PolynomialDistribution(new double[] { 1d, 2d, 3d });
-		final var t = p.toTable(0.0, 2.0, 1.0);
 		
-		assertNotNull(t);
+		final var t = p.toTabulatedForm(TableForm::new, 0d, 2d, 3);
+		
 		assertEquals(3, t.getAll().size());
-		assertEquals(1.d, t.get(0.0), 0.00001);
-		assertEquals(6.d, t.get(1.0), 0.00001);
-		assertEquals(17.d, t.get(2.0), 0.00001);
+		
+		assertNotNull(t.get(0d));
+		assertEquals(1d, t.get(0d), 0.00001);
+		
+		assertNotNull(t.get(1d));
+		assertEquals(6d, t.get(1d), 0.00001);
+		
+		assertNotNull(t.get(2d));
+		assertEquals(17d, t.get(2d), 0.00001);
+	}
+	
+	public static class TableForm extends TabulatedDistribution<Double> {
+		
+		@Override
+		public Double averageOver(Double intervalStart, Double intervalEnd) {
+			
+			final double start = (intervalEnd > intervalStart) ? intervalStart : intervalEnd;
+			final double end = (intervalEnd > intervalStart) ? intervalEnd : intervalStart;
+			return getTable().entrySet().stream().filter(e -> e.getKey() >= start && e.getKey() <= end).reduce(0d,
+					(d, e) -> d + e.getValue(), (d1, d2) -> d1 + d2) / (end - start);
+		}
+		
+		@Override
+		public TriFunction<Double, Double, Double, Double> getLinearInterpolationFunction() {
+			
+			return (s, e, f) -> (1d - f) * s + (f) * e;
+		}
+		
+		@Override
+		public Pair<Double, Double> parseEntry(String csvLine) {
+			
+			return null;
+		}
+		
+		@Override
+		public String writeEntry(Double key, Double entry) {
+			
+			return null;
+		}
 		
 	}
 }

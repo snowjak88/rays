@@ -99,4 +99,28 @@ public class TabulatedSpectralPowerDistributionTest {
 		assertEquals("Written entry was not as expected!", expected, actual);
 	}
 	
+	@Test
+	public void testAverageOver_noOverlap() {
+		
+		final var p = new TabulatedSpectralPowerDistribution();
+		p.addEntry(0d, 0d);
+		p.addEntry(1d, 1d);
+		p.addEntry(2d, 2d);
+		
+		assertEquals(1d, p.averageOver(0d, 2d), 0.00001);
+		
+	}
+	
+	@Test
+	public void testAverageOver_overlap() {
+		
+		final var p = new TabulatedSpectralPowerDistribution();
+		p.addEntry(0d, 0d);
+		p.addEntry(1d, 1d);
+		p.addEntry(2d, 0d);
+		
+		assertEquals(0.75d, p.averageOver(0.5d, 1.5d), 0.00001);
+		
+	}
+	
 }
