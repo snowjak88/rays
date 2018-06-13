@@ -34,7 +34,7 @@ public class Sample implements Serializable {
 	private transient Iterator<Point2D> next2DSample = null;
 	
 	public Sample(long renderId, int samplesPerPixel, Point2D filmPoint, Point2D lensUV, Ray cameraRay,
-			Spectrum radiance) {
+			Spectrum radiance, List<Double> additional1DSamples, List<Point2D> additional2DSamples) {
 		
 		this.renderId = renderId;
 		this.samplesPerPixel = samplesPerPixel;
@@ -42,6 +42,8 @@ public class Sample implements Serializable {
 		this.lensUV = lensUV;
 		this.cameraRay = cameraRay;
 		this.radiance = radiance;
+		this.additional1DSamples = additional1DSamples;
+		this.additional2DSamples = additional2DSamples;
 	}
 	
 	public Sample() {
