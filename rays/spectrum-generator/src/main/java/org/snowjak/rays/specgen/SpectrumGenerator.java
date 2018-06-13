@@ -1,5 +1,12 @@
 package org.snowjak.rays.specgen;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.spectrum.colorspace.RGB;
@@ -31,6 +38,8 @@ public class SpectrumGenerator implements CommandLineRunner {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SpectrumGenerator.class);
 	
+	private final ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+	
 	public static void main(String[] args) {
 		
 		SpringApplication.run(SpectrumGenerator.class, args);
@@ -39,19 +48,33 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		
-		final var rgb = new org.snowjak.rays.spectrum.colorspace.RGB(0.5, 0.5, 0.5);
-		final var xyz = rgb.to(XYZ.class);
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> executor.shutdownNow()));
 		
-		LOG.info("Starting from " + rgb.toString());
-		LOG.info("CIE XYZ = " + xyz.toString());
+		runFor(RGB.RED, new File("./spectra/red.csv"));
+		runFor(RGB.GREEN, new File("./spectra/green.csv"));
+		runFor(RGB.BLUE, new File("./spectra/blue.csv"));
 		
-		final var result = new BruteForceSearchSpectrumGeneratorJob(BruteForceSearchSpectrumGeneratorJob.TABLE, xyz, 6,
-				0d, +1d, 0.01d, 0.01, 16).generate();
+		executor.shutdown();
 		
-		final var resultingXYZ = XYZ.fromSpectrum(result);
+	}
+	
+	public void runFor(RGB rgb, File outputCsv) throws IOException, InterruptedException, ExecutionException {
 		
-		LOG.info("Found XYZ = " + resultingXYZ.toString());
-		LOG.info("-> RGB = " + resultingXYZ.to(RGB.class).toString());
+		executor.execute(() -> {
+			LOG.info("Generating a spectrum fit for: {}", rgb.toString());
+			
+			final var result = new OtherSpectrumGeneratorJob(rgb.to(XYZ.class), 16).call();
+			
+			LOG.info("Found fit: {}", XYZ.fromSpectrum(result).to(RGB.class));
+			
+			LOG.info("Writing spectrum as CSV ...");
+			try (var csv = new FileOutputStream(outputCsv)) {
+				result.saveToCSV(csv);
+			} catch (IOException e) {
+				LOG.error("Could not write spectrum to {}: {}, \"{}\"", outputCsv.getPath(),
+						e.getClass().getSimpleName(), e.getMessage());
+			}
+		});
 		
 	}
 	

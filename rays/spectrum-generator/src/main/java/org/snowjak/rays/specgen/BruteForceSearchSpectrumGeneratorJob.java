@@ -22,14 +22,13 @@ import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
-import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.spectrum.distribution.TabulatedSpectralPowerDistribution;
 
 public class BruteForceSearchSpectrumGeneratorJob {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(BruteForceSearchSpectrumGeneratorJob.class);
 	
-	public static final Function<double[], SpectralPowerDistribution> TABLE = (ds) -> {
+	public static final Function<double[], TabulatedSpectralPowerDistribution> TABLE = (ds) -> {
 		final double low = 360d, high = 830d;
 		final Map<Double, Double> table = new HashMap<>();
 		int i = 0;
@@ -45,7 +44,7 @@ public class BruteForceSearchSpectrumGeneratorJob {
 	private final BlockingQueue<Pair<Double, double[]>> resultsQueue;
 	private final AtomicLong searchJobsRunning;
 	
-	private final Function<double[], SpectralPowerDistribution> spdType;
+	private final Function<double[], TabulatedSpectralPowerDistribution> spdConstructor;
 	private final XYZ target;
 	private final int binCount;
 	private final double searchMinValue;
@@ -54,11 +53,11 @@ public class BruteForceSearchSpectrumGeneratorJob {
 	private final double tolerance;
 	private final int resultsRetentionLimit;
 	
-	public BruteForceSearchSpectrumGeneratorJob(Function<double[], SpectralPowerDistribution> spdType, XYZ target,
-			int binCount, double searchMinValue, double searchMaxValue, double searchStepSize, double tolerance,
-			int resultsRetentionLimit) {
+	public BruteForceSearchSpectrumGeneratorJob(Function<double[], TabulatedSpectralPowerDistribution> spdConstructor,
+			XYZ target, int binCount, double searchMinValue, double searchMaxValue, double searchStepSize,
+			double tolerance, int resultsRetentionLimit) {
 		
-		this.spdType = spdType;
+		this.spdConstructor = spdConstructor;
 		this.target = target;
 		this.binCount = binCount;
 		this.searchMinValue = searchMinValue;
@@ -79,7 +78,7 @@ public class BruteForceSearchSpectrumGeneratorJob {
 		searchJobsRunning = new AtomicLong();
 	}
 	
-	public SpectralPowerDistribution generate() {
+	public TabulatedSpectralPowerDistribution generate() {
 		
 		LOG.info("Starting new brute-force-search spectrum-generation job.");
 		LOG.info("Searching for solutions of length {}, on the interval [{},{}], by step-size {}", binCount,
@@ -127,7 +126,7 @@ public class BruteForceSearchSpectrumGeneratorJob {
 				.forEach(k -> LOG.info("Distance {}: [{}]", Double.toString(k), Arrays.stream(results.get(k))
 						.mapToObj(d -> String.format("%+1.5f", d)).collect(Collectors.joining(" "))));
 		
-		return spdType.apply(results.firstEntry().getValue());
+		return spdConstructor.apply(results.firstEntry().getValue());
 	}
 	
 	private void submitJobs(double[] currentVector, int currentDimension) {
@@ -145,8 +144,8 @@ public class BruteForceSearchSpectrumGeneratorJob {
 		// }
 		
 		searchJobsRunning.incrementAndGet();
-		jobExecutor.submit(
-				new BruteForceComputeTask(spdType, resultsQueue, searchJobsRunning, currentVector, target, tolerance));
+		jobExecutor.submit(new BruteForceComputeTask(spdConstructor, resultsQueue, searchJobsRunning, currentVector,
+				target, tolerance));
 		
 		for (double v = searchMinValue; v <= searchMaxValue; v += searchStepSize) {
 			
@@ -164,12 +163,12 @@ public class BruteForceSearchSpectrumGeneratorJob {
 		private final BlockingQueue<Pair<Double, double[]>> queue;
 		private final AtomicLong jobRunningCounter;
 		
-		private final Function<double[], SpectralPowerDistribution> spdType;
+		private final Function<double[], TabulatedSpectralPowerDistribution> spdType;
 		private final double[] value;
 		private final XYZ target;
 		private final double tolerance;
 		
-		public BruteForceComputeTask(Function<double[], SpectralPowerDistribution> spdType,
+		public BruteForceComputeTask(Function<double[], TabulatedSpectralPowerDistribution> spdType,
 				BlockingQueue<Pair<Double, double[]>> queue, AtomicLong jobRunningCounter, double[] value, XYZ target,
 				double tolerance) {
 			
