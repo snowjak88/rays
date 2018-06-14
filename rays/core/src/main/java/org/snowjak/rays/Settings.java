@@ -4,6 +4,7 @@ import java.util.Properties;
 import java.util.Random;
 
 import org.apache.commons.math3.util.FastMath;
+import org.snowjak.rays.sampler.BestCandidateSampler;
 import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctionDistribution;
 import org.snowjak.rays.spectrum.distribution.ColorMappingFunctionDistribution;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
@@ -25,6 +26,11 @@ public class Settings {
 	 * @see #getDoubleEqualityEpsilon()
 	 */
 	private double doubleEqualityEpsilon = 1e-8;
+	
+	/**
+	 * @see #getSamplerBestCandidateBlockSize()
+	 */
+	private int samplerBestCandidateBlockSize = 16;
 	
 	/**
 	 * @see #getColorMappingFunctionDistribution()
@@ -74,6 +80,10 @@ public class Settings {
 			doubleEqualityEpsilon = Double.parseDouble(coreSettings.getProperty(
 					"org.snowjak.rays.math.double-equality-epsilon", Double.toString(getDoubleEqualityEpsilon())));
 			
+			samplerBestCandidateBlockSize = Integer
+					.parseInt(coreSettings.getProperty("org.snowjak.rays.sampler.best-candidate.block-size",
+							Integer.toString(getSamplerBestCandidateBlockSize())));
+			
 			colorMappingFunctionDistribution = (coreSettings
 					.containsKey("org.snowjak.rays.cie-csv-xyz-color-mapping-path"))
 							? TabulatedColorMappingFunctionDistribution.loadFromCSV(
@@ -113,6 +123,15 @@ public class Settings {
 	public double getDoubleEqualityEpsilon() {
 		
 		return doubleEqualityEpsilon;
+	}
+	
+	/**
+	 * When using the {@link BestCandidateSampler}, generate samples enough to cover
+	 * a <code>blockSize</code> x <code>blockSize</code> block of pixels at once.
+	 */
+	public int getSamplerBestCandidateBlockSize() {
+		
+		return samplerBestCandidateBlockSize;
 	}
 	
 	/**

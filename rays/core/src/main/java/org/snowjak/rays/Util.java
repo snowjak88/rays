@@ -101,4 +101,24 @@ public class Util {
 		
 		return Arrays.stream(triplets).reduce(new Triplet(), (t1, t2) -> t1.add(t2)).divide(triplets.length);
 	}
+	
+	/**
+	 * Shuffle an array in-place.
+	 * 
+	 * @param array
+	 */
+	public static void shuffle(Object[] array) {
+		
+		for (int i = 0; i < array.length - 1; i++) {
+			
+			int newIndex;
+			do {
+				newIndex = Settings.RND.nextInt(array.length - i) + i;
+			} while (newIndex == i);
+			
+			final Object temp = array[i];
+			array[i] = array[newIndex];
+			array[newIndex] = temp;
+		}
+	}
 }
