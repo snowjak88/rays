@@ -2,6 +2,7 @@ package org.snowjak.rays.spectrum.distribution;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.regex.Pattern;
 
 import org.apache.commons.math3.util.Pair;
@@ -26,6 +27,18 @@ public class TabulatedColorMappingFunctions extends TabulatedDistribution<Tabula
 		return TabulatedDistribution.loadFromCSV(csvStream,
 				(bounds, values) -> new TabulatedColorMappingFunctions(bounds, values),
 				line -> TabulatedColorMappingFunctions.parseCSVLine(line), len -> new Triplet[len]);
+	}
+	
+	/**
+	 * Write a TabulatedColorMappingFunctions out to a CSV-formatter
+	 * {@link OutputStream}.
+	 * 
+	 * @param csvStream
+	 * @throws IOException
+	 */
+	public void saveToCSV(OutputStream csvStream) throws IOException {
+		
+		this.saveToCSV(csvStream, TabulatedColorMappingFunctions::buildCSVLine);
 	}
 	
 	public TabulatedColorMappingFunctions(BoundedDistribution<Triplet> sample, int sampleCount) {
