@@ -3,6 +3,7 @@ package org.snowjak.rays.spectrum.distribution;
 import static org.junit.Assert.*;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -69,7 +70,7 @@ public class TabulatedDistributionTest {
 		try {
 			final var t = TabulatedDistribution.loadFromCSV(testInputStream,
 					(bounds, values) -> new TabulatedDistributionImpl(bounds.getFirst(), bounds.getSecond(), values),
-					(line) -> SpectralPowerDistribution.parseCSVLine(line), (len) -> new Point[len]);
+					SpectralPowerDistribution::parseCSVLine, (len) -> new Point[len]);
 			
 			assertEquals(3, t.getEntries().length);
 			
@@ -81,6 +82,24 @@ public class TabulatedDistributionTest {
 			assertEquals(2d, t.get(1d).get(0), 0.00001);
 			assertEquals(0d, t.get(2d).get(0), 0.00001);
 			
+		} catch (IOException e) {
+			fail("Unexpected exception! " + e.getClass().getSimpleName() + ": \"" + e.getMessage() + "\"");
+		}
+	}
+	
+	@Test
+	public void testSaveToCSV() {
+		
+		final var testOutputStream = new ByteArrayOutputStream();
+		
+		final var t = new TabulatedDistributionImpl(0.0, 2.0,
+				new Point[] { new Point(1.0), new Point(2.0), new Point(0.0) });
+		
+		try {
+			t.saveToCSV(testOutputStream, SpectralPowerDistribution::buildCSVLine);
+			
+			assertEquals("0.0,1.0" + System.lineSeparator() + "1.0,2.0" + System.lineSeparator() + "2.0,0.0"
+					+ System.lineSeparator(), testOutputStream.toString());
 		} catch (IOException e) {
 			fail("Unexpected exception! " + e.getClass().getSimpleName() + ": \"" + e.getMessage() + "\"");
 		}

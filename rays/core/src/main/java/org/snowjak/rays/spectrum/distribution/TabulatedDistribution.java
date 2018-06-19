@@ -6,9 +6,12 @@ import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -55,8 +58,11 @@ public abstract class TabulatedDistribution<D extends TabulatedDistribution<D, Y
 			
 			List<Pair<Double, Y>> pairs = new LinkedList<>();
 			
-			while (reader.ready())
-				pairs.add(csvParser.apply(reader.readLine()));
+			while (reader.ready()) {
+				final var nextLine = reader.readLine();
+				if (nextLine != null && !nextLine.isEmpty())
+					pairs.add(csvParser.apply(nextLine));
+			}
 			
 			final double minX = pairs.stream().mapToDouble(p -> p.getFirst()).min().orElse(0d);
 			final double maxX = pairs.stream().mapToDouble(p -> p.getFirst()).max().orElse(0d);
@@ -64,6 +70,26 @@ public abstract class TabulatedDistribution<D extends TabulatedDistribution<D, Y
 			final Y[] values = pairs.stream().map(p -> p.getSecond()).toArray(len -> arrayAllocater.apply(len));
 			
 			return constructor.apply(new Pair<>(minX, maxX), values);
+		}
+	}
+	
+	/**
+	 * Write a TabulatedDistribution out to a CSV-formatter {@link OutputStream}.
+	 * 
+	 * @param csvStream
+	 * @throws IOException
+	 */
+	public void saveToCSV(OutputStream csvStream, BiFunction<Double, Y, String> csvWriter) throws IOException {
+		
+		try (var writer = new BufferedWriter(new OutputStreamWriter(csvStream))) {
+			
+			final var lineIterator = IntStream.range(0, entries.length).mapToDouble(i -> getPoint(i))
+					.mapToObj(d -> csvWriter.apply(d, this.get(d))).iterator();
+			
+			while (lineIterator.hasNext()) {
+				writer.write(lineIterator.next());
+				writer.newLine();
+			}
 		}
 	}
 	
