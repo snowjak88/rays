@@ -3,7 +3,6 @@ package org.snowjak.rays.spectrum;
 import java.io.Serializable;
 
 import org.snowjak.rays.spectrum.colorspace.RGB;
-import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 /**
  * Represents a measurement of radiant energy distributed across several
@@ -11,7 +10,7 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  * 
  * @author snowjak88
  */
-public interface Spectrum extends Serializable, SpectralPowerDistribution {
+public interface Spectrum extends Serializable {
 	
 	/**
 	 * @return <code>true</code> if this Spectrum has 0 (or even very close to 0)
@@ -38,14 +37,6 @@ public interface Spectrum extends Serializable, SpectralPowerDistribution {
 	 * @return
 	 */
 	public Spectrum multiply(double scalar);
-	
-	/**
-	 * Compute this Spectrum's amplitude -- a measure of its average intensity over
-	 * time, across all wavelengths.
-	 * 
-	 * @return
-	 */
-	public double getAmplitude();
 	
 	/**
 	 * Convert this Spectrum to a RGB-trio for subsequent display.

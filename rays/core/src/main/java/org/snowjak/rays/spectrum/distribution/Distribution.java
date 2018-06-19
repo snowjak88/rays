@@ -1,82 +1,80 @@
 package org.snowjak.rays.spectrum.distribution;
 
-import java.util.function.Supplier;
-import java.util.stream.DoubleStream;
+import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.math3.util.Pair;
+import org.snowjak.rays.geometry.util.AbstractVector;
 
 /**
- * Represents a distribution of some quantity.
+ * A distribution is, basically, a mapping from one space onto another. It is
+ * distinguished from a {@link Map} by being, in principle, a continuous mapping
+ * (as opposed to a Map's discrete mapping).
  * 
  * @author snowjak88
  *
  */
-public interface Distribution<V> {
+public interface Distribution<Y extends AbstractVector<Y>> {
 	
 	/**
-	 * Get this distribution's value for some key, or <code>null</code> if that
-	 * value does not exist.
+	 * For some point <code>x</code>, get the <code>y</code> which it maps on to.
 	 * 
-	 * @param k
+	 * @param x
+	 * @return
+	 * @throws IndexOutOfBoundsException
+	 *             if the given point <code>x</code> is out of bounds
+	 * @see #isInBounds(double)
+	 */
+	public Y get(double x) throws IndexOutOfBoundsException;
+	
+	/**
+	 * Returns <code>true</code> if this distribution is defined at the given point
+	 * <code>x</code>.
+	 * 
+	 * @param x
 	 * @return
 	 */
-	public V get(Double key);
+	public boolean isDefinedAt(double x);
 	
 	/**
-	 * Get the key corresponding to this distribution's low-end (or
-	 * <code>null</code> if not applicable).
+	 * Compute the average value of this distribution across the given interval. If
+	 * this distribution is bounded, the interval is trimmed to lie within its
+	 * bounds (potentially to a 0-width interval).
 	 * 
+	 * @param start
+	 * @param end
 	 * @return
 	 */
-	public Double getLowKey();
+	public Y averageOver(double start, double end);
 	
 	/**
-	 * Get the key corresponding to this distribution's high-end (or
-	 * <code>null</code> if not applicable).
+	 * @return <code>true</code> if this distribution has bounds outside of which it
+	 *         cannot be evaluated
+	 */
+	public boolean isBounded();
+	
+	/**
+	 * @return this distribution's lower and upper bounds, if they exist, or an
+	 *         empty Optional otherwise
+	 */
+	public Optional<Pair<Double, Double>> getBounds();
+	
+	/**
+	 * Returns <code>true</code> if the given point <code>x</code> is within this
+	 * distribution's bounds (or if this distribution has no bounds at all).
 	 * 
+	 * @param x
 	 * @return
 	 */
-	public Double getHighKey();
-	
-	/**
-	 * Compute an average value for this distribution from
-	 * <code>intervalStart</code> to <code>intervalEnd</code> (inclusive), or
-	 * <code>null</code> if not applicable.
-	 * 
-	 * @param intervalStart
-	 * @param intervalEnd
-	 * @return
-	 */
-	public V averageOver(Double intervalStart, Double intervalEnd);
-	
-	/**
-	 * Convert this distribution to a tabulated form (with <code>sampleCount</code>
-	 * table entries from <code>lowKey</code> to <code>highKey</code>, inclusive).
-	 * If this distribution is already in a tabulated form, resample it.
-	 * 
-	 * @param supplier
-	 * @param lowKey
-	 * @param highKey
-	 * @param sampleCount
-	 */
-	public default <R extends TabulatedDistribution<V>> R toTabulatedForm(Supplier<R> supplier, Double lowKey,
-			Double highKey, int sampleCount) {
+	public default boolean isInBounds(double x) {
 		
-		if (sampleCount <= 0)
-			return supplier.get();
+		if (!isBounded())
+			return true;
 		
-		if (sampleCount == 1) {
-			final var table = supplier.get();
-			table.addEntry((this.getLowKey() + this.getHighKey()) / 2d, this.averageOver(getLowKey(), getHighKey()));
-			return table;
-		}
+		if (!getBounds().isPresent())
+			return true;
 		
-		final var stepSize = (highKey - lowKey) / ((double) sampleCount - 1d);
-		final var table = supplier.get();
-		DoubleStream.iterate(lowKey, d -> d < highKey, d -> d + stepSize)
-				.mapToObj(d -> new Pair<>(d + stepSize / 2d, this.averageOver(d, d + stepSize)))
-				.forEach(p -> table.addEntry(p.getKey(), p.getValue()));
-		return table;
+		return (getBounds().get().getFirst() <= x) && (getBounds().get().getSecond() >= x);
 	}
 	
 }

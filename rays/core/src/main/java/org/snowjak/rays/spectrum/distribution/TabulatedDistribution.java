@@ -1,350 +1,391 @@
 package org.snowjak.rays.spectrum.distribution;
 
+import static org.apache.commons.math3.util.FastMath.ceil;
+import static org.apache.commons.math3.util.FastMath.floor;
+import static org.apache.commons.math3.util.FastMath.max;
+import static org.apache.commons.math3.util.FastMath.min;
+
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
 
 import org.apache.commons.math3.util.Pair;
-import org.snowjak.rays.TriFunction;
+import org.snowjak.rays.Settings;
+import org.snowjak.rays.geometry.util.AbstractVector;
 
-/**
- * Represents a {@link Distribution} backed by a table of measurements.
- * 
- * @author snowjak88
- *
- * @param <K>
- * @param <V>
- */
-public abstract class TabulatedDistribution<V> implements Distribution<V> {
+public abstract class TabulatedDistribution<D extends TabulatedDistribution<D, Y>, Y extends AbstractVector<Y>>
+		implements BoundedDistribution<Y> {
 	
-	private NavigableMap<Double, V> table;
-	private BlendMethod<V> blendMethod;
+	private final Pair<Double, Double> bounds;
+	private final double indexStep;
+	private final Y[] entries;
+	
+	private NavigableMap<Double, Y> __table = null;
 	
 	/**
-	 * Load a {@link TabulatedDistribution} from an {@link InputStream} (expected to
-	 * feed CSV-formatted data).
+	 * Load a TabulatedDistribution from a CSV-formatted {@link InputStream}.
 	 * 
-	 * @param supplier
-	 * @param csv
+	 * @param csvStream
+	 * @param constructor
+	 * @param csvParser
+	 * @param arrayAllocater
 	 * @return
 	 * @throws IOException
 	 */
-	public static <V, R extends TabulatedDistribution<V>> R loadFromCSV(Supplier<R> supplier, InputStream csv)
-			throws IOException {
-		
-		final var distribution = supplier.get();
-		
-		try (var reader = new BufferedReader(new InputStreamReader(csv))) {
-			while (reader.ready()) {
-				final var entry = distribution.parseEntry(reader.readLine());
-				distribution.addEntry(entry.getKey(), entry.getValue());
-			}
-		}
-		
-		return distribution;
-	}
-	
-	/**
-	 * Write this {@link TabulatedDistribution}, formatted as a CSV file, to the
-	 * given {@link OutputStream}.
-	 * 
-	 * @param distribution
-	 * @param csv
-	 * @throws IOException
-	 */
-	public void saveToCSV(OutputStream csv) throws IOException {
-		
-		try (var writer = new BufferedWriter(new OutputStreamWriter(csv))) {
+	public static <D extends TabulatedDistribution<D, Y>, Y extends AbstractVector<Y>> D
 			
-			boolean isFirstLineDone = false;
-			for (String line : this.getAll().stream().map(p -> this.writeEntry(p.getKey(), p.getValue()))
-					.collect(Collectors.toList())) {
-				if (isFirstLineDone)
-					writer.newLine();
-				
-				writer.write(line);
-				
-				isFirstLineDone = true;
-			}
+			loadFromCSV(InputStream csvStream, BiFunction<Pair<Double, Double>, Y[], D> constructor,
+					Function<String, Pair<Double, Y>> csvParser, Function<Integer, Y[]> arrayAllocater)
+					throws IOException {
+		
+		try (var reader = new BufferedReader(new InputStreamReader(csvStream))) {
+			
+			List<Pair<Double, Y>> pairs = new LinkedList<>();
+			
+			while (reader.ready())
+				pairs.add(csvParser.apply(reader.readLine()));
+			
+			final double minX = pairs.stream().mapToDouble(p -> p.getFirst()).min().orElse(0d);
+			final double maxX = pairs.stream().mapToDouble(p -> p.getFirst()).max().orElse(0d);
+			
+			final Y[] values = pairs.stream().map(p -> p.getSecond()).toArray(len -> arrayAllocater.apply(len));
+			
+			return constructor.apply(new Pair<>(minX, maxX), values);
 		}
-		
 	}
 	
 	/**
-	 * Construct a new (empty) {@link TabulatedDistribution}, using the default
-	 * linear-interpolation {@link LinearBlendMethod}.
-	 */
-	public TabulatedDistribution() {
-		
-		this(Collections.emptyMap());
-	}
-	
-	/**
-	 * Copy an existing {@link TabulatedDistribution}.
+	 * Create a new {@link TabulatedDistribution} by sampling the given
+	 * {@link BoundedDistribution} <code>sampleCount</code> times across its entire
+	 * bound.
 	 * 
-	 * @param toCopy
+	 * @param sample
+	 * @param sampleCount
 	 */
-	public <T extends TabulatedDistribution<V>> TabulatedDistribution(T toCopy) {
+	public TabulatedDistribution(BoundedDistribution<Y> sample, int sampleCount) {
 		
-		this(toCopy.getTable(), toCopy.getBlendMethod());
+		this(sample, sample.getBounds().get(), sampleCount);
 	}
 	
 	/**
-	 * Construct a new {@link TabulatedDistribution}, using the default
-	 * linear-interpolation {@link LinearBlendMethod}.
+	 * Create a new {@link TabulatedDistribution} by sampling the given
+	 * {@link Distribution} <code>sampleCount</code> times across the given
+	 * interval.
 	 * 
-	 * @param table
+	 * @param sample
+	 * @param sampleCount
 	 */
-	public TabulatedDistribution(Map<Double, V> table) {
+	public TabulatedDistribution(Distribution<Y> sample, Pair<Double, Double> interval, int sampleCount) {
 		
-		this(table, null);
-		this.setBlendMethod(new LinearBlendMethod<V>(getLinearInterpolationFunction()));
+		assert (sample != null);
+		assert (interval != null);
+		assert (interval.getFirst() <= interval.getSecond());
+		assert (sampleCount > 1);
+		
+		this.bounds = interval;
+		this.indexStep = (bounds.getSecond() - bounds.getFirst()) / ((double) sampleCount - 1d);
+		this.entries = IntStream.range(0, sampleCount).mapToObj(i -> sample.get(this.getPoint(i)))
+				.toArray(len -> this.getArray(len));
 	}
 	
 	/**
-	 * Construct a new {@link TabulatedDistribution}, using the given
-	 * {@link BlendMethod}.
+	 * Create a new {@link TabulatedDistribution} with the given bounds, backed by a
+	 * table containing the given <code>values</code>.
 	 * 
-	 * @param table
-	 * @param blendMethod
+	 * @param lowerBound
+	 * @param upperBound
+	 * @param entryCount
+	 * @param initialValue
 	 */
-	public TabulatedDistribution(Map<Double, V> table, BlendMethod<V> blendMethod) {
+	public TabulatedDistribution(double lowerBound, double upperBound, Y[] values) {
 		
-		this.table = new TreeMap<>(table);
-		this.blendMethod = blendMethod;
+		this(new Pair<>(lowerBound, upperBound), values);
+	}
+	
+	/**
+	 * Create a new {@link TabulatedDistribution} with the given bounds, backed by a
+	 * table containing the given <code>values</code>.
+	 * 
+	 * @param lowerBound
+	 * @param upperBound
+	 * @param entryCount
+	 * @param initialValue
+	 */
+	public TabulatedDistribution(Pair<Double, Double> bounds, Y[] values) {
+		
+		assert (bounds != null);
+		assert (bounds.getFirst() <= bounds.getSecond());
+		assert (values.length > 1);
+		
+		this.bounds = bounds;
+		this.indexStep = (bounds.getSecond() - bounds.getFirst()) / ((double) values.length - 1d);
+		this.entries = values;
+	}
+	
+	/**
+	 * Create a new {@link TabulatedDistribution} with the given bounds, backed by a
+	 * table containing <code>entryCount</code> entries, all initialized to
+	 * {@link #getZero()}.
+	 * 
+	 * @param lowerBound
+	 * @param upperBound
+	 * @param entryCount
+	 * @param initialValue
+	 */
+	public TabulatedDistribution(double lowerBound, double upperBound, int entryCount) {
+		
+		this(new Pair<>(lowerBound, upperBound), entryCount);
+	}
+	
+	/**
+	 * Create a new {@link TabulatedDistribution} with the given bounds, backed by a
+	 * table containing <code>entryCount</code> entries, all initialized to
+	 * {@link #getZero()}.
+	 * 
+	 * @param lowerBound
+	 * @param upperBound
+	 * @param entryCount
+	 * @param initialValue
+	 */
+	public TabulatedDistribution(Pair<Double, Double> bounds, int entryCount) {
+		
+		assert (bounds != null);
+		assert (bounds.getFirst() <= bounds.getSecond());
+		assert (entryCount > 1);
+		
+		this.bounds = bounds;
+		this.indexStep = (bounds.getSecond() - bounds.getFirst()) / ((double) entryCount - 1d);
+		this.entries = this.getArray(entryCount);
+		Arrays.fill(entries, getZero());
 	}
 	
 	@Override
-	public V get(Double k) {
+	public Y get(double x) throws IndexOutOfBoundsException {
 		
-		return this.blendMethod.get(this, k);
-	}
-	
-	/**
-	 * @return the {@link NavigableMap} backing this {@link TabulatedDistribution}
-	 */
-	protected NavigableMap<Double, V> getTable() {
+		if (!isInBounds(x))
+			throw new IndexOutOfBoundsException();
 		
-		return this.table;
-	}
-	
-	/**
-	 * @return all entries stored in this {@link TabulatedDistribution}
-	 */
-	public Collection<Pair<Double, V>> getAll() {
+		final double index = getIndex(x);
+		final double fraction = index - (int) index;
 		
-		return this.table.entrySet().stream().map(e -> new Pair<>(e.getKey(), e.getValue()))
-				.collect(Collectors.toList());
+		if (Settings.getInstance().nearlyEqual(fraction, 0d))
+			return entries[(int) index];
+		
+		return entries[(int) floor(index)].multiply(1d - fraction).add(entries[(int) ceil(index)].multiply(fraction));
 	}
 	
 	@Override
-	public Double getLowKey() {
+	public boolean isDefinedAt(double x) {
 		
-		return table.firstKey();
+		return isInBounds(x);
 	}
 	
 	@Override
-	public Double getHighKey() {
+	public Y averageOver(double start, double end) {
 		
-		return table.lastKey();
+		assert (start <= end);
+		
+		final double start_inside = max(bounds.getFirst(), start);
+		final double end_inside = min(bounds.getSecond(), end);
+		
+		if (Settings.getInstance().nearlyEqual(start_inside, end_inside))
+			return getZero();
+		
+		final double start_full = ceil((start_inside - bounds.getFirst()) / indexStep) + bounds.getFirst();
+		final double end_full = floor((end_inside - bounds.getFirst()) / indexStep) + bounds.getFirst();
+		
+		Y totalArea = getZero();
+		
+		if (!Settings.getInstance().nearlyEqual(start_full, end_full))
+			totalArea = totalArea.add(DoubleStream.iterate(start_full, d -> d < end_full, d -> d + indexStep)
+					.mapToObj(x -> get(x).add(get(x + indexStep)).divide(2d).multiply(indexStep))
+					.reduce(getZero(), (v1, v2) -> v1.add(v2)));
+		
+		if (!Settings.getInstance().nearlyEqual(start_inside, start_full))
+			totalArea = totalArea.add(get(start_inside).add(get(start_full)).multiply(start_full - start_inside));
+		
+		if (!Settings.getInstance().nearlyEqual(end_inside, end_full))
+			totalArea = totalArea.add(get(end_inside).add(get(end_full)).multiply(end_inside - end_full));
+		
+		return totalArea.divide(end_inside - start_inside);
+	}
+	
+	@Override
+	public Optional<Pair<Double, Double>> getBounds() {
+		
+		return Optional.of(bounds);
 	}
 	
 	/**
-	 * Add an entry to this {@link TabulatedDistribution}.
+	 * Return a new TabulatedDistribution produced by modifying this distribution's
+	 * bounds. The resulting {@link TabulatedDistribution} will have the same number
+	 * of table-entries as this distribution.
 	 * 
-	 * @param key
-	 * @param value
+	 * @param newBounds
+	 * @return
 	 */
-	public void addEntry(Double key, V value) {
+	public D resize(Pair<Double, Double> newBounds) {
 		
-		this.table.put(key, value);
+		return resize(newBounds, this.entries.length);
 	}
 	
 	/**
-	 * @return the {@link BlendMethod} currently used by this
-	 *         {@link TabulatedDistribution}
-	 */
-	public BlendMethod<V> getBlendMethod() {
-		
-		return blendMethod;
-	}
-	
-	/**
-	 * Set the {@link BlendMethod} to be used by this {@link TabulatedDistribution}
+	 * Return a new TabulatedDistribution produced by modifying this distribution's
+	 * bounds. The resulting {@link TabulatedDistribution} will have the specified
+	 * number of table-entries.
 	 * 
-	 * @param blendMethod
-	 */
-	public void setBlendMethod(BlendMethod<V> blendMethod) {
-		
-		this.blendMethod = blendMethod;
-	}
-	
-	/**
-	 * Defines the linear-interpolation {@link TriFunction} to use, should the user
-	 * desire to use a {@link LinearBlendMethod}.
-	 * <p>
-	 * The function must be of the form:
-	 * 
-	 * <pre>
-	 * f(intervalStart, intervalEnd, fractionAcrossInterval)
-	 * </pre>
-	 * </p>
-	 */
-	public abstract TriFunction<V, V, Double, V> getLinearInterpolationFunction();
-	
-	/**
-	 * Normalize this tabulated distribution -- i.e., computing the maximum value of
-	 * any single entry, and scaling all entries relative to that maximum value.
-	 * 
-	 * @param constructor
-	 *            a constructor for a {@link TabulatedDistribution} implementation
-	 * @param metric
-	 *            calculates the "extent" or "value" of this distribution's type
-	 * @param scaler
-	 *            scales an entry in this distribution according to some fraction
-	 *            (e.g., for a Double-valued Distribution, simple multiplication
-	 *            will work)
+	 * @param newBounds
+	 * @param newEntryCount
+	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public <D extends TabulatedDistribution<V>> D normalize(Function<Map<Double, V>, D> constructor,
-			Function<V, Double> metric, BiFunction<V, Double, V> scaler) {
+	public D resize(Pair<Double, Double> newBounds, int newEntryCount) {
 		
-		final var maxValue = this.getAll().stream().mapToDouble(p -> metric.apply(p.getValue())).max();
+		assert (newBounds != null);
+		assert (newBounds.getFirst() <= newBounds.getSecond());
+		assert (newEntryCount > 1);
 		
-		if (!maxValue.isPresent())
+		if (Settings.getInstance().nearlyEqual(bounds.getFirst(), newBounds.getFirst())
+				&& Settings.getInstance().nearlyEqual(bounds.getSecond(), newBounds.getSecond())
+				&& entries.length == newEntryCount)
 			return (D) this;
 		
-		return constructor.apply(this.getAll().stream()
-				.map(p -> new Pair<>(p.getKey(), scaler.apply(p.getValue(), 1d / maxValue.getAsDouble())))
-				.collect(Collectors.toMap((Pair<Double, V> p) -> p.getKey(), (Pair<Double, V> p) -> p.getValue())));
+		final double newStepSize = (newBounds.getSecond() - newBounds.getFirst()) / ((double) newEntryCount - 1d);
+		final Y[] newValues = this.getArray(newEntryCount);
+		
+		double currentX = newBounds.getFirst();
+		for (int i = 0; i < newValues.length; i++) {
+			newValues[i] = (this.isInBounds(currentX))
+					? this.averageOver(currentX - newStepSize, currentX + newStepSize)
+					: this.getZero();
+			currentX += newStepSize;
+		}
+		
+		return this.getNewInstance(newBounds, newValues);
 	}
 	
 	/**
-	 * Given a single line of CSV data, parse a single distribution-entry.
+	 * Get the entry-table-index corresponding to the given <code>x</code> point.
+	 * <p>
+	 * Note that this method performs no bounds-checking. As such, it's result may
+	 * be outside the range <code>[0, table.length )</code>. You should treat any
+	 * returned indices appropriately.
+	 * </p>
 	 * 
-	 * @param csvLine
+	 * @param x
 	 * @return
 	 */
-	public abstract Pair<Double, V> parseEntry(String csvLine);
+	protected double getIndex(double x) {
+		
+		return ((x - bounds.getFirst()) / indexStep);
+	}
 	
 	/**
-	 * Given a single key/value pair from this distribution, format it into a line
-	 * of CSV data.
+	 * Get the point <code>x</code> associated with the given entry-table-index
+	 * <code>index</code>.
 	 * 
-	 * @param key
-	 * @param entry
+	 * @param index
 	 * @return
 	 */
-	public abstract String writeEntry(Double key, V entry);
+	protected double getPoint(double index) {
+		
+		return (index * indexStep) + bounds.getFirst();
+		
+	}
 	
 	/**
-	 * Defines the method whereby we derive intermediate values (between stored
-	 * measurements) for a {@link TabulatedDistribution}.
+	 * Get an instance of Y initialized to all zeros.
 	 * 
-	 * @author snowjak88
-	 *
-	 * @param <K>
-	 * @param <V>
+	 * @return
 	 */
-	public interface BlendMethod<V> {
+	protected abstract Y getZero();
+	
+	/**
+	 * Allocate a typed array of the specified length.
+	 * 
+	 * @param len
+	 * @return
+	 */
+	protected abstract Y[] getArray(int len);
+	
+	/**
+	 * Wraps an implementation constructor. Returns a new instance, given the
+	 * specified bounds and entry-values.
+	 * 
+	 * @param bounds
+	 * @param values
+	 * @return
+	 */
+	protected abstract D getNewInstance(Pair<Double, Double> bounds, Y[] values);
+	
+	/**
+	 * Compute the average of a number of values.
+	 * 
+	 * @param values
+	 * @return
+	 */
+	protected Y average(Collection<Y> values) {
 		
-		/**
-		 * Get the blended value from the given {@link TabulatedDistribution}, or
-		 * <code>null</code> if no value is available.
-		 * 
-		 * @param table
-		 * @param key
-		 * @return
-		 */
-		public V get(TabulatedDistribution<V> table, Double key);
+		assert (values != null);
+		assert (values.size() > 0);
+		
+		return values.stream().reduce((v1, v2) -> v1.add(v2)).get().divide(values.size());
 	}
 	
-	public static class NearestBlendMethod<V> implements BlendMethod<V> {
+	/**
+	 * Return the array of entries backing this {@link TabulatedDistribution}. These
+	 * entries are ordered by this distribution's bounds (see {@link #getBounds()}).
+	 * Each index maps to a specific <code>x</code>, with each <code>x</code> being
+	 * an equal distance ({@link #getIndexStep()}) apart.
+	 * 
+	 * @return
+	 */
+	protected Y[] getEntries() {
 		
-		@Override
-		public V get(TabulatedDistribution<V> table, Double key) {
-			
-			if (table.getTable() == null || table.getTable().isEmpty())
-				return null;
-			
-			final var lower = table.getTable().floorEntry(key);
-			final var upper = table.getTable().ceilingEntry(key);
-			
-			if (lower == null && upper == null)
-				return null;
-			
-			if (upper == null)
-				return lower.getValue();
-			if (lower == null)
-				return upper.getValue();
-			
-			final double lowerDistance = key - lower.getKey();
-			final double upperDistance = upper.getKey() - key;
-			return (lowerDistance <= upperDistance) ? lower.getValue() : upper.getValue();
-		}
-		
+		return this.entries;
 	}
 	
-	public static class LinearBlendMethod<V> implements BlendMethod<V> {
+	/**
+	 * The indices to this distribution's table map onto a set of distinct points
+	 * <code>x0, x1, x2, ...</code>, where each <code>x</code> is the same distance
+	 * apart.
+	 * 
+	 * @return
+	 */
+	protected double getIndexStep() {
 		
-		private TriFunction<V, V, Double, V> interpolation;
+		return this.indexStep;
+	}
+	
+	/**
+	 * Return a {@link NavigableMap} which represents this distribution's
+	 * table-entries.
+	 * <p>
+	 * In general, you should probably only use this method if you absolutely must.
+	 * </p>
+	 * 
+	 * @return
+	 */
+	public NavigableMap<Double, Y> getTable() {
 		
-		/**
-		 * Construct a new {@link LinearBlendMethod}. You must provide an implementation
-		 * of linear-interpolation for your chosen value-type.
-		 * 
-		 * <p>
-		 * The function must be of the form:
-		 * 
-		 * <pre>
-		 * f(intervalStart, intervalEnd, fractionAcrossInterval)
-		 * </pre>
-		 * </p>
-		 * 
-		 * @param interpolation
-		 */
-		public LinearBlendMethod(TriFunction<V, V, Double, V> interpolation) {
-			
-			this.interpolation = interpolation;
-		}
+		if (__table == null)
+			__table = new TreeMap<>(IntStream.range(0, entries.length).mapToDouble(i -> getPoint(i)).boxed()
+					.collect(Collectors.toMap(d -> d, d -> this.get(d))));
 		
-		@Override
-		public V get(TabulatedDistribution<V> table, Double key) {
-			
-			if (table.getTable() == null || table.getTable().isEmpty())
-				return null;
-			
-			final var lower = table.getTable().floorEntry(key);
-			final var upper = table.getTable().ceilingEntry(key);
-			
-			if (lower == null && upper == null)
-				return null;
-			
-			if (upper == null)
-				return lower.getValue();
-			if (lower == null)
-				return upper.getValue();
-			
-			if (lower.getKey().equals(upper.getKey()))
-				return lower.getValue();
-			
-			final double fraction = (key - lower.getKey()) / (upper.getKey() - lower.getKey());
-			return interpolation.apply(lower.getValue(), upper.getValue(), fraction);
-		}
-		
+		return __table;
 	}
 	
 }

@@ -30,12 +30,12 @@ public class XYZTest {
 	@Test
 	public void testFromSpectrum_standardIlluminator() {
 		
-		final XYZ xyz = XYZ
-				.fromSpectrum(Settings.getInstance().getIlluminatorSpectralPowerDistribution());
+		final var spd = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
+		final XYZ xyz = XYZ.fromSpectrum(spd);
 		
-		assertEquals("XYZ (X) is not as expected!", 0.95047, xyz.getX() / xyz.getY(), 0.0001);
-		assertEquals("XYZ (Y) is not as expected!", 1.00000, xyz.getY() / xyz.getY(), 0.0001);
-		assertEquals("XYZ (Z) is not as expected!", 1.08883, xyz.getZ() / xyz.getY(), 0.0001);
+		assertEquals("XYZ (X) is not as expected!", 0.95047, xyz.getX() / xyz.getY(), 0.01);
+		assertEquals("XYZ (Y) is not as expected!", 1.00000, xyz.getY() / xyz.getY(), 0.01);
+		assertEquals("XYZ (Z) is not as expected!", 1.08883, xyz.getZ() / xyz.getY(), 0.01);
 	}
 	
 	@Test

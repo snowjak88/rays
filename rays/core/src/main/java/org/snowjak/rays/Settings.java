@@ -1,15 +1,16 @@
 package org.snowjak.rays;
 
+import java.io.IOException;
 import java.util.Properties;
 import java.util.Random;
 
 import org.apache.commons.math3.util.FastMath;
+import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.sampler.BestCandidateSampler;
-import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctionDistribution;
-import org.snowjak.rays.spectrum.distribution.ColorMappingFunctionDistribution;
+import org.snowjak.rays.spectrum.ColorMappingFunctions;
+import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctions;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
-import org.snowjak.rays.spectrum.distribution.TabulatedColorMappingFunctionDistribution;
-import org.snowjak.rays.spectrum.distribution.TabulatedSpectralPowerDistribution;
+import org.snowjak.rays.spectrum.distribution.TabulatedColorMappingFunctions;
 
 import com.google.common.math.DoubleMath;
 
@@ -33,9 +34,28 @@ public class Settings {
 	private int samplerBestCandidateBlockSize = 16;
 	
 	/**
+	 * @see #getSpectrumBinCount()
+	 */
+	private int spectrumBinCount = 16;
+	
+	/**
+	 * @see #getSpectrumRangeLow()
+	 */
+	private double spectrumRangeLow = 360.0;
+	/**
+	 * @see #getSpectrumRangeHigh()
+	 */
+	private double spectrumRangeHigh = 830.0;
+	
+	/**
+	 * @see #getSpectrumRange()
+	 */
+	private Pair<Double, Double> spectrumRange = null;
+	
+	/**
 	 * @see #getColorMappingFunctionDistribution()
 	 */
-	private ColorMappingFunctionDistribution colorMappingFunctionDistribution = new AnalyticColorMappingFunctionDistribution();
+	private ColorMappingFunctions colorMappingFunctions = null;
 	
 	/**
 	 * @see #getIlluminatorSpectralPowerDistribution()
@@ -52,6 +72,7 @@ public class Settings {
 	 */
 	public static final Random RND = new Random(System.currentTimeMillis());
 	
+	private final Properties coreSettings;
 	private static Settings __INSTANCE = null;
 	
 	public static Settings getInstance() {
@@ -69,7 +90,7 @@ public class Settings {
 		
 		try (var settingsStream = this.getClass().getClassLoader().getResourceAsStream("./core-settings.properties")) {
 			
-			var coreSettings = new Properties();
+			coreSettings = new Properties();
 			coreSettings.load(settingsStream);
 			System.getProperties().putAll(coreSettings);
 			
@@ -84,24 +105,14 @@ public class Settings {
 					.parseInt(coreSettings.getProperty("org.snowjak.rays.sampler.best-candidate.block-size",
 							Integer.toString(getSamplerBestCandidateBlockSize())));
 			
-			colorMappingFunctionDistribution = (coreSettings
-					.containsKey("org.snowjak.rays.cie-csv-xyz-color-mapping-path"))
-							? TabulatedColorMappingFunctionDistribution.loadFromCSV(
-									TabulatedColorMappingFunctionDistribution::new,
-									Settings.class.getClassLoader()
-											.getResourceAsStream(coreSettings
-													.getProperty("org.snowjak.rays.cie-csv-xyz-color-mapping-path")))
-							: getColorMappingFunctionDistribution();
+			spectrumBinCount = Integer.parseInt(coreSettings.getProperty("org.snowjak.rays.spectrum-bin-count",
+					Integer.toString(getSpectrumBinCount())));
 			
-			illuminatorSpectralPowerDistribution = (coreSettings
-					.containsKey("org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path"))
-							? TabulatedSpectralPowerDistribution
-									.loadFromCSV(TabulatedSpectralPowerDistribution::new, Settings.class
-											.getClassLoader()
-											.getResourceAsStream(coreSettings.getProperty(
-													"org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path")))
-									.normalize()
-							: getIlluminatorSpectralPowerDistribution();
+			spectrumRangeLow = Double.parseDouble(coreSettings.getProperty("org.snowjak.rays.spectrum-range-low",
+					Double.toString(getSpectrumRangeLow())));
+			
+			spectrumRangeHigh = Double.parseDouble(coreSettings.getProperty("org.snowjak.rays.spectrum-range-high",
+					Double.toString(getSpectrumRangeHigh())));
 			
 			cieXyzIntegrationStepSize = Double.parseDouble(coreSettings.getProperty(
 					"org.snowjak.rays.cie-xyz-integration-step-size", Double.toString(getCieXyzIntegrationStepSize())));
@@ -135,12 +146,75 @@ public class Settings {
 	}
 	
 	/**
+	 * When performing spectral raytracing, each {@link SpectralPowerDistribution}
+	 * we cast should contain so many "bins" -- i.e., distinct power-readings across
+	 * its wavelength-domain.
+	 */
+	public int getSpectrumBinCount() {
+		
+		return spectrumBinCount;
+	}
+	
+	/**
+	 * When performing spectral raytracing, each {@link SpectralPowerDistribution}
+	 * should span a certain wavelength-domain.
+	 * 
+	 * @see #getSpectrumRangeHigh()
+	 * @see #getSpectrumRange()
+	 */
+	public double getSpectrumRangeLow() {
+		
+		return spectrumRangeLow;
+	}
+	
+	/**
+	 * When performing spectral raytracing, each {@link SpectralPowerDistribution}
+	 * should span a certain wavelength-domain.
+	 * 
+	 * @see #getSpectrumRangeLow()
+	 * @see #getSpectrumRange()
+	 */
+	public double getSpectrumRangeHigh() {
+		
+		return spectrumRangeHigh;
+	}
+	
+	/**
+	 * When performing spectral raytracing, each {@link SpectralPowerDistribution}
+	 * should span a certain wavelength-domain.
+	 * 
+	 * @see #getSpectrumRangeLow()
+	 * @see #getSpectrumRangeHigh()
+	 */
+	public Pair<Double, Double> getSpectrumRange() {
+		
+		if (spectrumRange == null)
+			spectrumRange = new Pair<>(getSpectrumRangeLow(), getSpectrumRangeHigh());
+		
+		return spectrumRange;
+	}
+	
+	/**
 	 * The distribution of color-mapping-functions (for calculating {@link CIEXYZ}
 	 * triplets from spectra).
 	 */
-	public ColorMappingFunctionDistribution getColorMappingFunctionDistribution() {
+	public ColorMappingFunctions getColorMappingFunctions() {
 		
-		return colorMappingFunctionDistribution;
+		if (colorMappingFunctions == null)
+			if (coreSettings.containsKey("org.snowjak.rays.cie-csv-xyz-color-mapping-path"))
+				try {
+					colorMappingFunctions = TabulatedColorMappingFunctions
+							.loadFromCSV(this.getClass().getClassLoader().getResourceAsStream(
+									coreSettings.getProperty("org.snowjak.rays.cie-csv-xyz-color-mapping-path")));
+				} catch (IOException e) {
+					//
+					//
+					colorMappingFunctions = new AnalyticColorMappingFunctions();
+				}
+			else
+				colorMappingFunctions = new AnalyticColorMappingFunctions();
+			
+		return colorMappingFunctions;
 	}
 	
 	/**
@@ -148,6 +222,20 @@ public class Settings {
 	 * (Used to calculate {@link CIEXYZ} triplets from spectra.)
 	 */
 	public SpectralPowerDistribution getIlluminatorSpectralPowerDistribution() {
+		
+		if (illuminatorSpectralPowerDistribution == null)
+			try {
+				
+				illuminatorSpectralPowerDistribution = SpectralPowerDistribution
+						.loadFromCSV(this.getClass().getClassLoader().getResourceAsStream(
+								coreSettings.getProperty("org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path")))
+						.normalize();
+				
+			} catch (IOException e) {
+				//
+				//
+				throw new RuntimeException("Could not load standard-illuminator SDP.", e);
+			}
 		
 		return illuminatorSpectralPowerDistribution;
 	}

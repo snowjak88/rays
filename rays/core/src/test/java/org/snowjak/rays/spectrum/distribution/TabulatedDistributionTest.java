@@ -1,112 +1,122 @@
 package org.snowjak.rays.spectrum.distribution;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
-import java.util.Map;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.commons.math3.util.Pair;
 import org.junit.Test;
-import org.snowjak.rays.TriFunction;
+import org.snowjak.rays.geometry.util.Point;
 
 public class TabulatedDistributionTest {
 	
-	public static class TabulatedDistributionImpl extends TabulatedDistribution<Double> {
+	@Test
+	public void testZeroed() {
 		
-		public TabulatedDistributionImpl() {
-			
-			super();
+		final var t = new TabulatedDistributionImpl(0d, 2d, 3);
+		
+		assertEquals(3, t.getEntries().length);
+		
+		assertTrue(Arrays.stream(t.getEntries()).allMatch(p -> p.get(0) == 0d));
+		
+		assertTrue(t.isBounded());
+		assertTrue(t.getBounds().isPresent());
+		assertEquals(0d, t.getBounds().get().getFirst(), 0.00001d);
+		assertEquals(2d, t.getBounds().get().getSecond(), 0.00001d);
+	}
+	
+	@Test
+	public void test() {
+		
+		final var t = new TabulatedDistributionImpl(0d, 2d, new Point[] { new Point(0), new Point(1), new Point(2) });
+		
+		assertEquals(3, t.getEntries().length);
+		
+		assertTrue(t.isBounded());
+		assertTrue(t.getBounds().isPresent());
+		assertEquals(0d, t.getBounds().get().getFirst(), 0.00001d);
+		assertEquals(2d, t.getBounds().get().getSecond(), 0.00001d);
+		
+		assertEquals(0.0d, t.get(0.0d).get(0), 0.00001d);
+		assertEquals(0.5d, t.get(0.5d).get(0), 0.00001d);
+		assertEquals(1.0d, t.get(1.0d).get(0), 0.00001d);
+		assertEquals(1.5d, t.get(1.5d).get(0), 0.00001d);
+		assertEquals(2.0d, t.get(2.0d).get(0), 0.00001d);
+		
+		try {
+			t.get(-1d);
+			fail("Expected exception was not thrown.");
+		} catch (RuntimeException e) {
+			// do nothing
 		}
 		
-		public TabulatedDistributionImpl(Map<Double, Double> table) {
-			
-			super(table);
+		try {
+			t.get(3d);
+			fail("Expected exception was not thrown.");
+		} catch (RuntimeException e) {
+			// do nothing
 		}
+	}
+	
+	@Test
+	public void testLoadFromCSV() {
 		
-		@Override
-		public TriFunction<Double, Double, Double, Double> getLinearInterpolationFunction() {
-			
-			return (start, end, fraction) -> (start * (1d - fraction)) + (end * fraction);
-		}
+		final var testInputStream = new ByteArrayInputStream(
+				("0.0,1.0" + System.lineSeparator() + "1.0,2.0" + System.lineSeparator() + "2.0,0.0").getBytes());
 		
-		@Override
-		public Pair<Double, Double> parseEntry(String csvLine) {
+		try {
+			final var t = TabulatedDistribution.loadFromCSV(testInputStream,
+					(bounds, values) -> new TabulatedDistributionImpl(bounds.getFirst(), bounds.getSecond(), values),
+					(line) -> SpectralPowerDistribution.parseCSVLine(line), (len) -> new Point[len]);
 			
-			return null;
-		}
-		
-		@Override
-		public String writeEntry(Double key, Double entry) {
+			assertEquals(3, t.getEntries().length);
 			
-			return null;
-		}
-		
-		@Override
-		public Double averageOver(Double intervalStart, Double intervalEnd) {
+			assertTrue(t.getBounds().isPresent());
+			assertEquals(0d, t.getBounds().get().getFirst(), 0.00001);
+			assertEquals(2d, t.getBounds().get().getSecond(), 0.00001);
 			
-			final double start = (intervalEnd > intervalStart) ? intervalStart : intervalEnd;
-			final double end = (intervalEnd > intervalStart) ? intervalEnd : intervalStart;
+			assertEquals(1d, t.get(0d).get(0), 0.00001);
+			assertEquals(2d, t.get(1d).get(0), 0.00001);
+			assertEquals(0d, t.get(2d).get(0), 0.00001);
 			
-			return getTable().entrySet().stream().filter(e -> e.getKey() >= start && e.getKey() <= end).reduce(0d,
-					(d, e) -> d + e.getValue(), (d1, d2) -> d1 + d2) / (end - start);
+		} catch (IOException e) {
+			fail("Unexpected exception! " + e.getClass().getSimpleName() + ": \"" + e.getMessage() + "\"");
 		}
 		
 	}
 	
-	@Test
-	public void testGet() {
+	public static class TabulatedDistributionImpl extends TabulatedDistribution<TabulatedDistributionImpl, Point> {
 		
-		final var d = new TabulatedDistributionImpl();
+		public TabulatedDistributionImpl(double lowerBound, double upperBound, int entryCount) {
+			
+			super(lowerBound, upperBound, entryCount);
+		}
 		
-		d.addEntry(0d, 1d);
-		d.addEntry(1d, 2d);
-		d.addEntry(2d, 1.5d);
+		public TabulatedDistributionImpl(double lowerBound, double upperBound, Point[] values) {
+			
+			super(lowerBound, upperBound, values);
+		}
 		
-		assertEquals(1d, d.get(0d), 0.00001);
-		assertEquals(1.5d, d.get(0.5d), 0.00001);
-		assertEquals(2d, d.get(1d), 0.00001);
-		assertEquals(1.75d, d.get(1.5d), 0.00001);
-		assertEquals(1.5d, d.get(2d), 0.00001);
-	}
-	
-	@Test
-	public void testGetLowKey() {
+		@Override
+		protected Point getZero() {
+			
+			return new Point();
+		}
 		
-		final var d = new TabulatedDistributionImpl();
+		@Override
+		protected Point[] getArray(int len) {
+			
+			return new Point[len];
+		}
 		
-		d.addEntry(0d, 1d);
-		d.addEntry(1d, 2d);
-		d.addEntry(2d, 1.5d);
+		@Override
+		protected TabulatedDistributionImpl getNewInstance(Pair<Double, Double> bounds, Point[] values) {
+			
+			return new TabulatedDistributionImpl(bounds.getFirst(), bounds.getSecond(), values);
+		}
 		
-		assertEquals(0d, d.getLowKey(), 0.00001);
-	}
-	
-	@Test
-	public void testGetHighKey() {
-		
-		final var d = new TabulatedDistributionImpl();
-		
-		d.addEntry(0d, 1d);
-		d.addEntry(1d, 2d);
-		d.addEntry(2d, 1.5d);
-		
-		assertEquals(2d, d.getHighKey(), 0.00001);
-	}
-	
-	@Test
-	public void testNormalize() {
-		
-		final var d = new TabulatedDistributionImpl();
-		
-		d.addEntry(0d, 1d);
-		d.addEntry(1d, 2d);
-		d.addEntry(2d, 1.5d);
-		
-		final var n = d.normalize((map) -> new TabulatedDistributionImpl(map), (v) -> v, (v, f) -> v * f);
-		
-		assertEquals(3, n.getAll().size());
-		assertEquals(0.5d, n.get(0d), 0.00001);
-		assertEquals(1.0d, n.get(1d), 0.00001);
-		assertEquals(0.75d, n.get(2d), 0.00001);
 	}
 	
 }

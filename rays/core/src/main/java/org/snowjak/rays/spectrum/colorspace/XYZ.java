@@ -27,25 +27,25 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 	//@formatter:on
 	
 	/**
-	 * Calculate the CIE XYZ tristimulus triplet derived from the given spectrum
-	 * power-distribution (given as a map of wavelengths (nm) to spectral radiance
-	 * (W/sr*m^2)).
+	 * Calculate the CIE XYZ tristimulus triplet derived from the given spectral
+	 * power-distribution (given as a mapping of wavelengths (nm) to spectral
+	 * radiance (W/sr*m^2)).
 	 * 
-	 * @param spectrum
+	 * @param spd
 	 * @return
 	 */
-	public static XYZ fromSpectrum(SpectralPowerDistribution spectrum) {
+	public static XYZ fromSpectrum(SpectralPowerDistribution spd) {
 		
-		final var cmf = Settings.getInstance().getColorMappingFunctionDistribution();
+		final var cmf = Settings.getInstance().getColorMappingFunctions();
 		
-		final double cmfLowLambda = cmf.getLowestWavelength();
-		final double cmfHighLambda = cmf.getHighestWavelength();
+		final double lowLambda = spd.getBounds().get().getFirst();
+		final double highLambda = spd.getBounds().get().getSecond();
 		
-		final var numerator = Util.integrateTriplet(cmfLowLambda, cmfHighLambda,
+		final var numerator = Util.integrateTriplet(lowLambda, highLambda,
 				Settings.getInstance().getCieXyzIntegrationStepCount(),
-				(lambda) -> cmf.getCMF(lambda).multiply(spectrum.get(lambda)));
-		final var denominator = Util.integrate(cmfLowLambda, cmfHighLambda,
-				Settings.getInstance().getCieXyzIntegrationStepCount(), (lambda) -> cmf.getCMF(lambda).get(1));
+				(lambda) -> cmf.get(lambda).multiply(spd.get(lambda).get(0)));
+		final var denominator = Util.integrate(lowLambda, highLambda,
+				Settings.getInstance().getCieXyzIntegrationStepCount(), (lambda) -> cmf.get(lambda).get(1));
 		final var result = new XYZ(numerator.divide(denominator));
 		
 		return new XYZ(result.get().apply(c -> c / result.getY()));
@@ -63,7 +63,7 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 	 */
 	public static XYZ fromWavelength(double wavelength) {
 		
-		return new XYZ(Settings.getInstance().getColorMappingFunctionDistribution().getCMF(wavelength));
+		return new XYZ(Settings.getInstance().getColorMappingFunctions().get(wavelength));
 		
 	}
 	
