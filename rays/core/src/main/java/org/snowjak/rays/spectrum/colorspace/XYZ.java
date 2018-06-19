@@ -92,6 +92,16 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 		return get().get(2);
 	}
 	
+	/**
+	 * Normalize this XYZ triplet to unity brightness -- i.e., Y == 1.0
+	 * 
+	 * @return
+	 */
+	public XYZ normalize() {
+		
+		return new XYZ(this.get().apply(c -> c / this.getY()));
+	}
+	
 	@Override
 	protected void registerConverters(ColorspaceConverterRegistry<XYZ> registry) {
 		
