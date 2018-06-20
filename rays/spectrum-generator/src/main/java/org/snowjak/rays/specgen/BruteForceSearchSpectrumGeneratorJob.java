@@ -1,205 +1,152 @@
 package org.snowjak.rays.specgen;
 
-import static org.apache.commons.math3.util.FastMath.min;
 import static org.apache.commons.math3.util.FastMath.pow;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snowjak.rays.Settings;
+import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
-import org.snowjak.rays.spectrum.distribution.TabulatedSpectralPowerDistribution;
+import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
-public class BruteForceSearchSpectrumGeneratorJob {
+public class BruteForceSearchSpectrumGeneratorJob implements Runnable {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(BruteForceSearchSpectrumGeneratorJob.class);
 	
-	public static final Function<double[], TabulatedSpectralPowerDistribution> TABLE = (ds) -> {
-		final double low = 360d, high = 830d;
-		final Map<Double, Double> table = new HashMap<>();
-		int i = 0;
-		for (double lambda = low; lambda <= high; lambda += (high - low) / ((double) ds.length - 1d), i++)
-			table.put(lambda, ds[i]);
-		return new TabulatedSpectralPowerDistribution(table);
-	};
+	private final XYZ target, originalTarget;
 	
-	private final ExecutorService jobExecutor;
-	private final ExecutorService resultsGrabberExecutor;
-	private final ScheduledExecutorService statusUpdaterExecutor;
+	private final SpectralPowerDistribution startingSPD;
+	private final Point[] startingPoints;
 	
-	private final BlockingQueue<Pair<Double, double[]>> resultsQueue;
-	private final AtomicLong searchJobsRunning;
-	
-	private final Function<double[], TabulatedSpectralPowerDistribution> spdConstructor;
-	private final XYZ target;
 	private final int binCount;
-	private final double searchMinValue;
-	private final double searchMaxValue;
-	private final double searchStepSize;
-	private final double tolerance;
-	private final int resultsRetentionLimit;
 	
-	public BruteForceSearchSpectrumGeneratorJob(Function<double[], TabulatedSpectralPowerDistribution> spdConstructor,
-			XYZ target, int binCount, double searchMinValue, double searchMaxValue, double searchStepSize,
-			double tolerance, int resultsRetentionLimit) {
+	private final Pair<Double, Double> multiplierRange;
+	private final double incStep;
+	private final double targetDistance;
+	
+	private final BlockingQueue<Pair<Pair<Double, Double>, SpectralPowerDistribution>> resultQueue;
+	
+	public BruteForceSearchSpectrumGeneratorJob(XYZ target,
+			BlockingQueue<Pair<Pair<Double, Double>, SpectralPowerDistribution>> resultQueue, double targetDistance) {
 		
-		this.spdConstructor = spdConstructor;
-		this.target = target;
+		this(target, resultQueue, Settings.getInstance().getIlluminatorSpectralPowerDistribution(),
+				Settings.getInstance().getSpectrumBinCount(), new Pair<>(0d, 1d), 0.1, targetDistance);
+	}
+	
+	public BruteForceSearchSpectrumGeneratorJob(XYZ target,
+			BlockingQueue<Pair<Pair<Double, Double>, SpectralPowerDistribution>> resultQueue,
+			SpectralPowerDistribution startingSPD, int binCount, Pair<Double, Double> multiplierRange, double incStep,
+			double targetDistance) {
+		
+		assert (target != null);
+		assert (resultQueue != null);
+		assert (startingSPD != null);
+		assert (binCount > 1);
+		assert (multiplierRange != null);
+		assert (multiplierRange.getFirst() <= multiplierRange.getSecond());
+		assert (incStep > 0d);
+		assert (targetDistance > 0d);
+		
+		this.originalTarget = target;
+		this.target = target.normalize();
+		
+		this.resultQueue = resultQueue;
+		
+		this.startingSPD = startingSPD;
+		
+		final var spdTable = startingSPD.getTable();
+		this.startingPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
+				.toArray(len -> new Point[len]);
+		
 		this.binCount = binCount;
-		this.searchMinValue = searchMinValue;
-		this.searchMaxValue = searchMaxValue;
-		this.searchStepSize = searchStepSize;
-		this.tolerance = tolerance;
-		this.resultsRetentionLimit = resultsRetentionLimit;
 		
-		this.jobExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-		this.resultsGrabberExecutor = Executors.newSingleThreadExecutor();
-		this.statusUpdaterExecutor = Executors.newSingleThreadScheduledExecutor();
-		
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> jobExecutor.shutdownNow()));
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> resultsGrabberExecutor.shutdownNow()));
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> statusUpdaterExecutor.shutdownNow()));
-		
-		resultsQueue = new LinkedBlockingQueue<>();
-		searchJobsRunning = new AtomicLong();
+		this.multiplierRange = multiplierRange;
+		this.incStep = incStep;
+		this.targetDistance = targetDistance;
 	}
 	
-	public TabulatedSpectralPowerDistribution generate() {
+	@Override
+	public void run() {
 		
-		LOG.info("Starting new brute-force-search spectrum-generation job.");
-		LOG.info("Searching for solutions of length {}, on the interval [{},{}], by step-size {}", binCount,
-				searchMinValue, searchMaxValue, searchStepSize);
+		final Point[] vector;
 		
-		final double[] bins = new double[binCount];
-		Arrays.fill(bins, searchMinValue);
-		
-		final NavigableMap<Double, double[]> results = new TreeMap<>();
-		
-		resultsGrabberExecutor.submit(() -> {
-			try {
-				while (true) {
-					final var p = this.resultsQueue.take();
-					results.put(p.getKey(), p.getValue());
-					while (results.size() > resultsRetentionLimit)
-						results.remove(results.lastKey());
-				}
-			} catch (InterruptedException e) {
-				// nothing to do here
-			}
-		});
-		
-		statusUpdaterExecutor.scheduleAtFixedRate(() -> LOG.info("{} search jobs running ...", searchJobsRunning.get()),
-				5, 5, TimeUnit.SECONDS);
-		
-		LOG.info("Preparing and submitting search candidates ...");
-		submitJobs(bins, 0);
-		
-		while (searchJobsRunning.get() > 0) {
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// do nothing
-			}
+		if (startingSPD == null) {
+			vector = new Point[this.binCount];
+			Arrays.fill(vector, new Point(1.0d));
+		} else {
+			final var table = startingSPD.resize(this.binCount).getTable();
+			vector = table.navigableKeySet().stream().map(k -> table.get(k)).toArray(len -> new Point[len]);
 		}
 		
-		LOG.info("Completed brute-force-search spectrum-generation job.");
-		jobExecutor.shutdownNow();
-		resultsGrabberExecutor.shutdownNow();
-		statusUpdaterExecutor.shutdownNow();
-		
-		LOG.info("Top {} candidates are as follows:", min(results.size(), 5));
-		results.navigableKeySet().stream().limit(5)
-				.forEach(k -> LOG.info("Distance {}: [{}]", Double.toString(k), Arrays.stream(results.get(k))
-						.mapToObj(d -> String.format("%+1.5f", d)).collect(Collectors.joining(" "))));
-		
-		return spdConstructor.apply(results.firstEntry().getValue());
+		try {
+			
+			depthSearchVector(vector);
+			
+		} catch (InterruptedException e) {
+			// Do nothing if interrupted
+		}
 	}
 	
-	private void submitJobs(double[] currentVector, int currentDimension) {
+	private void depthSearchVector(Point[] vector) throws InterruptedException {
 		
-		if (currentDimension >= currentVector.length)
+		depthSearchVector(vector, 0);
+	}
+	
+	private void depthSearchVector(Point[] vector, int currentIndex) throws InterruptedException {
+		
+		if (currentIndex >= vector.length)
 			return;
-			
-		// if (currentDimension <= (currentVector.length / 2)) {
-		// final var pieces = Arrays.stream(currentVector).mapToObj(d ->
-		// String.format("%+1.5f", d))
-		// .collect(Collectors.toList());
-		// pieces.set(currentDimension, "__._____");
-		// LOG.info("Submitting search job --> [{}]",
-		// pieces.stream().collect(Collectors.joining(" ")));
-		// }
 		
-		searchJobsRunning.incrementAndGet();
-		jobExecutor.submit(new BruteForceComputeTask(spdConstructor, resultsQueue, searchJobsRunning, currentVector,
-				target, tolerance));
-		
-		for (double v = searchMinValue; v <= searchMaxValue; v += searchStepSize) {
+		for (double v = multiplierRange.getFirst(); v <= multiplierRange.getSecond(); v += incStep) {
 			
-			final double[] newVector = Arrays.copyOf(currentVector, currentVector.length);
-			newVector[currentDimension] = v;
+			final var mutatedPoint = startingPoints[currentIndex].multiply(v);
+			if( mutatedPoint.get(0) < 0d || mutatedPoint.get(0) > 1d )
+				continue;
 			
-			submitJobs(newVector, currentDimension + 1);
+			vector[currentIndex] = mutatedPoint;
+			final var spd = constructSPD(vector);
+			
+			final var resultingEval = evaluateSPD(spd);
+			if (resultingEval.getFirst() <= this.targetDistance) {
+				LOG.info("Found spectrum for {} within target-distance. Distance = {}, bumpiness = {}",
+						this.originalTarget.toString(), resultingEval.getFirst(), resultingEval.getSecond());
+				resultQueue.put(new Pair<>(resultingEval, scaleSPD(spd, originalTarget)));
+			}
+			
+			depthSearchVector(vector, currentIndex + 1);
 		}
 	}
 	
-	public static class BruteForceComputeTask implements Runnable {
+	public Pair<Double, Double> evaluateSPD(SpectralPowerDistribution spd) {
 		
-		private final static Logger LOG = LoggerFactory.getLogger(BruteForceComputeTask.class);
+		final XYZ xyz = XYZ.fromSpectrum(spd);
+		final double targetDistance = pow(xyz.getX() - target.getX(), 2) + pow(xyz.getY() - target.getY(), 2)
+				+ pow(xyz.getZ() - target.getZ(), 2);
 		
-		private final BlockingQueue<Pair<Double, double[]>> queue;
-		private final AtomicLong jobRunningCounter;
+		final var spdTable = spd.getTable();
+		final Point[] spdPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
+				.toArray(len -> new Point[len]);
+		final double bumpinessDistance = IntStream.range(0, spdPoints.length - 1)
+				.mapToDouble(i -> pow(spdPoints[i + 1].get(0) - spdPoints[i].get(0), 2)).sum();
 		
-		private final Function<double[], TabulatedSpectralPowerDistribution> spdType;
-		private final double[] value;
-		private final XYZ target;
-		private final double tolerance;
-		
-		public BruteForceComputeTask(Function<double[], TabulatedSpectralPowerDistribution> spdType,
-				BlockingQueue<Pair<Double, double[]>> queue, AtomicLong jobRunningCounter, double[] value, XYZ target,
-				double tolerance) {
-			
-			this.spdType = spdType;
-			this.queue = queue;
-			this.jobRunningCounter = jobRunningCounter;
-			this.value = value;
-			this.target = target;
-			this.tolerance = tolerance;
-		}
-		
-		@Override
-		public void run() {
-			
-			try {
-				final var candidateSpectrum = spdType.apply(value);
-				
-				final var evaluatedTriplet = XYZ.fromSpectrum(candidateSpectrum).get();
-				
-				final var distance = target.get().subtract(evaluatedTriplet).apply(c -> pow(c, 2)).summarize();
-				
-				if (distance <= tolerance) {
-					queue.put(new Pair<>(distance, value));
-				}
-			} catch (InterruptedException e) {
-				// nothing
-			}
-			
-			jobRunningCounter.decrementAndGet();
-			
-		}
-		
+		return new Pair<>(targetDistance, bumpinessDistance);
 	}
+	
+	private SpectralPowerDistribution constructSPD(Point[] vector) {
+		
+		return new SpectralPowerDistribution(vector);
+	}
+	
+	private SpectralPowerDistribution scaleSPD(SpectralPowerDistribution spd, XYZ targetColor) {
+		
+		final double brightness = targetColor.getY();
+		
+		return (SpectralPowerDistribution) spd.multiply(brightness);
+	}
+	
 }
