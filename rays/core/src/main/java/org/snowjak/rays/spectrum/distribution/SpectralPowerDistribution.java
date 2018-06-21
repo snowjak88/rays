@@ -2,6 +2,7 @@ package org.snowjak.rays.spectrum.distribution;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -40,6 +41,18 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 		return TabulatedDistribution.loadFromCSV(csvStream,
 				(bounds, values) -> new SpectralPowerDistribution(bounds, values),
 				line -> SpectralPowerDistribution.parseCSVLine(line), len -> new Point[len]);
+	}
+	
+	/**
+	 * Write a SpectralPowerDistribution out to a CSV-formatter
+	 * {@link OutputStream}.
+	 * 
+	 * @param csvStream
+	 * @throws IOException
+	 */
+	public void saveToCSV(OutputStream csvStream) throws IOException {
+		
+		this.saveToCSV(csvStream, SpectralPowerDistribution::buildCSVLine);
 	}
 	
 	/**
