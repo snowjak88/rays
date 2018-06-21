@@ -270,6 +270,19 @@ public abstract class TabulatedDistribution<D extends TabulatedDistribution<D, Y
 	
 	/**
 	 * Return a new TabulatedDistribution produced by modifying this distribution's
+	 * number of entries. The resulting {@link TabulatedDistribution} will have the
+	 * same bounds as this distribution.
+	 * 
+	 * @param newEntryCount
+	 * @return
+	 */
+	public D resize(int newEntryCount) {
+		
+		return resize(this.bounds, newEntryCount);
+	}
+	
+	/**
+	 * Return a new TabulatedDistribution produced by modifying this distribution's
 	 * bounds. The resulting {@link TabulatedDistribution} will have the specified
 	 * number of table-entries.
 	 * 
