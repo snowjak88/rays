@@ -55,7 +55,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> executor.shutdownNow()));
 		
-		final var directory = new File("/spectra/");
+		final var directory = new File("./spectra/");
 		if (!directory.exists())
 			directory.mkdirs();
 		

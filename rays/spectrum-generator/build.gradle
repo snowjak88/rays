@@ -1,21 +1,5 @@
-plugins {
-	id 'com.palantir.docker' version '0.19.2'
-}
-
 dependencies {
 	compile('org.springframework.boot:spring-boot-starter')
 	
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 }
-
-docker {
-	name = "${project.group}/${project.name}"
-	dockerfile project.file("Dockerfile")
-	tags project.version, "latest"
-	files jar.archivePath
-	buildArgs([ JAR_FILE: jar.archiveName ])
-	pull true
-}
-
-tasks.docker.dependsOn { tasks.bootJar }
-tasks.dockerPush.dependsOn { tasks.dockerTag }
