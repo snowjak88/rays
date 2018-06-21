@@ -22,10 +22,7 @@ subprojects { p ->
 		
 	apply plugin: 'java'
 	
-	if( p.name == "core" ) {
-		test { reports.html.enabled = false }
-	}
-	else {
+	if( p.name != "core" ) {
 		apply plugin: 'org.springframework.boot'
 		
 		dependencies {
@@ -35,6 +32,8 @@ subprojects { p ->
 		clean.dependsOn( project(":core").clean )
 		test.dependsOn( project(":core").test )
 	}
+	
+	test.ignoreFailures = true
 	
 	apply plugin: 'io.spring.dependency-management'
 	
@@ -47,8 +46,10 @@ subprojects { p ->
 	}
 }
 
-task test(type: TestReport) {
-	destinationDir = file("$buildDir/reports/allTests")
+task allTests(type: TestReport) {
+	group = "Verification"
+	description = "Gathers the output from all subproject 'test' tasks"
+	destinationDir = file("$buildDir/reports/allTests/")
 	
 	dependsOn subprojects.collect( { it.tasks.withType(Test) } ).flatten()
 	reportOn subprojects.collect( { it.tasks.withType(Test) } ).flatten()
