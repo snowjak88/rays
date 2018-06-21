@@ -88,7 +88,7 @@ public class Settings {
 		//
 		// Try to load the core-settings properties file.
 		
-		try (var settingsStream = this.getClass().getClassLoader().getResourceAsStream("./core-settings.properties")) {
+		try (var settingsStream = this.getClass().getClassLoader().getResourceAsStream("core-settings.properties")) {
 			
 			coreSettings = new Properties();
 			coreSettings.load(settingsStream);
