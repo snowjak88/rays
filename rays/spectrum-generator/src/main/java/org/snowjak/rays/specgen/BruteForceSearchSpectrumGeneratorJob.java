@@ -7,16 +7,12 @@ import java.util.concurrent.BlockingQueue;
 import java.util.stream.IntStream;
 
 import org.apache.commons.math3.util.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 public class BruteForceSearchSpectrumGeneratorJob implements Runnable {
-	
-	private static final Logger LOG = LoggerFactory.getLogger(BruteForceSearchSpectrumGeneratorJob.class);
 	
 	private final XYZ target, originalTarget;
 	
@@ -87,9 +83,16 @@ public class BruteForceSearchSpectrumGeneratorJob implements Runnable {
 			
 			depthSearchVector(vector);
 			
+			sendAllDoneResult();
+			
 		} catch (InterruptedException e) {
 			// Do nothing if interrupted
 		}
+	}
+	
+	private void sendAllDoneResult() throws InterruptedException {
+		
+		resultQueue.put(new Pair<>(null, null));
 	}
 	
 	private void depthSearchVector(Point[] vector) throws InterruptedException {
@@ -105,18 +108,15 @@ public class BruteForceSearchSpectrumGeneratorJob implements Runnable {
 		for (double v = multiplierRange.getFirst(); v <= multiplierRange.getSecond(); v += incStep) {
 			
 			final var mutatedPoint = startingPoints[currentIndex].multiply(v);
-			if( mutatedPoint.get(0) < 0d || mutatedPoint.get(0) > 1d )
+			if (mutatedPoint.get(0) < 0d || mutatedPoint.get(0) > 1d)
 				continue;
 			
 			vector[currentIndex] = mutatedPoint;
 			final var spd = constructSPD(vector);
 			
 			final var resultingEval = evaluateSPD(spd);
-			if (resultingEval.getFirst() <= this.targetDistance) {
-				LOG.info("Found spectrum for {} within target-distance. Distance = {}, bumpiness = {}",
-						this.originalTarget.toString(), resultingEval.getFirst(), resultingEval.getSecond());
+			if (resultingEval.getFirst() <= this.targetDistance)
 				resultQueue.put(new Pair<>(resultingEval, scaleSPD(spd, originalTarget)));
-			}
 			
 			depthSearchVector(vector, currentIndex + 1);
 		}

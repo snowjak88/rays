@@ -43,7 +43,10 @@ public class SpectrumGenerator implements CommandLineRunner {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SpectrumGenerator.class);
 	
-	private final ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+	private final ExecutorService searchExecutor = Executors
+			.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+	private final ExecutorService resultExecutor = Executors
+			.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 	
 	public static void main(String[] args) {
 		
@@ -53,57 +56,85 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> executor.shutdownNow()));
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> searchExecutor.shutdownNow()));
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> resultExecutor.shutdownNow()));
 		
 		final var directory = new File("./spectra/");
 		if (!directory.exists())
 			directory.mkdirs();
 		
-		runFor(RGB.WHITE, new File(directory, "white.csv"));
-		runFor(RGB.RED, new File(directory, "red.csv"));
-		runFor(RGB.GREEN, new File(directory, "green.csv"));
-		runFor(RGB.BLUE, new File(directory, "blue.csv"));
+		runFor("white", RGB.WHITE, new File(directory, "white.csv"));
+		runFor("red", RGB.RED, new File(directory, "red.csv"));
+		runFor("green", RGB.GREEN, new File(directory, "green.csv"));
+		runFor("blue", RGB.BLUE, new File(directory, "blue.csv"));
 		
-		executor.shutdown();
+		searchExecutor.shutdown();
 		
 	}
 	
-	public void runFor(RGB rgb, File outputCsv) throws IOException, InterruptedException, ExecutionException {
+	public void runFor(String name, RGB rgb, File outputCsv)
+			throws IOException, InterruptedException, ExecutionException {
 		
-		executor.execute(() -> {
-			LOG.info("Generating a spectrum fit for: {} / {}", rgb.toString(), rgb.to(XYZ.class).toString());
+		LOG.info("Generating a spectrum fit for: \"{}\" ({} / {})", name, rgb.toString(), rgb.to(XYZ.class).toString());
+		
+		final BlockingQueue<Pair<Pair<Double, Double>, SpectralPowerDistribution>> resultQueue = new LinkedBlockingQueue<>();
+		
+		final Runnable resultGrabber = () -> {
 			
-			final BlockingQueue<Pair<Pair<Double, Double>, SpectralPowerDistribution>> resultQueue = new LinkedBlockingQueue<>();
+			Pair<Pair<Double, Double>, SpectralPowerDistribution> bestResult = null;
 			
-			new BruteForceSearchSpectrumGeneratorJob(rgb.to(XYZ.class), resultQueue,
-				Settings.getInstance().getIlluminatorSpectralPowerDistribution(),
-				Settings.getInstance().getSpectrumBinCount(),
-				new Pair<>(0d, 4d), 0.1, 0.1).run();
-			
-			//
-			//
-			if (resultQueue.isEmpty()) {
-				LOG.error("Did not identify any close-enough spectra.");
-				return;
+			try {
+				boolean receivedFinalResult = false;
+				
+				while (!Thread.interrupted() && !receivedFinalResult) {
+					final var newResult = resultQueue.take();
+					
+					if (newResult.getKey() == null || newResult.getValue() == null) {
+						LOG.info("{}: received final (empty) result.", name);
+						receivedFinalResult = true;
+					}
+					
+					else if (bestResult == null) {
+						LOG.info("{}: received first result (d={}, b={}).", name, newResult.getKey().getFirst(),
+								newResult.getKey().getSecond());
+						bestResult = newResult;
+					}
+					
+					else if ((newResult.getKey().getFirst() <= bestResult.getKey().getFirst())
+							&& (newResult.getKey().getSecond() < bestResult.getKey().getSecond())) {
+						LOG.info("{}: received new best-result (d={}, b={}).", name, newResult.getKey().getFirst(),
+								newResult.getKey().getSecond());
+						bestResult = newResult;
+					}
+				}
+			} catch (InterruptedException e) {
+				//
+				LOG.warn("{}: interrupted!", name);
+			} finally {
+				
+				if (bestResult != null) {
+					
+					LOG.info("{}: writing results to file.", name);
+					
+					LOG.info("{}: resulting RGB = {}", name, XYZ.fromSpectrum(bestResult.getValue()).to(RGB.class));
+					LOG.info("{}: Distance: {}", name, bestResult.getKey().getFirst());
+					LOG.info("{}: Bumpiness: {}", name, bestResult.getKey().getSecond());
+					
+					LOG.info("{}: Writing spectrum as CSV ...", name);
+					try (var csv = new FileOutputStream(outputCsv)) {
+						bestResult.getValue().saveToCSV(csv);
+					} catch (IOException e) {
+						LOG.error("{}: Could not write spectrum to {}: {}, \"{}\"", name, outputCsv.getPath(),
+								e.getClass().getSimpleName(), e.getMessage());
+					}
+					
+				}
 			}
-			
-			LOG.info("Identified {} close-enough spectra, getting the least-bumpy version ...");
-			final var result = resultQueue.stream()
-					.sorted((pp1, pp2) -> Double.compare(pp1.getFirst().getSecond(), pp2.getFirst().getSecond()))
-					.findFirst().get();
-			
-			LOG.info("Best spectrum: RGB = {}", XYZ.fromSpectrum(result.getSecond()).to(RGB.class));
-			LOG.info("Distance: {}", result.getFirst().getFirst());
-			LOG.info("Bumpiness: {}", result.getFirst().getSecond());
-			
-			LOG.info("Writing spectrum as CSV ...");
-			try (var csv = new FileOutputStream(outputCsv)) {
-				result.getSecond().saveToCSV(csv);
-			} catch (IOException e) {
-				LOG.error("Could not write spectrum to {}: {}, \"{}\"", outputCsv.getPath(),
-						e.getClass().getSimpleName(), e.getMessage());
-			}
-		});
+		};
+					
+		searchExecutor.execute(new BruteForceSearchSpectrumGeneratorJob(rgb.to(XYZ.class), resultQueue,
+				Settings.getInstance().getIlluminatorSpectralPowerDistribution(), 10, new Pair<>(0d, 1.5d), 0.1, 0.1));
+		resultExecutor.execute(resultGrabber);
 		
 	}
 	
