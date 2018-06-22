@@ -7,13 +7,14 @@ import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 
 import org.snowjak.rays.filter.Filter;
-import org.snowjak.rays.sample.Sample;
+import org.snowjak.rays.sample.EstimatedSample;
+import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sampler.Sampler;
 import org.snowjak.rays.spectrum.Spectrum;
 
 /**
- * A film object is responsible for accepting a series of {@link Sample}s and
- * converting them into an image.
+ * A film object is responsible for accepting a series of {@link FixedSample}s
+ * and converting them into an image.
  * 
  * @author snowjak88
  *
@@ -36,28 +37,29 @@ public class Film {
 	}
 	
 	/**
-	 * Receive the given {@link Sample}.
+	 * Receive the given {@link EstimatedSample}.
 	 * <p>
 	 * It is assumed that the flow-of-execution has already reported back this
-	 * Sample to the appropriate Sampler (see
-	 * {@link Sampler#reportSampleResult(Sample)}), and that this Sample is judged
-	 * to be acceptable.
+	 * EstimatedSample to the appropriate Sampler (see
+	 * {@link Sampler#reportSampleResult(FixedSample)}), and that this
+	 * EstimatedSample is judged to be acceptable.
 	 * </p>
 	 * 
-	 * @param sample
+	 * @param estimate
 	 */
-	public void addSample(Sample sample) {
+	public void addSample(EstimatedSample estimate) {
 		
-		final int filmX = (int) sample.getFilmPoint().getX(), filmY = (int) sample.getFilmPoint().getY();
+		final int filmX = (int) estimate.getSample().getFilmPoint().getX(),
+				filmY = (int) estimate.getSample().getFilmPoint().getY();
 		
 		for (int pixelX = max(0, filmX - filter.getExtentX()); pixelX <= min(height - 1,
 				filmX + filter.getExtentX()); pixelX++)
 			for (int pixelY = max(0, filmY - filter.getExtentY()); pixelY <= min(width - 1,
 					filmY + filter.getExtentY()); pixelY++)
-				if (filter.isContributing(sample, pixelX, pixelY)) {
+				if (filter.isContributing(estimate.getSample(), pixelX, pixelY)) {
 					
-					final Spectrum sampleRadiance = sample.getRadiance()
-							.multiply(filter.getContribution(sample, pixelX, pixelY));
+					final Spectrum sampleRadiance = estimate.getRadiance()
+							.multiply(filter.getContribution(estimate.getSample(), pixelX, pixelY));
 					
 					synchronized (this) {
 						

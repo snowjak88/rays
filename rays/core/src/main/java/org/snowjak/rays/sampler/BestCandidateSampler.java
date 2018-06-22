@@ -1,6 +1,6 @@
 package org.snowjak.rays.sampler;
 
-import static org.apache.commons.math3.util.FastMath.log;
+import static org.apache.commons.math3.util.FastMath.*;
 import static org.apache.commons.math3.util.FastMath.min;
 import static org.apache.commons.math3.util.FastMath.pow;
 
@@ -19,6 +19,7 @@ import org.snowjak.rays.Settings;
 import org.snowjak.rays.Util;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.util.Pair;
+import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sample.Sample;
 
 /**
@@ -51,14 +52,44 @@ public class BestCandidateSampler extends Sampler {
 	
 	private final Point2D[] lensSamples;
 	
+	private final Double[] tSamples;
+	
 	private int currentBlockX, currentBlockY;
 	
 	private int currentPixelX, currentPixelY, currentPixelSample;
 	
-	public BestCandidateSampler(long renderId, int xStart, int yStart, int xEnd, int yEnd, int samplesPerPixel,
+	/**
+	 * Construct a new {@link BestCandidateSampler} across the given interval
+	 * [<code>(xStart,yStart)</code>, <code>(xEnd,yEnd)</code>], with no additional
+	 * points requested.
+	 * 
+	 * @param xStart
+	 * @param yStart
+	 * @param xEnd
+	 * @param yEnd
+	 * @param samplesPerPixel
+	 */
+	public BestCandidateSampler(int xStart, int yStart, int xEnd, int yEnd, int samplesPerPixel) {
+		
+		this(xStart, yStart, xEnd, yEnd, samplesPerPixel, 0, 0);
+	}
+	
+	/**
+	 * Construct a new {@link BestCandidateSampler} across the given interval
+	 * [<code>(xStart,yStart)</code>, <code>(xEnd,yEnd)</code>].
+	 * 
+	 * @param xStart
+	 * @param yStart
+	 * @param xEnd
+	 * @param yEnd
+	 * @param samplesPerPixel
+	 * @param additional1dSamples
+	 * @param additional2dSamples
+	 */
+	public BestCandidateSampler(int xStart, int yStart, int xEnd, int yEnd, int samplesPerPixel,
 			int additional1dSamples, int additional2dSamples) {
 		
-		super(renderId, xStart, yStart, xEnd, yEnd, samplesPerPixel, additional1dSamples, additional2dSamples);
+		super(xStart, yStart, xEnd, yEnd, samplesPerPixel, additional1dSamples, additional2dSamples);
 		
 		final int minDimensionSize = min(xEnd - xStart + 1, yEnd - yStart + 1);
 		this.blockSize = (minDimensionSize >= Settings.getInstance().getSamplerBestCandidateBlockSize())
@@ -72,6 +103,10 @@ public class BestCandidateSampler extends Sampler {
 				() -> new Point2D(Settings.RND.nextDouble(), Settings.RND.nextDouble()),
 				(p1, p2) -> pow(p1.getX() - p2.getX(), 2) + pow(p1.getY() - p2.getY(), 2), (p) -> true, (p) -> {
 				}).toArray(new Point2D[0]);
+		
+		this.tSamples = generateSamples(blockSize * blockSize * samplesPerPixel, () -> Settings.RND.nextDouble(),
+				(p1, p2) -> sqrt(pow(p1 - p2, 2)), (p) -> true, (p) -> {
+				}).toArray(new Double[0]);
 		
 		this.currentBlockX = 0;
 		this.currentBlockY = 0;
@@ -93,11 +128,12 @@ public class BestCandidateSampler extends Sampler {
 		final var filmPoint = block[currentBlockX][currentBlockY][currentPixelSample]
 				.add(new Pair(currentPixelX, currentPixelY));
 		final var lensPoint = lensSamples[currentPixelSample];
+		final double t = tSamples[currentBlockX * blockSize * getSamplesPerPixel()
+				+ currentBlockY * getSamplesPerPixel() + currentPixelSample];
 		
-		final var result = new Sample(getRenderId(), getSamplesPerPixel(), filmPoint, lensPoint, null, null,
-				generateSamples(getAdditional1DSamples(), () -> Settings.RND.nextDouble(), (d1, d2) -> pow(d1 - d2, 2),
-						(d) -> true, (d) -> {
-						}),
+		final var result = new FixedSample(this, filmPoint, lensPoint, t, generateSamples(getAdditional1DSamples(),
+				() -> Settings.RND.nextDouble(), (d1, d2) -> pow(d1 - d2, 2), (d) -> true, (d) -> {
+				}),
 				generateSamples(getAdditional2DSamples(),
 						() -> new Point2D(Settings.RND.nextDouble(), Settings.RND.nextDouble()),
 						(p1, p2) -> pow(p1.getX() - p2.getX(), 2) + pow(p1.getY() - p2.getY(), 2), (p) -> true, (p) -> {
@@ -180,7 +216,7 @@ public class BestCandidateSampler extends Sampler {
 			
 			final var newPoint = IntStream.range(0, blockSize).mapToObj(i -> generatePoint(blockSize, blockSize))
 					.filter(p -> hasFreeIndex(block[(int) p.getX()][(int) p.getY()]))
-					.sorted((p1, p2) -> Double.compare(distanceSq(p1, points), distanceSq(p2, points))).findFirst();
+					.sorted((p1, p2) -> Double.compare(distanceSq(p2, points), distanceSq(p1, points))).findFirst();
 			
 			if (newPoint.isPresent()) {
 				points.add(newPoint.get());

@@ -3,7 +3,7 @@ package org.snowjak.rays.interact;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
-import org.snowjak.rays.sample.Sample;
+import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.transform.Transformable;
 
 /**
@@ -47,22 +47,22 @@ public interface DescribesSurface extends Transformable {
 	public <T extends DescribesSurface> SurfaceDescriptor<T> getSurfaceNearestTo(Point3D neighbor);
 
 	/**
-	 * Sample a point from the surface of this object.
+	 * FixedSample a point from the surface of this object.
 	 * 
-	 * @param sample
+	 * @param fixedSample
 	 * @return
 	 */
-	public <T extends DescribesSurface> SurfaceDescriptor<T> sampleSurface(Sample sample);
+	public <T extends DescribesSurface> SurfaceDescriptor<T> sampleSurface(FixedSample fixedSample);
 
 	/**
-	 * Sample a point from the surface of this object such that the sampled
+	 * FixedSample a point from the surface of this object such that the sampled
 	 * point is "near" the specified <code>neighbor</code>ing point.
 	 * 
 	 * @param neighbor
-	 * @param sample
+	 * @param fixedSample
 	 * @return
 	 */
-	public <T extends DescribesSurface> SurfaceDescriptor<T> sampleSurfaceFacing(Point3D neighbor, Sample sample);
+	public <T extends DescribesSurface> SurfaceDescriptor<T> sampleSurfaceFacing(Point3D neighbor, FixedSample fixedSample);
 
 	/**
 	 * Given a neighboring point <code>viewedFrom</code>, compute the

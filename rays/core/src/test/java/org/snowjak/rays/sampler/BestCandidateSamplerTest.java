@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 
 import org.junit.Test;
@@ -19,7 +20,7 @@ public class BestCandidateSamplerTest {
 	@Test
 	public void test() {
 		
-		final var sampler = new BestCandidateSampler(0, 0, 0, 32, 32, 3, 4, 5);
+		final var sampler = new BestCandidateSampler(0, 0, 32, 32, 3, 4, 5);
 		
 		final Collection<Point2D> filmPoints = new LinkedList<>();
 		
@@ -43,14 +44,23 @@ public class BestCandidateSamplerTest {
 			assertTrue("Lens-U (" + Double.toString(lensU) + ") not in range.", (lensU >= 0d) && (lensU <= 1d));
 			assertTrue("Lens-V (" + Double.toString(lensV) + ") not in range.", (lensV >= 0d) && (lensV <= 1d));
 			
+			final var additional1DSamples = new HashSet<Double>();
+			do {
+				//
+			} while ((additional1DSamples.add(s.getAdditional1DSample())));
+			
+			final var additional2DSamples = new HashSet<Point2D>();
+			do {
+				//
+			} while ((additional2DSamples.add(s.getAdditional2DSample())));
+			
 			assertEquals("Not expected number of additional 1D samples.", sampler.getAdditional1DSamples(),
-					s.getAdditional1DSamples().size());
-			assertTrue("Not all 1D samples in range.",
-					s.getAdditional1DSamples().stream().allMatch(v -> v >= 0d && v <= 1d));
+					additional1DSamples.size());
+			assertTrue("Not all 1D samples in range.", additional1DSamples.stream().allMatch(v -> v >= 0d && v <= 1d));
 			
 			assertEquals("Not expected number of additional 2D samples.", sampler.getAdditional2DSamples(),
-					s.getAdditional2DSamples().size());
-			assertTrue("Not all 2D samples in range.", s.getAdditional2DSamples().stream()
+					additional2DSamples.size());
+			assertTrue("Not all 2D samples in range.", additional2DSamples.stream()
 					.allMatch(p -> p.getX() >= 0d && p.getY() >= 0d && p.getX() <= 1d && p.getY() <= 1d));
 			
 			filmPoints.add(s.getFilmPoint());

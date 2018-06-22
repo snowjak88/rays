@@ -5,6 +5,7 @@ import java.util.stream.IntStream;
 
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Point2D;
+import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sample.Sample;
 
 /**
@@ -26,10 +27,40 @@ public class PseudorandomSampler extends Sampler {
 	private int currentPixelX, currentPixelY;
 	private int currentPixelSampleNumber;
 	
-	public PseudorandomSampler(long renderId, int xStart, int yStart, int xEnd, int yEnd, int samplesPerPixel,
-			int additional1dSamples, int additional2dSamples) {
+	/**
+	 * Construct a new {@link PseudorandomSampler} across the given interval
+	 * [<code>(xStart,yStart)</code>, <code>(xEnd,yEnd)</code>], with no additional
+	 * points requested.
+	 * 
+	 * @param xStart
+	 * @param yStart
+	 * @param xEnd
+	 * @param yEnd
+	 * @param samplesPerPixel
+	 * @param additional1dSamples
+	 * @param additional2dSamples
+	 */
+	public PseudorandomSampler(int xStart, int yStart, int xEnd, int yEnd, int samplesPerPixel) {
 		
-		super(renderId, xStart, yStart, xEnd, yEnd, samplesPerPixel, additional1dSamples, additional2dSamples);
+		this(xStart, yStart, xEnd, yEnd, samplesPerPixel, 0, 0);
+	}
+	
+	/**
+	 * Construct a new {@link PseudorandomSampler} across the given interval
+	 * [<code>(xStart,yStart)</code>, <code>(xEnd,yEnd)</code>].
+	 * 
+	 * @param xStart
+	 * @param yStart
+	 * @param xEnd
+	 * @param yEnd
+	 * @param samplesPerPixel
+	 * @param additional1dSamples
+	 * @param additional2dSamples
+	 */
+	public PseudorandomSampler(int xStart, int yStart, int xEnd, int yEnd, int samplesPerPixel, int additional1dSamples,
+			int additional2dSamples) {
+		
+		super(xStart, yStart, xEnd, yEnd, samplesPerPixel, additional1dSamples, additional2dSamples);
 		
 		currentPixelX = xStart;
 		currentPixelY = yStart;
@@ -51,14 +82,14 @@ public class PseudorandomSampler extends Sampler {
 		final var filmPoint = new Point2D(((double) currentPixelX) + Settings.RND.nextDouble(),
 				((double) currentPixelY) + Settings.RND.nextDouble());
 		final var lensUV = new Point2D(Settings.RND.nextDouble(), Settings.RND.nextDouble());
+		final var t = Settings.RND.nextDouble();
 		final var additional1dSamples = IntStream.range(0, getAdditional1DSamples())
 				.mapToObj(i -> Settings.RND.nextDouble()).collect(Collectors.toList());
 		final var additional2dSamples = IntStream.range(0, getAdditional2DSamples())
 				.mapToObj(i -> new Point2D(Settings.RND.nextDouble(), Settings.RND.nextDouble()))
 				.collect(Collectors.toList());
 		
-		final var result = new Sample(getRenderId(), getSamplesPerPixel(), filmPoint, lensUV, null, null,
-				additional1dSamples, additional2dSamples);
+		final var result = new FixedSample(this, filmPoint, lensUV, t, additional1dSamples, additional2dSamples);
 		
 		currentPixelSampleNumber++;
 		if (currentPixelSampleNumber >= getSamplesPerPixel()) {

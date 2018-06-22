@@ -37,7 +37,7 @@ public class BoxFilter implements Filter {
 		if (!isContributing(sample, pixelX, pixelY))
 			return 0d;
 		
-		return 1d / ((double) pixelsInBox * sample.getSamplesPerPixel());
+		return 1d / ((double) pixelsInBox * sample.getSampler().getSamplesPerPixel());
 	}
 	
 }

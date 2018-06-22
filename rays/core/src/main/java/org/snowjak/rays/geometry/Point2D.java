@@ -13,6 +13,19 @@ public class Point2D extends Pair implements Serializable {
 	
 	private static final long serialVersionUID = -7421036355210501663L;
 	
+	/**
+	 * <code>{ 0, 0 }</code>
+	 */
+	public static final Point2D ZERO = new Point2D(0, 0);
+	/**
+	 * <code>{ .5, .5 }</code>
+	 */
+	public static final Point2D HALF = new Point2D(0.5, 0.5);
+	/**
+	 * <code>{ 1, 1 }</code>
+	 */
+	public static final Point2D ONE = new Point2D(1, 1);
+	
 	public static Point2D from(Pair p) {
 		
 		if (Point2D.class.isAssignableFrom(p.getClass()))

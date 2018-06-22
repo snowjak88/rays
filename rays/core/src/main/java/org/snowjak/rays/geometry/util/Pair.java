@@ -14,7 +14,18 @@ public class Pair extends AbstractVector<Pair> implements Serializable {
 	
 	private static final long serialVersionUID = 8826976880964290469L;
 	
+	/**
+	 * <code>{ 0, 0 }</code>
+	 */
 	public static final Pair ZERO = new Pair(0, 0);
+	/**
+	 * <code>{ .5, .5 }</code>
+	 */
+	public static final Pair HALF = new Pair(0.5, 0.5);
+	/**
+	 * <code>{ 1, 1 }</code>
+	 */
+	public static final Pair ONE = new Pair(1, 1);
 	
 	/**
 	 * Create a new Pair consisting of 2 values.

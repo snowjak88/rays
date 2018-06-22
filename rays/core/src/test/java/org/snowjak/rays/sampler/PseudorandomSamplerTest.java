@@ -2,14 +2,17 @@ package org.snowjak.rays.sampler;
 
 import static org.junit.Assert.*;
 
+import java.util.HashSet;
+
 import org.junit.Test;
+import org.snowjak.rays.geometry.Point2D;
 
 public class PseudorandomSamplerTest {
 	
 	@Test
 	public void testSamplingRange() {
 		
-		final var sampler = new PseudorandomSampler(0, 0, 0, 32, 32, 3, 3, 4);
+		final var sampler = new PseudorandomSampler(0, 0, 32, 32, 3, 3, 4);
 		
 		final int[][] sampleCounts = new int[sampler.getXEnd() - sampler.getXStart() + 1][sampler.getYEnd()
 				- sampler.getYStart() + 1];
@@ -31,15 +34,15 @@ public class PseudorandomSamplerTest {
 			assertTrue("Lens-U (" + Double.toString(lensU) + ") not in range.", (lensU >= 0d) && (lensU <= 1d));
 			assertTrue("Lens-V (" + Double.toString(lensV) + ") not in range.", (lensV >= 0d) && (lensV <= 1d));
 			
-			assertEquals("Not expected number of additional 1D samples.", sampler.getAdditional1DSamples(),
-					s.getAdditional1DSamples().size());
-			assertTrue("Not all 1D samples in range.",
-					s.getAdditional1DSamples().stream().allMatch(v -> v >= 0d && v <= 1d));
+			final var additional1DSamples = new HashSet<Double>();
+			do {
+				//
+			} while ((additional1DSamples.add(s.getAdditional1DSample())));
 			
-			assertEquals("Not expected number of additional 2D samples.", sampler.getAdditional2DSamples(),
-					s.getAdditional2DSamples().size());
-			assertTrue("Not all 2D samples in range.", s.getAdditional2DSamples().stream()
-					.allMatch(p -> p.getX() >= 0d && p.getY() >= 0d && p.getX() <= 1d && p.getY() <= 1d));
+			final var additional2DSamples = new HashSet<Point2D>();
+			do {
+				//
+			} while ((additional2DSamples.add(s.getAdditional2DSample())));
 		}
 		
 		assertEquals("Not expected number of samples generated.", (sampler.getXEnd() - sampler.getXStart() + 1)

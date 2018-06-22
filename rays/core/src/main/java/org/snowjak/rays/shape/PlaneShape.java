@@ -12,7 +12,7 @@ import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.SurfaceDescriptor;
-import org.snowjak.rays.sample.Sample;
+import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.transform.Transform;
 
 /**
@@ -84,9 +84,9 @@ public class PlaneShape extends Shape {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<PlaneShape> sampleSurface(Sample sample) {
+	public SurfaceDescriptor<PlaneShape> sampleSurface(FixedSample fixedSample) {
 		
-		final Point2D samplePoint = sample.getAdditional2DSample();
+		final Point2D samplePoint = fixedSample.getAdditional2DSample();
 		final double x = (samplePoint.getX() - 0.5) * Double.MAX_VALUE;
 		final double y = 0d;
 		final double z = (samplePoint.getY() - 0.5) * Double.MAX_VALUE;
@@ -99,9 +99,9 @@ public class PlaneShape extends Shape {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<PlaneShape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
+	public SurfaceDescriptor<PlaneShape> sampleSurfaceFacing(Point3D neighbor, FixedSample fixedSample) {
 		
-		return sampleSurface(sample);
+		return sampleSurface(fixedSample);
 	}
 	
 	@Override
