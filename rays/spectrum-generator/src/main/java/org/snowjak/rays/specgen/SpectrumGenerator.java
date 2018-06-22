@@ -4,10 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
@@ -44,10 +41,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SpectrumGenerator.class);
 	
-	private final ScheduledExecutorService statusUpdateExecutor = Executors.newSingleThreadScheduledExecutor();
-	
 	private final ForkJoinPool forkJoinPool = new ForkJoinPool();
-	private final StatusReporter reporter = new StatusReporter();
 	
 	public static void main(String[] args) {
 		
@@ -57,7 +51,6 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> statusUpdateExecutor.shutdownNow()));
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> forkJoinPool.shutdownNow()));
 		
 		final var directory = new File("./spectra/");
@@ -69,17 +62,12 @@ public class SpectrumGenerator implements CommandLineRunner {
 		runFor("green", RGB.GREEN, new File(directory, "green.csv"));
 		runFor("blue", RGB.BLUE, new File(directory, "blue.csv"));
 		
-		statusUpdateExecutor.shutdown();
-		
 	}
 	
 	public void runFor(String name, RGB rgb, File outputCsv)
 			throws IOException, InterruptedException, ExecutionException {
 		
 		LOG.info("Generating a spectrum fit for: \"{}\" ({} / {})", name, rgb.toString(), rgb.to(XYZ.class).toString());
-		
-		final var statusReporter = statusUpdateExecutor.scheduleAtFixedRate(() -> reporter.reportStatus(name), 1, 30,
-				TimeUnit.SECONDS);
 		
 		final var binCount = 10;
 		
@@ -97,9 +85,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		final var vector = table.navigableKeySet().stream().map(k -> table.get(k)).toArray(len -> new Point[len]);
 		
 		final var result = forkJoinPool.submit(new BruteForceSpectrumSearchRecursiveTask(originalTarget, target,
-				multiplierRange, incStep, startingPoints, reporter, vector)).join();
-		
-		statusReporter.cancel(false);
+				multiplierRange, incStep, startingPoints, new StatusReporter(name), vector)).join();
 		
 		LOG.info("{}: writing result to file.", name);
 		
@@ -120,28 +106,27 @@ public class SpectrumGenerator implements CommandLineRunner {
 	public static class StatusReporter {
 		
 		private static final Logger LOG = LoggerFactory.getLogger(StatusReporter.class);
+		
+		private final String name;
+		
 		private double bestDistance, bestBumpiness;
 		private SpectralPowerDistribution bestSPD = null;
+		
+		public StatusReporter(String name) {
+			
+			this.name = name;
+		}
 		
 		public void reportResult(double distance, double bumpiness, SpectralPowerDistribution spd) {
 			
 			synchronized (this) {
-				if (bestSPD == null) {
+				if (bestSPD == null || (distance <= bestDistance && bumpiness <= bestBumpiness)) {
 					bestDistance = distance;
 					bestBumpiness = bumpiness;
 					bestSPD = spd;
-				} else if (distance <= bestDistance && bumpiness <= bestBumpiness) {
-					bestDistance = distance;
-					bestBumpiness = bumpiness;
-					bestSPD = spd;
+					
+					LOG.info("{}: Best SPD: Distance: {} / Bumpiness: {}", name, bestDistance, bestBumpiness);
 				}
-			}
-		}
-		
-		public void reportStatus(String name) {
-			
-			synchronized (this) {
-				LOG.info("{}: Best SPD: Distance: {} / Bumpiness: {}", name, bestDistance, bestBumpiness);
 			}
 		}
 	}
