@@ -256,6 +256,14 @@ public abstract class TabulatedDistribution<D extends TabulatedDistribution<D, Y
 	}
 	
 	/**
+	 * @return the number of entries in this tabulated distribution
+	 */
+	public int size() {
+		
+		return this.entries.length;
+	}
+	
+	/**
 	 * Return a new TabulatedDistribution produced by modifying this distribution's
 	 * bounds. The resulting {@link TabulatedDistribution} will have the same number
 	 * of table-entries as this distribution.
