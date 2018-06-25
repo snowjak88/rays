@@ -4,13 +4,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
 
-import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
@@ -41,8 +38,6 @@ public class SpectrumGenerator implements CommandLineRunner {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SpectrumGenerator.class);
 	
-	private final ForkJoinPool forkJoinPool = new ForkJoinPool();
-	
 	public static void main(String[] args) {
 		
 		SpringApplication.run(SpectrumGenerator.class, args);
@@ -50,8 +45,6 @@ public class SpectrumGenerator implements CommandLineRunner {
 	
 	@Override
 	public void run(String... args) throws Exception {
-		
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> forkJoinPool.shutdownNow()));
 		
 		final var directory = new File("./spectra/");
 		if (!directory.exists())
@@ -69,31 +62,19 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		LOG.info("Generating a spectrum fit for: \"{}\" ({} / {})", name, rgb.toString(), rgb.to(XYZ.class).toString());
 		
-		final var originalTarget = rgb.to(XYZ.class);
-		final var target = new XYZ(originalTarget.get().divide(originalTarget.getY()));
-		final var multiplierRange = new Pair<>(0d, 1.2d);
-		final var incStep = 0.1d;
-		
-		final var startingSPD = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
-		final var spdTable = startingSPD.getTable();
-		final var startingPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
-				.toArray(len -> new Point[len]);
-		
-		final var table = startingSPD.resize(binCount).getTable();
-		final var vector = table.navigableKeySet().stream().map(k -> table.get(k)).toArray(len -> new Point[len]);
-		
-		final var result = forkJoinPool.submit(new BruteForceSpectrumSearchRecursiveTask(originalTarget, target,
-				multiplierRange, incStep, startingPoints, new StatusReporter(name), vector)).join();
+		final var result = new BruteForceSpectrumSearch(binCount, rgb.to(XYZ.class),
+				Settings.getInstance().getIlluminatorSpectralPowerDistribution(), 0.1, new StatusReporter(name))
+						.doSearch();
 		
 		LOG.info("{}: writing result to file.", name);
 		
-		LOG.info("{}: resulting RGB = {}", name, XYZ.fromSpectrum(result.getValue()).to(RGB.class));
-		LOG.info("{}: Distance: {}", name, result.getKey().getFirst());
-		LOG.info("{}: Bumpiness: {}", name, result.getKey().getSecond());
+		LOG.info("{}: resulting RGB = {}", name, XYZ.fromSpectrum(result.getSpd()).to(RGB.class));
+		LOG.info("{}: Distance: {}", name, result.getDistance());
+		LOG.info("{}: Bumpiness: {}", name, result.getBumpiness());
 		
 		LOG.info("{}: Writing spectrum as CSV ...", name);
 		try (var csv = new FileOutputStream(outputCsv)) {
-			result.getValue().saveToCSV(csv);
+			result.getSpd().saveToCSV(csv);
 		} catch (IOException e) {
 			LOG.error("{}: Could not write spectrum to {}: {}, \"{}\"", name, outputCsv.getPath(),
 					e.getClass().getSimpleName(), e.getMessage());
