@@ -6,7 +6,6 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.math3.util.Pair;
@@ -77,12 +76,13 @@ public class BruteForceSpectrumSearchRecursiveTask
 						startingPoints, reporter, vector, currentIndex + 1).fork());
 		}
 		
-		final var subtaskResults = subtasks.stream().map(t -> t.join()).collect(Collectors.toList());
-		for (Pair<Pair<Double, Double>, SpectralPowerDistribution> p : subtaskResults)
+		for (ForkJoinTask<Pair<Pair<Double, Double>, SpectralPowerDistribution>> t : subtasks) {
+			var p = t.join();
 			if (p.getKey().getFirst() <= bestResult.getKey().getFirst()
 					&& p.getKey().getSecond() <= bestResult.getKey().getSecond())
 				bestResult = p;
-			
+		}
+		
 		reporter.reportResult(bestResult.getKey().getFirst(), bestResult.getKey().getSecond(), bestResult.getValue());
 		
 		return bestResult;

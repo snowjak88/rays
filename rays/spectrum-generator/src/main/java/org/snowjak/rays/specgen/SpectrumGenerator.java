@@ -57,19 +57,17 @@ public class SpectrumGenerator implements CommandLineRunner {
 		if (!directory.exists())
 			directory.mkdirs();
 		
-		runFor("white", RGB.WHITE, new File(directory, "white.csv"));
-		runFor("red", RGB.RED, new File(directory, "red.csv"));
-		runFor("green", RGB.GREEN, new File(directory, "green.csv"));
-		runFor("blue", RGB.BLUE, new File(directory, "blue.csv"));
+		runFor("white", 8, RGB.WHITE, new File(directory, "white.csv"));
+		runFor("red", 8, RGB.RED, new File(directory, "red.csv"));
+		runFor("green", 8, RGB.GREEN, new File(directory, "green.csv"));
+		runFor("blue", 8, RGB.BLUE, new File(directory, "blue.csv"));
 		
 	}
 	
-	public void runFor(String name, RGB rgb, File outputCsv)
+	public void runFor(String name, int binCount, RGB rgb, File outputCsv)
 			throws IOException, InterruptedException, ExecutionException {
 		
 		LOG.info("Generating a spectrum fit for: \"{}\" ({} / {})", name, rgb.toString(), rgb.to(XYZ.class).toString());
-		
-		final var binCount = 10;
 		
 		final var originalTarget = rgb.to(XYZ.class);
 		final var target = new XYZ(originalTarget.get().divide(originalTarget.getY()));
