@@ -1,9 +1,13 @@
 package org.snowjak.rays.specgen;
 
+import static org.apache.commons.math3.util.FastMath.max;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,20 +54,24 @@ public class SpectrumGenerator implements CommandLineRunner {
 		if (!directory.exists())
 			directory.mkdirs();
 		
-		runFor("white", 8, RGB.WHITE, new File(directory, "white.csv"));
-		runFor("red", 8, RGB.RED, new File(directory, "red.csv"));
-		runFor("green", 8, RGB.GREEN, new File(directory, "green.csv"));
-		runFor("blue", 8, RGB.BLUE, new File(directory, "blue.csv"));
+		runFor("white", 16, RGB.WHITE, new File(directory, "white.csv"),
+				Settings.getInstance().getIlluminatorSpectralPowerDistribution());
+		runFor("red", 16, RGB.RED, new File(directory, "red.csv"),
+				Settings.getInstance().getIlluminatorSpectralPowerDistribution());
+		runFor("green", 16, RGB.GREEN, new File(directory, "green.csv"),
+				Settings.getInstance().getIlluminatorSpectralPowerDistribution());
+		runFor("blue", 16, RGB.BLUE, new File(directory, "blue.csv"),
+				Settings.getInstance().getIlluminatorSpectralPowerDistribution());
 		
 	}
 	
-	public void runFor(String name, int binCount, RGB rgb, File outputCsv)
+	public void runFor(String name, int binCount, RGB rgb, File outputCsv, SpectralPowerDistribution startingSPD)
 			throws IOException, InterruptedException, ExecutionException {
 		
 		LOG.info("Generating a spectrum fit for: \"{}\" ({} / {})", name, rgb.toString(), rgb.to(XYZ.class).toString());
 		
-		final var result = new BruteForceSpectrumSearch(binCount, rgb.to(XYZ.class),
-				Settings.getInstance().getIlluminatorSpectralPowerDistribution(), 0.1, new StatusReporter(name))
+		final var result = new StochasticSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 32, 0.050d,
+				Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors(), new StatusReporter(name, 9, 40))
 						.doSearch();
 		
 		LOG.info("{}: writing result to file.", name);
@@ -88,12 +96,30 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		private final String name;
 		
+		private final boolean graphEnabled;
+		private final int graphRows, graphColumns;
+		
 		private double bestDistance, bestBumpiness;
 		private SpectralPowerDistribution bestSPD = null;
 		
 		public StatusReporter(String name) {
 			
 			this.name = name;
+			this.graphEnabled = false;
+			
+			this.graphRows = 0;
+			this.graphColumns = 0;
+		}
+		
+		public StatusReporter(String name, int graphRows, int graphColumns) {
+			
+			assert (graphRows > 1);
+			assert (graphColumns > 2);
+			
+			this.name = name;
+			this.graphEnabled = true;
+			this.graphRows = graphRows;
+			this.graphColumns = graphColumns;
 		}
 		
 		public void reportResult(double distance, double bumpiness, SpectralPowerDistribution spd) {
@@ -105,6 +131,49 @@ public class SpectrumGenerator implements CommandLineRunner {
 					bestSPD = spd;
 					
 					LOG.info("{}: Best SPD: Distance: {} / Bumpiness: {}", name, bestDistance, bestBumpiness);
+					
+					if (this.graphEnabled) {
+						final double lowBound = spd.getBounds().get().getFirst(),
+								highBound = spd.getBounds().get().getSecond();
+						final double colSpan = (highBound - lowBound) / ((double) graphColumns - 1d);
+						
+						final double[] measurements = IntStream.range(0, graphColumns - 1)
+								.mapToDouble(i -> ((double) i * colSpan) + lowBound).map(k -> spd.get(k).get(0))
+								.toArray();
+						
+						final double maxMeasurement = Arrays.stream(measurements).max().getAsDouble();
+						
+						final double rowSpan = max(1d, maxMeasurement) / ((double) (graphRows - 1));
+						
+						for (int row = 0; row < graphRows; row++) {
+							
+							final var graphBuilder = new StringBuilder();
+							
+							final var isLastRow = (row == graphRows - 1);
+							if (isLastRow)
+								graphBuilder.append("+");
+							else
+								graphBuilder.append("|");
+							
+							final double rowBoundLow = (double) (graphRows - row - 2) * rowSpan;
+							final double rowBoundHigh = (double) (graphRows - row - 1) * rowSpan;
+							
+							for (int col = 0; col < graphColumns - 1; col++) {
+								
+								if (isLastRow)
+									graphBuilder.append("-");
+								else {
+									
+									if (measurements[col] > rowBoundLow && measurements[col] <= rowBoundHigh)
+										graphBuilder.append("*");
+									else
+										graphBuilder.append(" ");
+								}
+							}
+							
+							LOG.info("{}: SPD: {}", name, graphBuilder.toString());
+						}
+					}
 				}
 			}
 		}
