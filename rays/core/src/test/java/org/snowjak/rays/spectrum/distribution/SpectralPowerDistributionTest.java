@@ -3,6 +3,7 @@ package org.snowjak.rays.spectrum.distribution;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.stream.IntStream;
 
 import org.junit.Test;
 import org.snowjak.rays.Settings;
@@ -129,7 +130,7 @@ public class SpectralPowerDistributionTest {
 		
 		final var norm = (SpectralPowerDistribution) spd.normalize();
 		
-		assertEquals(Settings.getInstance().getSpectrumBinCount(), norm.getTable().size());
+		assertEquals(Settings.getInstance().getSpectrumBinCount(), norm.size());
 		
 		assertEquals(Settings.getInstance().getSpectrumRangeLow(), norm.getBounds().get().getFirst(), 0.00001);
 		assertEquals(Settings.getInstance().getSpectrumRangeHigh(), norm.getBounds().get().getSecond(), 0.00001);
@@ -140,6 +141,22 @@ public class SpectralPowerDistributionTest {
 				0.00001);
 		assertEquals(1d, norm.get(Settings.getInstance().getSpectrumRangeLow() + 2d * norm.getIndexStep()).get(0),
 				0.00001);
+	}
+	
+	@Test
+	public void testResize() {
+		
+		final var values = IntStream.range(0, 8).mapToObj(i -> new Point(i)).toArray(len -> new Point[len]);
+		final var spd = new SpectralPowerDistribution(values).resize();
+		
+		assertEquals(Settings.getInstance().getSpectrumBinCount(), spd.size());
+		
+		assertEquals(Settings.getInstance().getSpectrumRangeLow(), spd.getBounds().get().getFirst(), 0.00001);
+		assertEquals(Settings.getInstance().getSpectrumRangeHigh(), spd.getBounds().get().getSecond(), 0.00001);
+		
+		assertEquals(0d, Arrays.stream(spd.getEntries()).mapToDouble(p -> p.get(0)).min().getAsDouble(), 0.00001);
+		assertEquals(7d, Arrays.stream(spd.getEntries()).mapToDouble(p -> p.get(0)).max().getAsDouble(), 0.00001);
+		
 	}
 	
 	@Test

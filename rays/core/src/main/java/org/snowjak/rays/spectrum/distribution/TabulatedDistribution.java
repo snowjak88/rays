@@ -319,9 +319,7 @@ public abstract class TabulatedDistribution<D extends TabulatedDistribution<D, Y
 		
 		double currentX = newBounds.getFirst();
 		for (int i = 0; i < newValues.length; i++) {
-			newValues[i] = (this.isInBounds(currentX))
-					? this.averageOver(currentX - newStepSize, currentX + newStepSize)
-					: this.getZero();
+			newValues[i] = (this.isInBounds(currentX)) ? this.get(currentX) : this.getZero();
 			currentX += newStepSize;
 		}
 		

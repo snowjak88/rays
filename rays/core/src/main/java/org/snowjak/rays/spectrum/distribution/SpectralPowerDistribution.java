@@ -261,7 +261,7 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	public SpectralPowerDistribution resize() {
 		
 		return this.resize(
-				new Pair<>(Settings.getInstance().getSpectrumRangeLow(), Settings.getInstance().getSpectrumRangeHigh()),
+				Settings.getInstance().getSpectrumRange(),
 				Settings.getInstance().getSpectrumBinCount());
 	}
 	
