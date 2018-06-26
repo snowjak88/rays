@@ -41,8 +41,8 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		assert (startingSPD != null);
 		assert (generationSize > 0);
 		
-		this.target = target.normalize();
 		this.originalTarget = target;
+		this.target = target.normalize();
 		this.startingSPD = startingSPD.resize(binCount);
 		this.executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(parallelism));
 		this.generationSize = generationSize;
@@ -54,7 +54,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	@Override
 	public Result doSearch() {
 		
-		var bestResult = CandidateSPDEvaluator.evaluateSPD(startingSPD, target);
+		var bestResult = CandidateSPDEvaluator.evaluateSPD(startingSPD, originalTarget);
 		
 		reporter.reportResult(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd());
 		
@@ -68,7 +68,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 			
 			final var evaluatedGenerations = IntStream.range(0, generationSize)
 					.mapToObj(i -> mutate(currentBestResult.getSpd()))
-					.map(spd -> executor.submit(new CandidateSPDEvaluator(currentBestResult, spd, target)))
+					.map(spd -> executor.submit(new CandidateSPDEvaluator(currentBestResult, spd, originalTarget)))
 					.collect(Collectors.toList());
 			
 			try {
@@ -95,8 +95,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 				reporter.reportResult(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd());
 		}
 		
-		return new Result(bestResult.getDistance(), bestResult.getBumpiness(),
-				scaleSPD(bestResult.getSpd(), originalTarget));
+		return new Result(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd().normalize());
 	}
 	
 	private SpectralPowerDistribution mutate(SpectralPowerDistribution spd) {

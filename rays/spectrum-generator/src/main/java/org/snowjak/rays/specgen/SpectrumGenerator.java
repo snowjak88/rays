@@ -7,17 +7,22 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 /**
  * SpectrumGenerator is an application that can pre-generate spectra
@@ -38,9 +43,25 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *
  */
 @SpringBootApplication
+@EnableConfigurationProperties
 public class SpectrumGenerator implements CommandLineRunner {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SpectrumGenerator.class);
+	
+	@Value("${generator-type}")
+	private String generatorType;
+	
+	@Value("${colors}")
+	private String colors;
+	
+	@Value("${bins}")
+	private int binCount;
+	
+	@Value("${distance}")
+	private double targetDistance;
+	
+	@Autowired
+	SpectrumGeneratorProperties spectrumGeneratorProperties;
 	
 	public static void main(String[] args) {
 		
@@ -54,25 +75,67 @@ public class SpectrumGenerator implements CommandLineRunner {
 		if (!directory.exists())
 			directory.mkdirs();
 		
-		runFor("white", 16, RGB.WHITE, new File(directory, "white.csv"),
-				Settings.getInstance().getIlluminatorSpectralPowerDistribution());
-		runFor("red", 16, RGB.RED, new File(directory, "red.csv"),
-				Settings.getInstance().getIlluminatorSpectralPowerDistribution());
-		runFor("green", 16, RGB.GREEN, new File(directory, "green.csv"),
-				Settings.getInstance().getIlluminatorSpectralPowerDistribution());
-		runFor("blue", 16, RGB.BLUE, new File(directory, "blue.csv"),
-				Settings.getInstance().getIlluminatorSpectralPowerDistribution());
+		if (generatorType.trim().isEmpty()) {
+			LOG.warn("No generator-type specified. Please specify one of: {}",
+					spectrumGeneratorProperties.getAvailableGenerators().stream().collect(Collectors.joining(",")));
+			return;
+		}
+		
+		if (!spectrumGeneratorProperties.getAvailableGenerators().contains(generatorType)) {
+			LOG.error("Given generator-type \"{}\" is not recognized! Please use one of: {}", generatorType,
+					spectrumGeneratorProperties.getAvailableGenerators().stream().collect(Collectors.joining(",")));
+			return;
+		}
+		
+		if (colors.trim().isEmpty())
+			LOG.warn("No colors for which to generate spectra. Nothing to do.");
+		
+		for (String color : colors.split(",")) {
+			
+			if (!spectrumGeneratorProperties.getAvailableColors().contains(color)) {
+				LOG.error("Given color \"{}\" is not recognized! Please use one of: {}", color,
+						spectrumGeneratorProperties.getAvailableColors().stream().collect(Collectors.joining(",")));
+				return;
+			}
+			
+			if (!spectrumGeneratorProperties.getColorDefinitions().containsKey(color)) {
+				LOG.error("Given color \"{}\" does not have a configured RGB definition! Please use one of: {}", color,
+						spectrumGeneratorProperties.getAvailableColors().stream().collect(Collectors.joining(",")));
+				return;
+			}
+		}
+		
+		for (String color : colors.split(","))
+			runFor(generatorType, color, binCount,
+					new RGB(new Triplet(spectrumGeneratorProperties.getColorDefinitions().get(color).stream()
+							.mapToDouble(d -> d).toArray())),
+					new File(directory, color + ".csv"),
+					Settings.getInstance().getIlluminatorSpectralPowerDistribution(), targetDistance);
 		
 	}
 	
-	public void runFor(String name, int binCount, RGB rgb, File outputCsv, SpectralPowerDistribution startingSPD)
+	public void runFor(String generatorType, String name, int binCount, RGB rgb, File outputCsv,
+			SpectralPowerDistribution startingSPD, double targetDistance)
 			throws IOException, InterruptedException, ExecutionException {
 		
 		LOG.info("Generating a spectrum fit for: \"{}\" ({} / {})", name, rgb.toString(), rgb.to(XYZ.class).toString());
 		
-		final var result = new StochasticSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 32, 0.050d,
-				Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors(), new StatusReporter(name, 9, 40))
-						.doSearch();
+		final SpectrumSearch.Result result;
+		
+		switch (generatorType) {
+		case "STOCHASTIC":
+			result = new StochasticSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 128, targetDistance,
+					Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors(), new StatusReporter(name, 9, 40))
+							.doSearch();
+			break;
+		case "BRUTE-FORCE":
+			result = new BruteForceSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 0.1,
+					new StatusReporter(name, 9, 40)).doSearch();
+			break;
+		default:
+			result = null;
+			return;
+		}
 		
 		LOG.info("{}: writing result to file.", name);
 		
