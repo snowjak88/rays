@@ -47,7 +47,7 @@ public class SpectralPowerDistributionTest {
 		final var spd2 = new SpectralPowerDistribution(values2);
 		
 		final var sum = (SpectralPowerDistribution) spd1.add(spd2);
-		assertEquals(Settings.getInstance().getSpectrumBinCount(), sum.getTable().size());
+		assertEquals(Settings.getInstance().getSpectrumBinCount(), sum.size());
 		
 		assertEquals(Settings.getInstance().getSpectrumRangeLow(), sum.getBounds().get().getFirst(), 0.00001);
 		assertEquals(Settings.getInstance().getSpectrumRangeHigh(), sum.getBounds().get().getSecond(), 0.00001);
@@ -104,7 +104,7 @@ public class SpectralPowerDistributionTest {
 		
 		final var product = (SpectralPowerDistribution) spd.multiply(2d);
 		
-		assertEquals(Settings.getInstance().getSpectrumBinCount(), product.getTable().size());
+		assertEquals(Settings.getInstance().getSpectrumBinCount(), product.size());
 		
 		assertEquals(Settings.getInstance().getSpectrumRangeLow(), product.getBounds().get().getFirst(), 0.00001);
 		assertEquals(Settings.getInstance().getSpectrumRangeHigh(), product.getBounds().get().getSecond(), 0.00001);
@@ -152,6 +152,17 @@ public class SpectralPowerDistributionTest {
 		assertEquals("RGB(R) not as expected.", expected.getRed(), rgb.getRed(), 0.05);
 		assertEquals("RGB(G) not as expected.", expected.getGreen(), rgb.getGreen(), 0.05);
 		assertEquals("RGB(B) not as expected.", expected.getBlue(), rgb.getBlue(), 0.05);
+	}
+	
+	@Test
+	public void testAverageOver() {
+		
+		final var spd = new SpectralPowerDistribution(1.0, 8.0, new Point[] { new Point(1.0), new Point(1.0),
+				new Point(0.0), new Point(4.0), new Point(3.0), new Point(2.0), new Point(4.0), new Point(0.0) });
+		
+		assertEquals(1d, spd.averageOver(1.0, 2.0).get(0), 0.00001);
+		assertEquals(0.5d, spd.averageOver(2.0, 3.0).get(0), 0.00001);
+		assertEquals(0.25d, spd.averageOver(2.5, 3.0).get(0), 0.00001);
 	}
 	
 }

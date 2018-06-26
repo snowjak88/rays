@@ -208,7 +208,10 @@ public abstract class TabulatedDistribution<D extends TabulatedDistribution<D, Y
 		final double fraction = index - (int) index;
 		
 		if (Settings.getInstance().nearlyEqual(fraction, 0d))
-			return entries[(int) index];
+			return entries[(int) floor(index)];
+		
+		if (Settings.getInstance().nearlyEqual(fraction, 1d))
+			return entries[(int) ceil(index)];
 		
 		return entries[(int) floor(index)].multiply(1d - fraction).add(entries[(int) ceil(index)].multiply(fraction));
 	}
@@ -241,10 +244,11 @@ public abstract class TabulatedDistribution<D extends TabulatedDistribution<D, Y
 					.reduce(getZero(), (v1, v2) -> v1.add(v2)));
 		
 		if (!Settings.getInstance().nearlyEqual(start_inside, start_full))
-			totalArea = totalArea.add(get(start_inside).add(get(start_full)).multiply(start_full - start_inside));
+			totalArea = totalArea
+					.add(get(start_inside).add(get(start_full)).divide(2d).multiply(start_full - start_inside));
 		
 		if (!Settings.getInstance().nearlyEqual(end_inside, end_full))
-			totalArea = totalArea.add(get(end_inside).add(get(end_full)).multiply(end_inside - end_full));
+			totalArea = totalArea.add(get(end_inside).add(get(end_full)).divide(2d).multiply(end_inside - end_full));
 		
 		return totalArea.divide(end_inside - start_inside);
 	}
