@@ -6,6 +6,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 
+import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.specgen.SpectrumGenerator.StatusReporter;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
@@ -38,11 +39,12 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 	}
 	
 	@Override
-	public Result doSearch(XYZ targetColor, SpectralPowerDistribution startingSPD, StatusReporter reporter) {
+	public Result doSearch(XYZ targetColor, StatusReporter reporter) {
 		
 		if (forkJoinPool == null)
 			forkJoinPool = new ForkJoinPool(parallelism);
 		
+		final var startingSPD = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
 		final var spdTable = startingSPD.getTable();
 		final var startingPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
 				.toArray(len -> new Point[len]);

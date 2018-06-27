@@ -11,8 +11,7 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 public interface SpectrumSearch {
 	
-	public SpectrumSearch.Result doSearch(XYZ targetColor, SpectralPowerDistribution startingSPD,
-			StatusReporter reporter);
+	public SpectrumSearch.Result doSearch(XYZ targetColor, StatusReporter reporter);
 	
 	public static SpectrumSearch.Result evaluateSPD(SpectralPowerDistribution spd, XYZ targetColor) {
 		

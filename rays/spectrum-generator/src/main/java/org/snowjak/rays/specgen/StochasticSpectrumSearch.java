@@ -8,9 +8,9 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -41,6 +41,9 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	private int reproducerPoolSize;
 	private int minGenerations;
 	private int maxGenerations;
+	private double mutation;
+	private double crossover;
+	private String newMemberType;
 	
 	@Value("${parallelism}")
 	private int parallelism;
@@ -58,58 +61,82 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	}
 	
 	private static final Comparator<SpectrumSearch.Result> RESULT_COMPARATOR = (r1,
-			r2) -> (Double.compare(r1.getDistance(), r2.getDistance()) * 2
+			r2) -> (Double.compare(r1.getDistance(), r2.getDistance()) * 10
 					+ Double.compare(r1.getBumpiness(), r2.getBumpiness()));
 	
 	@Override
-	public Result doSearch(XYZ targetColor, SpectralPowerDistribution startingSPD, StatusReporter reporter) {
+	public Result doSearch(XYZ targetColor, StatusReporter reporter) {
 		
 		if (executor == null)
 			this.executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(parallelism));
 		
-		List<SpectrumSearch.Result> reproducerPool = new ArrayList<>(reproducerPoolSize);
-		for (int i = 0; i < reproducerPoolSize; i++)
-			// reproducerPool.add(CandidateSPDEvaluator.evaluateSPD(getRandomizedSPD(binCount),
-			// originalTarget));
-			reproducerPool.add(SpectrumSearch.evaluateSPD(mutate(startingSPD.resize(binCount)), targetColor));
+		final Supplier<SpectralPowerDistribution> newMemberSupplier;
+		switch (newMemberType) {
+		case "RANDOM":
+			newMemberSupplier = () -> getRandomizedSPD(binCount);
+			break;
+		case "WHITE":
+			newMemberSupplier = () -> Settings.getInstance().getIlluminatorSpectralPowerDistribution();
+			break;
+		case "EVEN":
+			newMemberSupplier = () -> getUniformSPD(binCount, 0.5d);
+			break;
+		default:
+			throw new RuntimeException(
+					"Unrecognized new-member selector. Please use one of 'RANDOM', 'WHITE', 'EVEN'.");
+		}
+		
+		List<SpectrumSearch.Result> currentGeneration = new ArrayList<>(generationSize);
+		for (int i = 0; i < generationSize; i++)
+			currentGeneration.add(SpectrumSearch.evaluateSPD(newMemberSupplier.get(), targetColor));
 		
 		int generationCount = 0;
 		
-		var bestResult = getBestResult(reproducerPool);
+		var bestResult = getBestResult(currentGeneration);
 		do {
 			generationCount++;
 			
-			final var currentReproducerPool = reproducerPool;
-			final List<ListenableFuture<Result>> nextGeneration = IntStream.range(0, generationSize)
-					.mapToObj(i -> currentReproducerPool.get(RND.nextInt(currentReproducerPool.size())))
-					.map(r -> executor.submit(new CandidateSPDEvaluator(r,
-							mutate(cross(r.getSpd(),
-									currentReproducerPool.get(RND.nextInt(currentReproducerPool.size())).getSpd())),
-							targetColor)))
-					.collect(Collectors.toList());
+			if (generationCount % 64 == 0)
+				LOG.info("Processing generation #{}", generationCount);
 			
-			try {
-				
-				reproducerPool = Futures.whenAllSucceed(nextGeneration).call(() -> nextGeneration.stream().map(fr -> {
-					try {
-						return fr.get();
-					} catch (InterruptedException | ExecutionException e) {
-						e.printStackTrace();
-					}
-					return null;
-				}).filter(r -> r != null).sorted(RESULT_COMPARATOR).limit(reproducerPoolSize)
-						.collect(Collectors.toList()), executor).get();
-				
-			} catch (InterruptedException | ExecutionException e) {
-				LOG.error("Unexpected exception: {}, \"{}\"", e.getClass().getSimpleName(), e.getMessage());
-				throw new RuntimeException("Unexpected exception!", e);
+			final var fixedCurrentGeneration = currentGeneration;
+			final List<ListenableFuture<Result>> nextGenerationFutures = new ArrayList<>(generationSize);
+			
+			while (nextGenerationFutures.size() < generationSize) {
+				nextGenerationFutures.add(executor.submit(() -> {
+					
+					final var parent1 = IntStream.range(0, reproducerPoolSize)
+							.mapToObj(i -> fixedCurrentGeneration.get(RND.nextInt(fixedCurrentGeneration.size())))
+							.reduce((r1, r2) -> (RESULT_COMPARATOR.compare(r1, r2) == 1) ? r2 : r1).get();
+					
+					final var parent2 = IntStream.range(0, reproducerPoolSize)
+							.mapToObj(i -> fixedCurrentGeneration.get(RND.nextInt(fixedCurrentGeneration.size())))
+							.reduce((r1, r2) -> (RESULT_COMPARATOR.compare(r1, r2) == 1) ? r2 : r1).get();
+					
+					return SpectrumSearch.evaluateSPD(mutate(cross(parent1.getSpd(), parent2.getSpd())), targetColor);
+				}));
 			}
 			
-			bestResult = getBestResult(reproducerPool);
+			try {
+				currentGeneration = Futures.whenAllSucceed(nextGenerationFutures)
+						.call(() -> nextGenerationFutures.stream().map(fr -> {
+							try {
+								return fr.get();
+							} catch (InterruptedException | ExecutionException e) {
+								LOG.error("Interrupted!", e);
+								return null;
+							}
+						}).filter(r -> r != null).collect(Collectors.toList()), executor).get();
+			} catch (InterruptedException | ExecutionException e) {
+				LOG.error("Interrupted!", e);
+				return bestResult;
+			}
+			
+			bestResult = getBestResult(currentGeneration);
 			reporter.reportResult(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd());
 			
-		} while (bestResult.getDistance() > targetDistance
-				&& (generationCount < minGenerations || generationCount <= maxGenerations));
+		} while (!(bestResult.getDistance() <= targetDistance && generationCount > minGenerations)
+				&& generationCount < maxGenerations);
 		
 		return new Result(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd().normalize());
 	}
@@ -128,7 +155,16 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 				IntStream.range(0, binCount).mapToObj(i -> new Point(RND.nextDouble())).toArray(len -> new Point[len]));
 	}
 	
+	private SpectralPowerDistribution getUniformSPD(int binCount, double value) {
+		
+		return new SpectralPowerDistribution(
+				IntStream.range(0, binCount).mapToObj(i -> new Point(value)).toArray(len -> new Point[len]));
+	}
+	
 	private SpectralPowerDistribution cross(SpectralPowerDistribution spd1, SpectralPowerDistribution spd2) {
+		
+		if (RND.nextDouble() > crossover)
+			return (RND.nextDouble() > 0.5) ? spd2 : spd1;
 		
 		final Point[] entries1 = spd1.getTable().navigableKeySet().stream().map(k -> spd1.get(k))
 				.toArray(len -> new Point[len]);
@@ -153,37 +189,15 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	
 	private SpectralPowerDistribution mutate(SpectralPowerDistribution spd) {
 		
+		if (RND.nextDouble() > mutation)
+			return spd;
+		
 		final Point[] entries = spd.getTable().navigableKeySet().stream().map(k -> spd.get(k))
 				.toArray(len -> new Point[len]);
 		
 		entries[RND.nextInt(entries.length)] = new Point(RND.nextDouble());
 		
 		return new SpectralPowerDistribution(spd.getBounds().get(), entries);
-	}
-	
-	public static class CandidateSPDEvaluator implements Callable<SpectrumSearch.Result> {
-		
-		private final SpectrumSearch.Result ancestor;
-		private final SpectralPowerDistribution candidate;
-		private final XYZ target;
-		
-		public CandidateSPDEvaluator(SpectrumSearch.Result ancestor, SpectralPowerDistribution candidate, XYZ target) {
-			
-			this.ancestor = ancestor;
-			this.candidate = candidate;
-			this.target = target;
-		}
-		
-		@Override
-		public Result call() throws Exception {
-			
-			final var candidateResult = SpectrumSearch.evaluateSPD(candidate, target);
-			
-			return (candidateResult.getDistance() <= ancestor.getDistance()
-					&& candidateResult.getBumpiness() <= ancestor.getBumpiness()) ? candidateResult : ancestor;
-			
-		}
-		
 	}
 	
 	private SpectralPowerDistribution scaleSPD(SpectralPowerDistribution spd, XYZ targetColor) {
@@ -231,6 +245,36 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	public void setMaxGenerations(int maxGenerations) {
 		
 		this.maxGenerations = maxGenerations;
+	}
+	
+	public double getMutation() {
+		
+		return mutation;
+	}
+	
+	public void setMutation(double mutation) {
+		
+		this.mutation = mutation;
+	}
+	
+	public double getCrossover() {
+		
+		return crossover;
+	}
+	
+	public void setCrossover(double crossover) {
+		
+		this.crossover = crossover;
+	}
+	
+	public String getNewMemberType() {
+		
+		return newMemberType;
+	}
+	
+	public void setNewMemberType(String newMemberType) {
+		
+		this.newMemberType = newMemberType;
 	}
 	
 }

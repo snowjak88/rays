@@ -12,7 +12,6 @@ import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
@@ -119,17 +118,14 @@ public class SpectrumGenerator implements CommandLineRunner {
 		}
 		
 		for (String color : colors.split(","))
-			runFor(generatorType, parallelism, color, binCount,
-					new RGB(new Triplet(spectrumGeneratorProperties.getColorDefinitions().get(color).stream()
-							.mapToDouble(d -> d).toArray())),
-					new File(directory, color + ".csv"),
-					Settings.getInstance().getIlluminatorSpectralPowerDistribution(), targetDistance);
+			runFor(generatorType, parallelism, color, binCount, new RGB(new Triplet(spectrumGeneratorProperties
+					.getColorDefinitions().get(color).stream().mapToDouble(d -> d).toArray())),
+					new File(directory, color + ".csv"), targetDistance);
 		
 	}
 	
 	public void runFor(String generatorType, int parallelism, String name, int binCount, RGB rgb, File outputCsv,
-			SpectralPowerDistribution startingSPD, double targetDistance)
-			throws IOException, InterruptedException, ExecutionException {
+			double targetDistance) throws IOException, InterruptedException, ExecutionException {
 		
 		LOG.info("Generating a spectrum fit for: \"{}\" ({} / {})", name, rgb.toString(), rgb.to(XYZ.class).toString());
 		
@@ -137,10 +133,10 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		switch (generatorType) {
 		case "STOCHASTIC":
-			result = stochastic.doSearch(rgb.to(XYZ.class), startingSPD, new StatusReporter(name, 9, 40));
+			result = stochastic.doSearch(rgb.to(XYZ.class), new StatusReporter(name, 9, 40));
 			break;
 		case "BRUTE-FORCE":
-			result = bruteForce.doSearch(rgb.to(XYZ.class), startingSPD, new StatusReporter(name, 9, 40));
+			result = bruteForce.doSearch(rgb.to(XYZ.class), new StatusReporter(name, 9, 40));
 			break;
 		default:
 			result = null;
