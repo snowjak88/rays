@@ -1,5 +1,7 @@
 package org.snowjak.rays.specgen;
 
+import static org.apache.commons.math3.util.FastMath.max;
+import static org.apache.commons.math3.util.FastMath.min;
 import static org.apache.commons.math3.util.FastMath.pow;
 
 import java.util.ArrayList;
@@ -31,16 +33,17 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	private static final Logger LOG = LoggerFactory.getLogger(StochasticSpectrumSearch.class);
 	private static final Random RND = new Random(System.currentTimeMillis());
 	
+	private final int binCount;
 	private final XYZ target, originalTarget;
 	private final SpectralPowerDistribution startingSPD;
 	private final int generationSize, reproducerPoolSize;
 	private final double targetDistance;
-	private final int maxGenerations;
+	private final int minGenerations, maxGenerations;
 	private final ListeningExecutorService executor;
 	private final StatusReporter reporter;
 	
 	public StochasticSpectrumSearch(int binCount, XYZ target, SpectralPowerDistribution startingSPD, int generationSize,
-			int reproducerPoolSize, double targetDistance, int maxGenerations, int parallelism,
+			int reproducerPoolSize, double targetDistance, int minGenerations, int maxGenerations, int parallelism,
 			StatusReporter reporter) {
 		
 		assert (binCount > 1);
@@ -48,6 +51,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		assert (startingSPD != null);
 		assert (generationSize > 0);
 		
+		this.binCount = binCount;
 		this.originalTarget = target;
 		this.target = target.normalize();
 		this.startingSPD = startingSPD.resize(binCount);
@@ -55,6 +59,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		this.generationSize = generationSize;
 		this.reproducerPoolSize = reproducerPoolSize;
 		this.targetDistance = targetDistance;
+		this.minGenerations = minGenerations;
 		this.maxGenerations = maxGenerations;
 		this.reporter = reporter;
 	}
@@ -68,7 +73,9 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		
 		List<SpectrumSearch.Result> reproducerPool = new ArrayList<>(reproducerPoolSize);
 		for (int i = 0; i < reproducerPoolSize; i++)
-			reproducerPool.add(CandidateSPDEvaluator.evaluateSPD(startingSPD, originalTarget));
+			// reproducerPool.add(CandidateSPDEvaluator.evaluateSPD(getRandomizedSPD(binCount),
+			// originalTarget));
+			reproducerPool.add(CandidateSPDEvaluator.evaluateSPD(mutate(startingSPD), originalTarget));
 		
 		int generationCount = 0;
 		
@@ -78,8 +85,11 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 			
 			final var currentReproducerPool = reproducerPool;
 			final List<ListenableFuture<Result>> nextGeneration = IntStream.range(0, generationSize)
-					.mapToObj(i -> currentReproducerPool.get(Settings.RND.nextInt(currentReproducerPool.size())))
-					.map(r -> executor.submit(new CandidateSPDEvaluator(r, mutate(r.getSpd()), originalTarget)))
+					.mapToObj(i -> currentReproducerPool.get(RND.nextInt(currentReproducerPool.size())))
+					.map(r -> executor.submit(new CandidateSPDEvaluator(r,
+							mutate(cross(r.getSpd(),
+									currentReproducerPool.get(RND.nextInt(currentReproducerPool.size())).getSpd())),
+							originalTarget)))
 					.collect(Collectors.toList());
 			
 			try {
@@ -102,7 +112,8 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 			bestResult = getBestResult(reproducerPool);
 			reporter.reportResult(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd());
 			
-		} while (bestResult.getDistance() > targetDistance && generationCount <= maxGenerations);
+		} while (bestResult.getDistance() > targetDistance
+				&& (generationCount < minGenerations || generationCount <= maxGenerations));
 		
 		return new Result(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd().normalize());
 	}
@@ -115,23 +126,41 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		return results.stream().min(RESULT_COMPARATOR).get();
 	}
 	
+	private SpectralPowerDistribution getRandomizedSPD(int binCount) {
+		
+		return new SpectralPowerDistribution(
+				IntStream.range(0, binCount).mapToObj(i -> new Point(RND.nextDouble())).toArray(len -> new Point[len]));
+	}
+	
+	private SpectralPowerDistribution cross(SpectralPowerDistribution spd1, SpectralPowerDistribution spd2) {
+		
+		final Point[] entries1 = spd1.getTable().navigableKeySet().stream().map(k -> spd1.get(k))
+				.toArray(len -> new Point[len]);
+		final Point[] entries2 = spd2.getTable().navigableKeySet().stream().map(k -> spd2.get(k))
+				.toArray(len -> new Point[len]);
+		
+		final int crossPoint = Settings.RND.nextInt(min(entries1.length, entries2.length));
+		
+		final var shorter = (entries1.length <= entries2.length) ? entries1 : entries2;
+		final var longer = (entries1.length <= entries2.length) ? entries2 : entries1;
+		
+		final Point[] result = new Point[max(entries1.length, entries2.length)];
+		for (int i = 0; i < result.length; i++) {
+			if (i < crossPoint)
+				result[i] = shorter[i];
+			else
+				result[i] = longer[i];
+		}
+		
+		return new SpectralPowerDistribution(result);
+	}
+	
 	private SpectralPowerDistribution mutate(SpectralPowerDistribution spd) {
 		
 		final Point[] entries = spd.getTable().navigableKeySet().stream().map(k -> spd.get(k))
 				.toArray(len -> new Point[len]);
 		
-		int mutateIndex;
-		Point mutatedEntry;
-		
-		do {
-			
-			final var mutateFactor = RND.nextDouble() * 0.75d + 0.75d;
-			mutateIndex = RND.nextInt(spd.size());
-			mutatedEntry = entries[mutateIndex].multiply(mutateFactor);
-			
-		} while (mutatedEntry.get(0) >= 0d && mutatedEntry.get(0) <= entries[mutateIndex].get(0));
-		
-		entries[mutateIndex] = mutatedEntry;
+		entries[RND.nextInt(entries.length)] = new Point(RND.nextDouble());
 		
 		return new SpectralPowerDistribution(spd.getBounds().get(), entries);
 	}

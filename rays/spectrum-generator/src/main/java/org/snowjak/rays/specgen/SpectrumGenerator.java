@@ -132,7 +132,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		switch (generatorType) {
 		case "STOCHASTIC":
-			result = new StochasticSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 128, 16, targetDistance,
+			result = new StochasticSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 1024, 128, targetDistance, 16,
 					Integer.MAX_VALUE, parallelism, new StatusReporter(name, 9, 40)).doSearch();
 			break;
 		case "BRUTE-FORCE":
