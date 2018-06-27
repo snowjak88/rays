@@ -1,56 +1,57 @@
 package org.snowjak.rays.specgen;
 
-import static org.apache.commons.math3.util.FastMath.pow;
-
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
-import java.util.stream.IntStream;
 
-import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.specgen.SpectrumGenerator.StatusReporter;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
+@Component
+@ConfigurationProperties("brute-force")
 public class BruteForceSpectrumSearch implements SpectrumSearch {
 	
-	private final XYZ originalTarget;
-	private final XYZ target;
-	private final Pair<Double, Double> multiplierRange;
-	private final double incStep;
-	private final Point[] startingPoints;
-	private final StatusReporter reporter;
-	private final Point[] vector;
-	private final ForkJoinPool forkJoinPool;
+	private double searchMin;
+	private double searchMax;
+	private double searchStep;
 	
-	public BruteForceSpectrumSearch(int binCount, XYZ target, SpectralPowerDistribution startingSPD, double incStep,
-			int parallelism, StatusReporter reporter) {
+	@Value("${parallelism}")
+	private int parallelism;
+	
+	@Value("${distance}")
+	private double targetDistance;
+	
+	@Value("${bins}")
+	private int binCount;
+	
+	private ForkJoinPool forkJoinPool = null;
+	
+	public BruteForceSpectrumSearch() {
 		
-		this.originalTarget = target;
-		this.target = target.normalize();
-		this.multiplierRange = new Pair<>(0d, 2d);
-		this.incStep = incStep;
-		
-		final var spdTable = startingSPD.getTable();
-		this.startingPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
-				.toArray(len -> new Point[len]);
-		
-		this.reporter = reporter;
-		
-		final var table = startingSPD.resize(binCount).getTable();
-		this.vector = table.navigableKeySet().stream().map(k -> table.get(k)).toArray(len -> new Point[len]);
-		
-		this.forkJoinPool = new ForkJoinPool(parallelism);
 	}
 	
 	@Override
-	public Result doSearch() {
+	public Result doSearch(XYZ targetColor, SpectralPowerDistribution startingSPD, StatusReporter reporter) {
 		
-		return forkJoinPool.submit(new BruteForceSpectrumSearchRecursiveTask(originalTarget, target, multiplierRange,
-				incStep, startingPoints, reporter, vector)).join();
+		if (forkJoinPool == null)
+			forkJoinPool = new ForkJoinPool(parallelism);
+		
+		final var spdTable = startingSPD.getTable();
+		final var startingPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
+				.toArray(len -> new Point[len]);
+		
+		final var table = startingSPD.resize(binCount).getTable();
+		final var vector = table.navigableKeySet().stream().map(k -> table.get(k)).toArray(len -> new Point[len]);
+		
+		return forkJoinPool.submit(new BruteForceSpectrumSearchRecursiveTask(targetColor, targetColor.normalize(),
+				searchMin, searchMax, searchStep, startingPoints, reporter, vector)).join();
 	}
 	
 	public static class BruteForceSpectrumSearchRecursiveTask extends RecursiveTask<SpectrumSearch.Result> {
@@ -58,30 +59,29 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 		private static final long serialVersionUID = -3715483293390660280L;
 		
 		private final XYZ originalTarget, target;
-		private final Pair<Double, Double> multiplierRange;
-		private final double incStep;
+		private final double searchMin, searchMax;
+		private final double searchStep;
 		private final Point[] startingPoints;
 		private final StatusReporter reporter;
 		private final Point[] vector;
 		private final int currentIndex;
 		
-		public BruteForceSpectrumSearchRecursiveTask(XYZ originalTarget, XYZ target,
-				Pair<Double, Double> multiplierRange, double incStep, Point[] startingPoints, StatusReporter reporter,
-				Point[] vector) {
+		public BruteForceSpectrumSearchRecursiveTask(XYZ originalTarget, XYZ target, double searchMin, double searchMax,
+				double searchStep, Point[] startingPoints, StatusReporter reporter, Point[] vector) {
 			
-			this(originalTarget, target, multiplierRange, incStep, startingPoints, reporter, vector, 0);
+			this(originalTarget, target, searchMin, searchMax, searchStep, startingPoints, reporter, vector, 0);
 		}
 		
-		public BruteForceSpectrumSearchRecursiveTask(XYZ originalTarget, XYZ target,
-				Pair<Double, Double> multiplierRange, double incStep, Point[] startingPoints, StatusReporter reporter,
-				Point[] vector, int currentIndex) {
+		public BruteForceSpectrumSearchRecursiveTask(XYZ originalTarget, XYZ target, double searchMin, double searchMax,
+				double searchStep, Point[] startingPoints, StatusReporter reporter, Point[] vector, int currentIndex) {
 			
 			super();
 			
 			this.originalTarget = originalTarget;
 			this.target = target;
-			this.multiplierRange = multiplierRange;
-			this.incStep = incStep;
+			this.searchMin = searchMin;
+			this.searchMax = searchMax;
+			this.searchStep = searchStep;
 			this.startingPoints = startingPoints;
 			this.reporter = reporter;
 			this.vector = vector;
@@ -94,23 +94,19 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 			SpectrumSearch.Result bestResult = null;
 			final Collection<ForkJoinTask<SpectrumSearch.Result>> subtasks = new LinkedList<>();
 			
-			for (double v = multiplierRange.getFirst(); v <= multiplierRange.getSecond(); v += incStep) {
+			for (double v = searchMin; v <= searchMax; v += searchStep) {
 				
-				final var mutatedPoint = startingPoints[currentIndex].multiply(v);
-				if (mutatedPoint.get(0) < 0d || mutatedPoint.get(0) > 1d)
-					continue;
-				
-				vector[currentIndex] = mutatedPoint;
+				vector[currentIndex] = new Point(v);
 				final var spd = constructSPD(vector);
-				final var eval = evaluateSPD(spd);
+				final var eval = SpectrumSearch.evaluateSPD(spd, target);
 				
-				if (bestResult == null || (eval.getFirst() <= bestResult.getDistance()
-						&& eval.getSecond() <= bestResult.getBumpiness()))
-					bestResult = new Result(eval.getFirst(), eval.getSecond(), scaleSPD(spd, originalTarget));
+				if (bestResult == null || (eval.getDistance() <= bestResult.getDistance()
+						&& eval.getBumpiness() <= bestResult.getBumpiness()))
+					bestResult = new Result(eval.getDistance(), eval.getBumpiness(), scaleSPD(spd, originalTarget));
 				
 				if (currentIndex < vector.length - 1)
-					subtasks.add(new BruteForceSpectrumSearchRecursiveTask(originalTarget, target, multiplierRange,
-							incStep, startingPoints, reporter, vector, currentIndex + 1).fork());
+					subtasks.add(new BruteForceSpectrumSearchRecursiveTask(originalTarget, target, searchMin, searchMax,
+							searchStep, startingPoints, reporter, vector, currentIndex + 1).fork());
 			}
 			
 			for (ForkJoinTask<SpectrumSearch.Result> t : subtasks) {
@@ -124,21 +120,6 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 			return bestResult;
 		}
 		
-		public Pair<Double, Double> evaluateSPD(SpectralPowerDistribution spd) {
-			
-			final XYZ xyz = XYZ.fromSpectrum(spd);
-			final double targetDistance = pow(xyz.getX() - target.getX(), 2) + pow(xyz.getY() - target.getY(), 2)
-					+ pow(xyz.getZ() - target.getZ(), 2);
-			
-			final var spdTable = spd.getTable();
-			final Point[] spdPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
-					.toArray(len -> new Point[len]);
-			final double bumpinessDistance = IntStream.range(0, spdPoints.length - 1)
-					.mapToDouble(i -> pow(spdPoints[i + 1].get(0) - spdPoints[i].get(0), 2)).sum();
-			
-			return new Pair<>(targetDistance, bumpinessDistance);
-		}
-		
 		private SpectralPowerDistribution constructSPD(Point[] vector) {
 			
 			return new SpectralPowerDistribution(vector);
@@ -149,6 +130,21 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 			final double brightness = targetColor.getY();
 			
 			return (SpectralPowerDistribution) spd.multiply(brightness);
+		}
+		
+		public double getSearchMin() {
+			
+			return searchMin;
+		}
+		
+		public double getSearchMax() {
+			
+			return searchMax;
+		}
+		
+		public double getSearchStep() {
+			
+			return searchStep;
 		}
 		
 	}

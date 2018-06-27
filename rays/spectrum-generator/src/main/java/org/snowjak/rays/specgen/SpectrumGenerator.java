@@ -64,6 +64,11 @@ public class SpectrumGenerator implements CommandLineRunner {
 	private int parallelism;
 	
 	@Autowired
+	private StochasticSpectrumSearch stochastic;
+	@Autowired
+	private BruteForceSpectrumSearch bruteForce;
+	
+	@Autowired
 	SpectrumGeneratorProperties spectrumGeneratorProperties;
 	
 	public static void main(String[] args) {
@@ -132,12 +137,10 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		switch (generatorType) {
 		case "STOCHASTIC":
-			result = new StochasticSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 1024, 128, targetDistance, 16,
-					Integer.MAX_VALUE, parallelism, new StatusReporter(name, 9, 40)).doSearch();
+			result = stochastic.doSearch(rgb.to(XYZ.class), startingSPD, new StatusReporter(name, 9, 40));
 			break;
 		case "BRUTE-FORCE":
-			result = new BruteForceSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 0.1, parallelism,
-					new StatusReporter(name, 9, 40)).doSearch();
+			result = bruteForce.doSearch(rgb.to(XYZ.class), startingSPD, new StatusReporter(name, 9, 40));
 			break;
 		default:
 			result = null;

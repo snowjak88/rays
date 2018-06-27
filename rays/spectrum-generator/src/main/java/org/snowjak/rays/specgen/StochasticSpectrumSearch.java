@@ -2,7 +2,6 @@ package org.snowjak.rays.specgen;
 
 import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
-import static org.apache.commons.math3.util.FastMath.pow;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,60 +21,57 @@ import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.specgen.SpectrumGenerator.StatusReporter;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
+@Component
+@ConfigurationProperties("stochastic")
 public class StochasticSpectrumSearch implements SpectrumSearch {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(StochasticSpectrumSearch.class);
 	private static final Random RND = new Random(System.currentTimeMillis());
 	
-	private final int binCount;
-	private final XYZ target, originalTarget;
-	private final SpectralPowerDistribution startingSPD;
-	private final int generationSize, reproducerPoolSize;
-	private final double targetDistance;
-	private final int minGenerations, maxGenerations;
-	private final ListeningExecutorService executor;
-	private final StatusReporter reporter;
+	private int generationSize;
+	private int reproducerPoolSize;
+	private int minGenerations;
+	private int maxGenerations;
 	
-	public StochasticSpectrumSearch(int binCount, XYZ target, SpectralPowerDistribution startingSPD, int generationSize,
-			int reproducerPoolSize, double targetDistance, int minGenerations, int maxGenerations, int parallelism,
-			StatusReporter reporter) {
+	@Value("${parallelism}")
+	private int parallelism;
+	
+	@Value("${distance}")
+	private double targetDistance;
+	
+	@Value("${bins}")
+	private int binCount;
+	
+	private ListeningExecutorService executor = null;
+	
+	public StochasticSpectrumSearch() {
 		
-		assert (binCount > 1);
-		assert (target != null);
-		assert (startingSPD != null);
-		assert (generationSize > 0);
-		
-		this.binCount = binCount;
-		this.originalTarget = target;
-		this.target = target.normalize();
-		this.startingSPD = startingSPD.resize(binCount);
-		this.executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(parallelism));
-		this.generationSize = generationSize;
-		this.reproducerPoolSize = reproducerPoolSize;
-		this.targetDistance = targetDistance;
-		this.minGenerations = minGenerations;
-		this.maxGenerations = maxGenerations;
-		this.reporter = reporter;
 	}
 	
 	private static final Comparator<SpectrumSearch.Result> RESULT_COMPARATOR = (r1,
-			r2) -> (Double.compare(r1.getDistance(), r2.getDistance()) * 10
+			r2) -> (Double.compare(r1.getDistance(), r2.getDistance()) * 2
 					+ Double.compare(r1.getBumpiness(), r2.getBumpiness()));
 	
 	@Override
-	public Result doSearch() {
+	public Result doSearch(XYZ targetColor, SpectralPowerDistribution startingSPD, StatusReporter reporter) {
+		
+		if (executor == null)
+			this.executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(parallelism));
 		
 		List<SpectrumSearch.Result> reproducerPool = new ArrayList<>(reproducerPoolSize);
 		for (int i = 0; i < reproducerPoolSize; i++)
 			// reproducerPool.add(CandidateSPDEvaluator.evaluateSPD(getRandomizedSPD(binCount),
 			// originalTarget));
-			reproducerPool.add(CandidateSPDEvaluator.evaluateSPD(mutate(startingSPD), originalTarget));
+			reproducerPool.add(SpectrumSearch.evaluateSPD(mutate(startingSPD.resize(binCount)), targetColor));
 		
 		int generationCount = 0;
 		
@@ -89,7 +85,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 					.map(r -> executor.submit(new CandidateSPDEvaluator(r,
 							mutate(cross(r.getSpd(),
 									currentReproducerPool.get(RND.nextInt(currentReproducerPool.size())).getSpd())),
-							originalTarget)))
+							targetColor)))
 					.collect(Collectors.toList());
 			
 			try {
@@ -120,8 +116,8 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	
 	private SpectrumSearch.Result getBestResult(Collection<SpectrumSearch.Result> results) {
 		
-		if (results == null || results.isEmpty())
-			return null;
+		assert (results != null);
+		assert (!results.isEmpty());
 		
 		return results.stream().min(RESULT_COMPARATOR).get();
 	}
@@ -181,26 +177,11 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		@Override
 		public Result call() throws Exception {
 			
-			final var candidateResult = evaluateSPD(candidate, target);
+			final var candidateResult = SpectrumSearch.evaluateSPD(candidate, target);
 			
 			return (candidateResult.getDistance() <= ancestor.getDistance()
 					&& candidateResult.getBumpiness() <= ancestor.getBumpiness()) ? candidateResult : ancestor;
 			
-		}
-		
-		public static SpectrumSearch.Result evaluateSPD(SpectralPowerDistribution spd, XYZ targetColor) {
-			
-			final XYZ xyz = XYZ.fromSpectrum(spd);
-			final double targetDistance = pow(xyz.getX() - targetColor.getX(), 2)
-					+ pow(xyz.getY() - targetColor.getY(), 2) + pow(xyz.getZ() - targetColor.getZ(), 2);
-			
-			final var spdTable = spd.getTable();
-			final Point[] spdPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
-					.toArray(len -> new Point[len]);
-			final double bumpinessDistance = IntStream.range(0, spdPoints.length - 1)
-					.mapToDouble(i -> pow(spdPoints[i + 1].get(0) - spdPoints[i].get(0), 2)).sum();
-			
-			return new Result(targetDistance, bumpinessDistance, spd);
 		}
 		
 	}
@@ -210,6 +191,46 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		final double brightness = targetColor.getY();
 		
 		return (SpectralPowerDistribution) spd.multiply(brightness);
+	}
+	
+	public int getGenerationSize() {
+		
+		return generationSize;
+	}
+	
+	public void setGenerationSize(int generationSize) {
+		
+		this.generationSize = generationSize;
+	}
+	
+	public int getReproducerPoolSize() {
+		
+		return reproducerPoolSize;
+	}
+	
+	public void setReproducerPoolSize(int reproducerPoolSize) {
+		
+		this.reproducerPoolSize = reproducerPoolSize;
+	}
+	
+	public int getMinGenerations() {
+		
+		return minGenerations;
+	}
+	
+	public void setMinGenerations(int minGenerations) {
+		
+		this.minGenerations = minGenerations;
+	}
+	
+	public int getMaxGenerations() {
+		
+		return maxGenerations;
+	}
+	
+	public void setMaxGenerations(int maxGenerations) {
+		
+		this.maxGenerations = maxGenerations;
 	}
 	
 }
