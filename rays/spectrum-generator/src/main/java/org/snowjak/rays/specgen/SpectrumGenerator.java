@@ -60,6 +60,9 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Value("${distance}")
 	private double targetDistance;
 	
+	@Value("${parallelism}")
+	private int parallelism;
+	
 	@Autowired
 	SpectrumGeneratorProperties spectrumGeneratorProperties;
 	
@@ -105,8 +108,13 @@ public class SpectrumGenerator implements CommandLineRunner {
 			}
 		}
 		
+		if (parallelism <= 0) {
+			LOG.error("--parallelism must be greater than 0!");
+			return;
+		}
+		
 		for (String color : colors.split(","))
-			runFor(generatorType, color, binCount,
+			runFor(generatorType, parallelism, color, binCount,
 					new RGB(new Triplet(spectrumGeneratorProperties.getColorDefinitions().get(color).stream()
 							.mapToDouble(d -> d).toArray())),
 					new File(directory, color + ".csv"),
@@ -114,7 +122,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 	}
 	
-	public void runFor(String generatorType, String name, int binCount, RGB rgb, File outputCsv,
+	public void runFor(String generatorType, int parallelism, String name, int binCount, RGB rgb, File outputCsv,
 			SpectralPowerDistribution startingSPD, double targetDistance)
 			throws IOException, InterruptedException, ExecutionException {
 		
@@ -124,12 +132,11 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		switch (generatorType) {
 		case "STOCHASTIC":
-			result = new StochasticSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 128, targetDistance,
-					Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors(), new StatusReporter(name, 9, 40))
-							.doSearch();
+			result = new StochasticSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 128, 16, targetDistance,
+					Integer.MAX_VALUE, parallelism, new StatusReporter(name, 9, 40)).doSearch();
 			break;
 		case "BRUTE-FORCE":
-			result = new BruteForceSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 0.1,
+			result = new BruteForceSpectrumSearch(binCount, rgb.to(XYZ.class), startingSPD, 0.1, parallelism,
 					new StatusReporter(name, 9, 40)).doSearch();
 			break;
 		default:
@@ -188,7 +195,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		public void reportResult(double distance, double bumpiness, SpectralPowerDistribution spd) {
 			
 			synchronized (this) {
-				if (bestSPD == null || (distance <= bestDistance && bumpiness <= bestBumpiness)) {
+				if (bestSPD == null || (distance < bestDistance && bumpiness < bestBumpiness)) {
 					bestDistance = distance;
 					bestBumpiness = bumpiness;
 					bestSPD = spd;

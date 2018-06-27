@@ -4,6 +4,7 @@ import static org.apache.commons.math3.util.FastMath.pow;
 
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 import java.util.stream.IntStream;
@@ -23,9 +24,10 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 	private final Point[] startingPoints;
 	private final StatusReporter reporter;
 	private final Point[] vector;
+	private final ForkJoinPool forkJoinPool;
 	
 	public BruteForceSpectrumSearch(int binCount, XYZ target, SpectralPowerDistribution startingSPD, double incStep,
-			StatusReporter reporter) {
+			int parallelism, StatusReporter reporter) {
 		
 		this.originalTarget = target;
 		this.target = target.normalize();
@@ -40,13 +42,15 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 		
 		final var table = startingSPD.resize(binCount).getTable();
 		this.vector = table.navigableKeySet().stream().map(k -> table.get(k)).toArray(len -> new Point[len]);
+		
+		this.forkJoinPool = new ForkJoinPool(parallelism);
 	}
 	
 	@Override
 	public Result doSearch() {
 		
-		return new BruteForceSpectrumSearchRecursiveTask(originalTarget, target, multiplierRange, incStep,
-				startingPoints, reporter, vector).fork().join();
+		return forkJoinPool.submit(new BruteForceSpectrumSearchRecursiveTask(originalTarget, target, multiplierRange,
+				incStep, startingPoints, reporter, vector)).join();
 	}
 	
 	public static class BruteForceSpectrumSearchRecursiveTask extends RecursiveTask<SpectrumSearch.Result> {

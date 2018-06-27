@@ -2,6 +2,10 @@ package org.snowjak.rays.specgen;
 
 import static org.apache.commons.math3.util.FastMath.pow;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -11,12 +15,14 @@ import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.specgen.SpectrumGenerator.StatusReporter;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -27,14 +33,15 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	
 	private final XYZ target, originalTarget;
 	private final SpectralPowerDistribution startingSPD;
-	private final int generationSize;
+	private final int generationSize, reproducerPoolSize;
 	private final double targetDistance;
 	private final int maxGenerations;
 	private final ListeningExecutorService executor;
 	private final StatusReporter reporter;
 	
 	public StochasticSpectrumSearch(int binCount, XYZ target, SpectralPowerDistribution startingSPD, int generationSize,
-			double targetDistance, int maxGenerations, int parallelism, StatusReporter reporter) {
+			int reproducerPoolSize, double targetDistance, int maxGenerations, int parallelism,
+			StatusReporter reporter) {
 		
 		assert (binCount > 1);
 		assert (target != null);
@@ -46,56 +53,66 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		this.startingSPD = startingSPD.resize(binCount);
 		this.executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(parallelism));
 		this.generationSize = generationSize;
+		this.reproducerPoolSize = reproducerPoolSize;
 		this.targetDistance = targetDistance;
 		this.maxGenerations = maxGenerations;
 		this.reporter = reporter;
 	}
 	
+	private static final Comparator<SpectrumSearch.Result> RESULT_COMPARATOR = (r1,
+			r2) -> (Double.compare(r1.getDistance(), r2.getDistance()) * 10
+					+ Double.compare(r1.getBumpiness(), r2.getBumpiness()));
+	
 	@Override
 	public Result doSearch() {
 		
-		var bestResult = CandidateSPDEvaluator.evaluateSPD(startingSPD, originalTarget);
-		
-		reporter.reportResult(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd());
+		List<SpectrumSearch.Result> reproducerPool = new ArrayList<>(reproducerPoolSize);
+		for (int i = 0; i < reproducerPoolSize; i++)
+			reproducerPool.add(CandidateSPDEvaluator.evaluateSPD(startingSPD, originalTarget));
 		
 		int generationCount = 0;
 		
-		while (bestResult.getDistance() > targetDistance && generationCount <= maxGenerations) {
-			
+		var bestResult = getBestResult(reproducerPool);
+		do {
 			generationCount++;
 			
-			final var currentBestResult = bestResult;
-			
-			final var evaluatedGenerations = IntStream.range(0, generationSize)
-					.mapToObj(i -> mutate(currentBestResult.getSpd()))
-					.map(spd -> executor.submit(new CandidateSPDEvaluator(currentBestResult, spd, originalTarget)))
+			final var currentReproducerPool = reproducerPool;
+			final List<ListenableFuture<Result>> nextGeneration = IntStream.range(0, generationSize)
+					.mapToObj(i -> currentReproducerPool.get(Settings.RND.nextInt(currentReproducerPool.size())))
+					.map(r -> executor.submit(new CandidateSPDEvaluator(r, mutate(r.getSpd()), originalTarget)))
 					.collect(Collectors.toList());
 			
 			try {
 				
-				bestResult = Futures.whenAllSucceed(evaluatedGenerations)
-						.call(() -> evaluatedGenerations.stream().map(fr -> {
-							try {
-								return fr.get();
-							} catch (InterruptedException | ExecutionException e) {
-								e.printStackTrace();
-							}
-							return null;
-						}).filter(r -> r != null).filter(r -> r.getDistance() <= targetDistance)
-								.sorted((r1, r2) -> Double.compare(r2.getBumpiness(), r1.getBumpiness())).findFirst()
-								.orElse(currentBestResult), executor)
-						.get();
+				reproducerPool = Futures.whenAllSucceed(nextGeneration).call(() -> nextGeneration.stream().map(fr -> {
+					try {
+						return fr.get();
+					} catch (InterruptedException | ExecutionException e) {
+						e.printStackTrace();
+					}
+					return null;
+				}).filter(r -> r != null).sorted(RESULT_COMPARATOR).limit(reproducerPoolSize)
+						.collect(Collectors.toList()), executor).get();
 				
 			} catch (InterruptedException | ExecutionException e) {
 				LOG.error("Unexpected exception: {}, \"{}\"", e.getClass().getSimpleName(), e.getMessage());
 				throw new RuntimeException("Unexpected exception!", e);
 			}
 			
-			if (bestResult.getSpd() != currentBestResult.getSpd())
-				reporter.reportResult(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd());
-		}
+			bestResult = getBestResult(reproducerPool);
+			reporter.reportResult(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd());
+			
+		} while (bestResult.getDistance() > targetDistance && generationCount <= maxGenerations);
 		
 		return new Result(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd().normalize());
+	}
+	
+	private SpectrumSearch.Result getBestResult(Collection<SpectrumSearch.Result> results) {
+		
+		if (results == null || results.isEmpty())
+			return null;
+		
+		return results.stream().min(RESULT_COMPARATOR).get();
 	}
 	
 	private SpectralPowerDistribution mutate(SpectralPowerDistribution spd) {
