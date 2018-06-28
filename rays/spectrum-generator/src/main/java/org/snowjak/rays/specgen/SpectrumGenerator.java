@@ -207,7 +207,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		public void reportResult(double distance, double bumpiness, SpectralPowerDistribution spd) {
 			
 			synchronized (this) {
-				if (bestSPD == null || (distance < bestDistance && bumpiness < bestBumpiness)) {
+				if (bestSPD == null || (distance < bestDistance)) {
 					bestDistance = distance;
 					bestBumpiness = bumpiness;
 					bestSPD = spd;

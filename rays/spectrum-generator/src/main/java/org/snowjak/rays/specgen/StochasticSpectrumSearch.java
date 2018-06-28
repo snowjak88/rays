@@ -39,6 +39,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	
 	private int generationSize;
 	private int reproducerPoolSize;
+	private int elitePersistence;
 	private int minGenerations;
 	private int maxGenerations;
 	private double mutation;
@@ -63,9 +64,8 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		
 	}
 	
-	private static final Comparator<SpectrumSearch.Result> RESULT_COMPARATOR = (r1,
-			r2) -> (Double.compare(r1.getDistance(), r2.getDistance()) * 10
-					+ Double.compare(r1.getBumpiness(), r2.getBumpiness()));
+	private static final Comparator<SpectrumSearch.Result> RESULT_COMPARATOR = (r1, r2) -> (Double
+			.compare(r1.getDistance() * 1000d + r1.getBumpiness(), r2.getDistance() * 1000d + r2.getBumpiness()));
 	
 	@Override
 	public Result doSearch(XYZ targetColor, StatusReporter reporter) {
@@ -100,10 +100,13 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 			generationCount++;
 			
 			if (generationCount % 64 == 0)
-				LOG.info("Processing generation #{}", generationCount);
+				LOG.info("Processing generation #{} (best distance = {})", generationCount, bestResult.getDistance());
 			
 			final var fixedCurrentGeneration = currentGeneration;
 			final List<ListenableFuture<Result>> nextGenerationFutures = new ArrayList<>(generationSize);
+			
+			fixedCurrentGeneration.stream().sorted(RESULT_COMPARATOR).limit(elitePersistence)
+					.forEach(r -> nextGenerationFutures.add(Futures.immediateFuture(r)));
 			
 			while (nextGenerationFutures.size() < generationSize) {
 				nextGenerationFutures.add(executor.submit(() -> {
@@ -198,7 +201,25 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		final Point[] entries = spd.getTable().navigableKeySet().stream().map(k -> spd.get(k))
 				.toArray(len -> new Point[len]);
 		
-		entries[RND.nextInt(entries.length)] = new Point(RND.nextDouble());
+		final int entryStartIndex = RND.nextInt(entries.length);
+		final int entryEndIndex = RND.nextInt(entries.length - entryStartIndex) + entryStartIndex;
+		final double displacement = RND.nextDouble() * 0.2d - 0.1d;
+		
+		IntStream.range(entryStartIndex, entryEndIndex)
+				.forEach(i -> entries[i] = entries[i].add(displacement).clamp(0d, 1d));
+		
+		// final double currentEntry = entries[entryStartIndex].get(0);
+		// final double displacement = RND.nextDouble() * 0.1d;
+		//
+		// final double newEntry;
+		// if ((currentEntry + displacement) > 1d)
+		// newEntry = currentEntry - displacement;
+		// else if ((currentEntry - displacement) < 0d)
+		// newEntry = currentEntry + displacement;
+		// else
+		// newEntry = currentEntry + (displacement * 2d) - 0.1d;
+		//
+		// entries[entryStartIndex] = new Point(newEntry);
 		
 		return new SpectralPowerDistribution(spd.getBounds().get(), entries);
 	}
@@ -228,6 +249,16 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	public void setReproducerPoolSize(int reproducerPoolSize) {
 		
 		this.reproducerPoolSize = reproducerPoolSize;
+	}
+	
+	public int getElitePersistence() {
+		
+		return elitePersistence;
+	}
+	
+	public void setElitePersistence(int elitePersistence) {
+		
+		this.elitePersistence = elitePersistence;
 	}
 	
 	public int getMinGenerations() {

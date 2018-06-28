@@ -6,6 +6,7 @@ import java.util.stream.IntStream;
 
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.specgen.SpectrumGenerator.StatusReporter;
+import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
@@ -15,9 +16,11 @@ public interface SpectrumSearch {
 	
 	public static SpectrumSearch.Result evaluateSPD(SpectralPowerDistribution spd, XYZ targetColor) {
 		
-		final XYZ xyz = XYZ.fromSpectrum(spd);
-		final double targetDistance = pow(xyz.getX() - targetColor.getX(), 2) + pow(xyz.getY() - targetColor.getY(), 2)
-				+ pow(xyz.getZ() - targetColor.getZ(), 2);
+		final RGB targetRGB = targetColor.to(RGB.class);
+		final RGB rgb = XYZ.fromSpectrum(spd).to(RGB.class);
+		
+		final double targetDistance = pow(rgb.getRed() - targetRGB.getRed(), 2)
+				+ pow(rgb.getGreen() - targetRGB.getGreen(), 2) + pow(rgb.getBlue() - targetRGB.getBlue(), 2);
 		
 		final var spdTable = spd.getTable();
 		final Point[] spdPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
