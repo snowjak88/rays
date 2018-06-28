@@ -59,6 +59,9 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Value("${distance}")
 	private double targetDistance;
 	
+	@Value("${bumpiness}")
+	private double targetBumpiness;
+	
 	@Value("${parallelism}")
 	private int parallelism;
 	
@@ -117,15 +120,25 @@ public class SpectrumGenerator implements CommandLineRunner {
 			return;
 		}
 		
+		if (targetDistance <= 0) {
+			LOG.error("--distance must be greater than 0!");
+			return;
+		}
+		
+		if (targetBumpiness <= 0) {
+			LOG.error("--bumpiness must be greater than 0!");
+			return;
+		}
+		
 		for (String color : colors.split(","))
 			runFor(generatorType, parallelism, color, binCount, new RGB(new Triplet(spectrumGeneratorProperties
 					.getColorDefinitions().get(color).stream().mapToDouble(d -> d).toArray())),
-					new File(directory, color + ".csv"), targetDistance);
+					new File(directory, color + ".csv"));
 		
 	}
 	
-	public void runFor(String generatorType, int parallelism, String name, int binCount, RGB rgb, File outputCsv,
-			double targetDistance) throws IOException, InterruptedException, ExecutionException {
+	public void runFor(String generatorType, int parallelism, String name, int binCount, RGB rgb, File outputCsv)
+			throws IOException, InterruptedException, ExecutionException {
 		
 		LOG.info("Generating a spectrum fit for: \"{}\" ({} / {})", name, rgb.toString(), rgb.to(XYZ.class).toString());
 		

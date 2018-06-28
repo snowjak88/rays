@@ -51,6 +51,9 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	@Value("${distance}")
 	private double targetDistance;
 	
+	@Value("${bumpiness}")
+	private double targetBumpiness;
+	
 	@Value("${bins}")
 	private int binCount;
 	
@@ -135,8 +138,8 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 			bestResult = getBestResult(currentGeneration);
 			reporter.reportResult(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd());
 			
-		} while (!(bestResult.getDistance() <= targetDistance && generationCount > minGenerations)
-				&& generationCount < maxGenerations);
+		} while (!(bestResult.getDistance() <= targetDistance && bestResult.getBumpiness() <= targetBumpiness
+				&& generationCount > minGenerations) && generationCount < maxGenerations);
 		
 		return new Result(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd().normalize());
 	}

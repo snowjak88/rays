@@ -29,6 +29,9 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 	@Value("${distance}")
 	private double targetDistance;
 	
+	@Value("${bumpiness}")
+	private double targetBumpiness;
+	
 	@Value("${bins}")
 	private int binCount;
 	
