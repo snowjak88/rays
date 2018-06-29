@@ -11,7 +11,7 @@ import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.SurfaceDescriptor;
-import org.snowjak.rays.sample.FixedSample;
+import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.transform.RotationTransform;
 import org.snowjak.rays.transform.TranslationTransform;
 
@@ -35,7 +35,7 @@ public class ShapeTest {
 			
 			@SuppressWarnings("unchecked")
 			@Override
-			public SurfaceDescriptor<Shape> sampleSurface(FixedSample fixedSample) {
+			public SurfaceDescriptor<Shape> sampleSurface(Sample sample) {
 				
 				// We don't care about this method for the purposes of this
 				// test.
@@ -44,7 +44,7 @@ public class ShapeTest {
 			
 			@SuppressWarnings("unchecked")
 			@Override
-			public SurfaceDescriptor<Shape> sampleSurfaceFacing(Point3D neighbor, FixedSample fixedSample) {
+			public SurfaceDescriptor<Shape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
 				
 				// We don't care about this method for the purposes of this
 				// test.

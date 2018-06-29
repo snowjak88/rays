@@ -176,6 +176,12 @@ public class RGB extends Colorspace<RGB, Triplet> {
 	}
 	
 	@Override
+	public RGB clamp() {
+		
+		return new RGB(get().clamp(0d, 1d));
+	}
+	
+	@Override
 	protected void registerConverters(ColorspaceConverterRegistry<RGB> registry) {
 		
 		registry.register(RGB.class, (rgb) -> rgb);

@@ -20,21 +20,21 @@ import org.snowjak.rays.interact.SurfaceDescriptor;
  * @author snowjak88
  */
 public interface Transformable {
-
+	
 	/**
-	 * Get the Transforms currently affecting this Transformable, in the order
-	 * such that an {@link Iterator} traversing the {@link List} will correctly
-	 * give the Transformable's orientation in local coordinates.
+	 * Get the Transforms currently affecting this Transformable, in the order such
+	 * that an {@link Iterator} traversing the {@link List} will correctly give the
+	 * Transformable's orientation in local coordinates.
 	 */
 	public List<Transform> getWorldToLocalTransforms();
-
+	
 	/**
-	 * Get the Transforms currently affecting this Transformable, in the order
-	 * such that an {@link Iterator} traversing the {@link List} will correctly
-	 * give the Transformable's orientation in world coordinates.
+	 * Get the Transforms currently affecting this Transformable, in the order such
+	 * that an {@link Iterator} traversing the {@link List} will correctly give the
+	 * Transformable's orientation in world coordinates.
 	 */
 	public List<Transform> getLocalToWorldTransforms();
-
+	
 	/**
 	 * Add the given {@link Transform} to the end of the list of world-to-local
 	 * Transforms (and implicitly to the beginning of the corresponding
@@ -43,7 +43,7 @@ public interface Transformable {
 	 * @param transform
 	 */
 	public void appendTransform(Transform transform);
-
+	
 	/**
 	 * Transform the given Point3D from world- to this-object-local coordinates.
 	 * 
@@ -51,14 +51,14 @@ public interface Transformable {
 	 * @return
 	 */
 	public default Point3D worldToLocal(Point3D point) {
-
+		
 		Point3D working = point;
 		for (Transform t : getWorldToLocalTransforms())
 			working = t.worldToLocal(working);
-
+		
 		return working;
 	}
-
+	
 	/**
 	 * Transform the given Point3D from this-object-local to world-coordinates.
 	 * 
@@ -66,30 +66,29 @@ public interface Transformable {
 	 * @return
 	 */
 	public default Point3D localToWorld(Point3D point) {
-
+		
 		Point3D working = point;
 		for (Transform t : getLocalToWorldTransforms())
 			working = t.localToWorld(working);
-
+		
 		return working;
 	}
-
+	
 	/**
-	 * Transform the given Vector3D from world- to this-object-local
-	 * coordinates.
+	 * Transform the given Vector3D from world- to this-object-local coordinates.
 	 * 
 	 * @param vector
 	 * @return
 	 */
 	public default Vector3D worldToLocal(Vector3D vector) {
-
+		
 		Vector3D working = vector;
 		for (Transform t : getWorldToLocalTransforms())
 			working = t.worldToLocal(working);
-
+		
 		return working;
 	}
-
+	
 	/**
 	 * Transform the given Vector3D from this-object-local to world-coordinates.
 	 * 
@@ -97,14 +96,14 @@ public interface Transformable {
 	 * @return
 	 */
 	public default Vector3D localToWorld(Vector3D vector) {
-
+		
 		Vector3D working = vector;
 		for (Transform t : getLocalToWorldTransforms())
 			working = t.localToWorld(working);
-
+		
 		return working;
 	}
-
+	
 	/**
 	 * Transform the given Ray from world- to this-object-local coordinates.
 	 * 
@@ -112,14 +111,14 @@ public interface Transformable {
 	 * @return
 	 */
 	public default Ray worldToLocal(Ray ray) {
-
+		
 		Ray working = ray;
 		for (Transform t : getWorldToLocalTransforms())
 			working = t.worldToLocal(working);
-
+		
 		return working;
 	}
-
+	
 	/**
 	 * Transform the given Ray from this-object-local to world-coordinates.
 	 * 
@@ -127,30 +126,29 @@ public interface Transformable {
 	 * @return
 	 */
 	public default Ray localToWorld(Ray ray) {
-
+		
 		Ray working = ray;
 		for (Transform t : getLocalToWorldTransforms())
 			working = t.localToWorld(working);
-
+		
 		return working;
 	}
-
+	
 	/**
-	 * Transform the given Normal3D from world- to this-object-local
-	 * coordinates.
+	 * Transform the given Normal3D from world- to this-object-local coordinates.
 	 * 
 	 * @param normal
 	 * @return
 	 */
 	public default Normal3D worldToLocal(Normal3D normal) {
-
+		
 		Normal3D working = normal;
 		for (Transform t : getWorldToLocalTransforms())
 			working = t.worldToLocal(working);
-
+		
 		return working;
 	}
-
+	
 	/**
 	 * Transform the given Normal3D from this-object-local to world-coordinates.
 	 * 
@@ -158,14 +156,14 @@ public interface Transformable {
 	 * @return
 	 */
 	public default Normal3D localToWorld(Normal3D normal) {
-
+		
 		Normal3D working = normal;
 		for (Transform t : getLocalToWorldTransforms())
 			working = t.localToWorld(working);
-
+		
 		return working;
 	}
-
+	
 	/**
 	 * Transform the given SurfaceDescriptor from world- to this-object-local
 	 * coordinates.
@@ -175,14 +173,14 @@ public interface Transformable {
 	 */
 	public default <T extends DescribesSurface> SurfaceDescriptor<T> worldToLocal(
 			SurfaceDescriptor<T> surfaceDescriptor) {
-
+		
 		SurfaceDescriptor<T> working = surfaceDescriptor;
 		for (Transform t : getWorldToLocalTransforms())
 			working = t.worldToLocal(working);
-
+		
 		return working;
 	}
-
+	
 	/**
 	 * Transform the given SurfaceDescriptor from this-object-local to
 	 * world-coordinates.
@@ -192,54 +190,52 @@ public interface Transformable {
 	 */
 	public default <T extends DescribesSurface> SurfaceDescriptor<T> localToWorld(
 			SurfaceDescriptor<T> surfaceDescriptor) {
-
+		
 		SurfaceDescriptor<T> working = surfaceDescriptor;
 		for (Transform t : getLocalToWorldTransforms())
 			working = t.localToWorld(working);
-
+		
 		return working;
 	}
-
+	
 	/**
-	 * Transform the given Interaction from world- to this-object-local
-	 * coordinates.
+	 * Transform the given Interaction from world- to this-object-local coordinates.
 	 * 
 	 * @param interaction
 	 * @return
 	 */
 	public default <T extends Interactable> Interaction<T> worldToLocal(Interaction<T> interaction) {
-
+		
 		Interaction<T> working = interaction;
 		for (Transform t : getWorldToLocalTransforms())
 			working = t.worldToLocal(working);
-
+		
 		return working;
 	}
-
+	
 	/**
-	 * Transform the given Interaction from this-object-local to
-	 * world-coordinates.
+	 * Transform the given Interaction from this-object-local to world-coordinates.
 	 * 
 	 * @param interaction
 	 * @return
 	 */
 	public default <T extends Interactable> Interaction<T> localToWorld(Interaction<T> interaction) {
-
+		
 		Interaction<T> working = interaction;
 		for (Transform t : getLocalToWorldTransforms())
 			working = t.localToWorld(working);
-
+		
 		return working;
 	}
-
+	
 	/**
-	 * Compute the world-coordinates for the center (<code>{0,0,0}</code>) of
-	 * this object's coordinate system.
+	 * Compute the world-coordinates for the center (<code>{0,0,0}</code>) of this
+	 * object's coordinate system.
 	 * 
 	 * @return
 	 */
 	public default Point3D getObjectZero() {
-
+		
 		return localToWorld(Point3D.ZERO);
 	}
 }

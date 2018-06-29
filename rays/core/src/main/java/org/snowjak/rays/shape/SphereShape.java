@@ -20,7 +20,7 @@ import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.geometry.boundingvolume.AABB;
 import org.snowjak.rays.interact.SurfaceDescriptor;
-import org.snowjak.rays.sample.FixedSample;
+import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.transform.Transform;
 
 public class SphereShape extends Shape {
@@ -130,9 +130,9 @@ public class SphereShape extends Shape {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<SphereShape> sampleSurface(FixedSample fixedSample) {
+	public SurfaceDescriptor<SphereShape> sampleSurface(Sample sample) {
 		
-		final Point2D samplePoint = fixedSample.getAdditional2DSample();
+		final Point2D samplePoint = sample.getAdditional2DSample();
 		
 		final double sin2_theta = samplePoint.getX();
 		final double cos2_theta = 1d - sin2_theta;
@@ -153,7 +153,7 @@ public class SphereShape extends Shape {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<SphereShape> sampleSurfaceFacing(Point3D neighbor, FixedSample fixedSample) {
+	public SurfaceDescriptor<SphereShape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
 		
 		final Vector3D towardsV_local = Vector3D.from(worldToLocal(neighbor));
 		
@@ -163,7 +163,7 @@ public class SphereShape extends Shape {
 		//
 		//
 		//
-		final Point2D samplePoint = fixedSample.getAdditional2DSample();
+		final Point2D samplePoint = sample.getAdditional2DSample();
 		
 		final double sin2_theta = samplePoint.getX();
 		final double cos2_theta = 1d - sin2_theta;

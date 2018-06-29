@@ -10,12 +10,11 @@ import org.snowjak.rays.transform.Transformable;
  * @author snowjak88
  */
 public interface Interactable extends Transformable, DescribesSurface {
-
+	
 	/**
 	 * Given a {@link Ray} (considered to be in the global reference-frame),
-	 * determine if the Ray intersects with this surface and, if it does,
-	 * construct the resulting {@link Interaction}. If not, return
-	 * <code>null</code>.
+	 * determine if the Ray intersects with this surface and, if it does, construct
+	 * the resulting {@link Interaction}. If not, return <code>null</code>.
 	 * 
 	 * @param ray
 	 * @return

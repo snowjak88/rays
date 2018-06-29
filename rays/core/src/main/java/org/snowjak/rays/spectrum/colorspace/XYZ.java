@@ -92,6 +92,12 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 		return get().get(2);
 	}
 	
+	@Override
+	public XYZ clamp() {
+		
+		return new XYZ(get().clamp(0d, 1d));
+	}
+	
 	/**
 	 * Normalize this XYZ triplet to unity brightness -- i.e., Y == 1.0
 	 * 

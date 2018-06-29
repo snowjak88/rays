@@ -28,13 +28,13 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Create a new AbstractVector with order <code>n</code> implicitly given by the length
-	 * of the given array.
+	 * Create a new AbstractVector with order <code>n</code> implicitly given by the
+	 * length of the given array.
 	 * <p>
 	 * Please note that this constructor will <strong>not</strong> copy the given
 	 * array of values before using it. This means that, if you pass in an array
-	 * reference without first copying it manually, your immutable AbstractVector could
-	 * turn out to be very mutable indeed (when your code starts modifying the
+	 * reference without first copying it manually, your immutable AbstractVector
+	 * could turn out to be very mutable indeed (when your code starts modifying the
 	 * original array).
 	 * </p>
 	 * 
@@ -46,9 +46,9 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Create a new AbstractVector, taking the first <code>n</code> values from the given
-	 * list of <code>values</code>. If <code>n > values.length</code>, 0-pad this
-	 * AbstractVector to make up the length.
+	 * Create a new AbstractVector, taking the first <code>n</code> values from the
+	 * given list of <code>values</code>. If <code>n > values.length</code>, 0-pad
+	 * this AbstractVector to make up the length.
 	 * 
 	 * @param n
 	 * @param values
@@ -77,8 +77,8 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Return the <code>i</code>th element of this AbstractVector, where <code>i</code> is
-	 * in [0, {@link #getN()}-1].
+	 * Return the <code>i</code>th element of this AbstractVector, where
+	 * <code>i</code> is in [0, {@link #getN()}-1].
 	 * 
 	 * @param i
 	 * @return
@@ -134,8 +134,8 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Apply the given {@link UnaryOperator} to this AbstractVector, producing another
-	 * AbstractVector as a result.
+	 * Apply the given {@link UnaryOperator} to this AbstractVector, producing
+	 * another AbstractVector as a result.
 	 * 
 	 * @param operator
 	 * @return
@@ -143,8 +143,8 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	public abstract T apply(UnaryOperator<Double> operator);
 	
 	/**
-	 * Apply the given {@link BinaryOperator} to this and another AbstractVector, producing
-	 * a third AbstractVector as a result.
+	 * Apply the given {@link BinaryOperator} to this and another AbstractVector,
+	 * producing a third AbstractVector as a result.
 	 * <h1>Processing NVectors of different lengths</h1>
 	 * <p>
 	 * When applying an operation to two NVectors of differing lengths, the shorter
@@ -230,8 +230,8 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Normalize this AbstractVector according to some magnitude-function (which evaluates
-	 * the absolute-magnitude of this AbstractVector).
+	 * Normalize this AbstractVector according to some magnitude-function (which
+	 * evaluates the absolute-magnitude of this AbstractVector).
 	 * 
 	 * @return
 	 */
@@ -281,10 +281,11 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Adds this AbstractVector to another, producing a third AbstractVector as a result.
+	 * Adds this AbstractVector to another, producing a third AbstractVector as a
+	 * result.
 	 * <p>
-	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about behavior
-	 * when adding NVectors of differing lengths.
+	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about
+	 * behavior when adding NVectors of differing lengths.
 	 * </p>
 	 * 
 	 * @param addend
@@ -296,8 +297,8 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Adds a constant value to every element in this AbstractVector, producing another
-	 * AbstractVector as a result.
+	 * Adds a constant value to every element in this AbstractVector, producing
+	 * another AbstractVector as a result.
 	 * 
 	 * @param addend
 	 * @return
@@ -308,11 +309,11 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Subtract another AbstractVector from this AbstractVector, producing a third AbstractVector as a
-	 * result.
+	 * Subtract another AbstractVector from this AbstractVector, producing a third
+	 * AbstractVector as a result.
 	 * <p>
-	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about behavior
-	 * when subtracting NVectors of differing lengths.
+	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about
+	 * behavior when subtracting NVectors of differing lengths.
 	 * </p>
 	 * 
 	 * @param subtrahend
@@ -324,8 +325,8 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Subtract a constant value from every element in this AbstractVector, producing
-	 * another AbstractVector as a result.
+	 * Subtract a constant value from every element in this AbstractVector,
+	 * producing another AbstractVector as a result.
 	 * 
 	 * @param subtrahend
 	 * @return
@@ -336,11 +337,11 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Multiply this AbstractVector by another AbstractVector, producing a third AbstractVector as a
-	 * result.
+	 * Multiply this AbstractVector by another AbstractVector, producing a third
+	 * AbstractVector as a result.
 	 * <p>
-	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about behavior
-	 * when multiplying NVectors of differing lengths.
+	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about
+	 * behavior when multiplying NVectors of differing lengths.
 	 * </p>
 	 * 
 	 * @param multiplicand
@@ -352,8 +353,8 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Multiply every element in this AbstractVector by a constant value, producing another
-	 * AbstractVector as a result.
+	 * Multiply every element in this AbstractVector by a constant value, producing
+	 * another AbstractVector as a result.
 	 * 
 	 * @param multiplicand
 	 * @return
@@ -364,11 +365,11 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Divide this AbstractVector by another AbstractVector, producing a third AbstractVector as a
-	 * result.
+	 * Divide this AbstractVector by another AbstractVector, producing a third
+	 * AbstractVector as a result.
 	 * <p>
-	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about behavior
-	 * when dividing NVectors of differing lengths.
+	 * See {@link #apply(AbstractVector, BinaryOperator)} for information about
+	 * behavior when dividing NVectors of differing lengths.
 	 * </p>
 	 * 
 	 * @param divisor
@@ -380,8 +381,8 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	}
 	
 	/**
-	 * Divide every element in this AbstractVector by a constant value, producing another
-	 * AbstractVector as a result.
+	 * Divide every element in this AbstractVector by a constant value, producing
+	 * another AbstractVector as a result.
 	 * 
 	 * @param divisor
 	 * @return

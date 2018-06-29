@@ -48,6 +48,11 @@ public abstract class Colorspace<C extends Colorspace<C, T>, T extends AbstractV
 	}
 	
 	/**
+	 * Clamp each of this Colorspace's components to lie in <code>[0,1]</code>.
+	 */
+	public abstract C clamp();
+	
+	/**
 	 * Convert this colorspace implementation to another colorspace.
 	 * 
 	 * @param colorspaceClass

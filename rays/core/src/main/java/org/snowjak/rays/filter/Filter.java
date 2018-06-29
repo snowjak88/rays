@@ -1,14 +1,13 @@
 package org.snowjak.rays.filter;
 
-import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sample.Sample;
 
 /**
- * Represents a filter of {@link FixedSample}s with respect to image-locations.
+ * Represents a filter of {@link Sample}s with respect to image-locations.
  * <p>
  * Raytracing ultimately is all about estimating an integral using a set of
  * samples. Because each pixel-location is discrete, we need a way of
- * determining how much each FixedSample film-point contributes to each pixel in the
+ * determining how much each Sample film-point contributes to each pixel in the
  * resulting image.
  * </p>
  * <p>
@@ -17,7 +16,7 @@ import org.snowjak.rays.sample.Sample;
  * <ul>
  * <li>its extent (for any given pixel-location, how many neighboring pixels can
  * be contributed to)</li>
- * <li>for a given FixedSample and pixel, a method for calculating that FixedSample's
+ * <li>for a given Sample and pixel, a method for calculating that Sample's
  * contribution-fraction to that pixel</li>
  * </ul>
  * </p>
@@ -29,16 +28,16 @@ public interface Filter {
 	
 	/**
 	 * This filter will affect neighboring pixels +/-{@link #getExtentX()} from any
-	 * given pixel-location. (An extent of "0" signifies that any FixedSample will only
-	 * ever contribute to 1 pixel.)
+	 * given pixel-location. (An extent of "0" signifies that any FixedSample will
+	 * only ever contribute to 1 pixel.)
 	 * 
 	 */
 	public int getExtentX();
 	
 	/**
 	 * This filter will affect neighboring pixels +/-{@link #getExtentY()} from any
-	 * given pixel-location. (An extent of "0" signifies that any FixedSample will only
-	 * ever contribute to 1 pixel.)
+	 * given pixel-location. (An extent of "0" signifies that any FixedSample will
+	 * only ever contribute to 1 pixel.)
 	 * 
 	 */
 	public int getExtentY();
