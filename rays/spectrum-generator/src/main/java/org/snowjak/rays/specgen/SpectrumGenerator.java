@@ -65,6 +65,12 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Value("${parallelism}")
 	private int parallelism;
 	
+	@Value("${min-energy}")
+	private double minEnergy;
+	
+	@Value("${max-energy}")
+	private double maxEnergy;
+	
 	@Autowired
 	private StochasticSpectrumSearch stochastic;
 	@Autowired
@@ -129,6 +135,14 @@ public class SpectrumGenerator implements CommandLineRunner {
 			LOG.error("--bumpiness must be greater than 0!");
 			return;
 		}
+		
+		if (minEnergy < 0d)
+			LOG.warn(
+					"WARNING -- you've selected an allowed minimum-energy of less than 0. This will allow the Generator to generate non-physical Spectral Power Distributions.");
+		
+		if (maxEnergy > 1d)
+			LOG.warn(
+					"WARNING -- you've selected an allowed maximum-energy of greater than 1. This will allow the Generator to generate non-physical Spectral Power Distributions.");
 		
 		for (String color : colors.split(","))
 			runFor(generatorType, parallelism, color, binCount, new RGB(new Triplet(spectrumGeneratorProperties

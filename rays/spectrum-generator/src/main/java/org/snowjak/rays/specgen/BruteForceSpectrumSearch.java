@@ -19,8 +19,6 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties("brute-force")
 public class BruteForceSpectrumSearch implements SpectrumSearch {
 	
-	private double searchMin;
-	private double searchMax;
 	private double searchStep;
 	
 	@Value("${parallelism}")
@@ -34,6 +32,12 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 	
 	@Value("${bins}")
 	private int binCount;
+	
+	@Value("${min-energy}")
+	private double minEnergy;
+	
+	@Value("${max-energy}")
+	private double maxEnergy;
 	
 	private ForkJoinPool forkJoinPool = null;
 	
@@ -56,7 +60,7 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 		final var vector = table.navigableKeySet().stream().map(k -> table.get(k)).toArray(len -> new Point[len]);
 		
 		return forkJoinPool.submit(new BruteForceSpectrumSearchRecursiveTask(targetColor, targetColor.normalize(),
-				searchMin, searchMax, searchStep, startingPoints, reporter, vector)).join();
+				minEnergy, maxEnergy, searchStep, startingPoints, reporter, vector)).join();
 	}
 	
 	public static class BruteForceSpectrumSearchRecursiveTask extends RecursiveTask<SpectrumSearch.Result> {
@@ -136,21 +140,16 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 			
 			return (SpectralPowerDistribution) spd.multiply(brightness);
 		}
-		
-		public double getSearchMin() {
-			
-			return searchMin;
-		}
-		
-		public double getSearchMax() {
-			
-			return searchMax;
-		}
-		
-		public double getSearchStep() {
-			
-			return searchStep;
-		}
-		
 	}
+	
+	public double getSearchStep() {
+		
+		return searchStep;
+	}
+	
+	public void setSearchStep(double searchStep) {
+		
+		this.searchStep = searchStep;
+	}
+	
 }
