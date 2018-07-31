@@ -266,7 +266,7 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	@Override
 	public RGB toRGB() {
 		
-		return XYZ.fromSpectrum(this).to(RGB.class);
+		return XYZ.fromSpectrum(this).normalize().to(RGB.class);
 	}
 	
 	protected static Pair<Double, Point> parseCSVLine(String line) throws NumberFormatException {

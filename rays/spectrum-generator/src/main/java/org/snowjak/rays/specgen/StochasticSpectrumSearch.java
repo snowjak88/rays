@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.specgen.SpectrumGenerator.StatusReporter;
-import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.springframework.beans.factory.annotation.Value;
@@ -77,7 +76,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 			(int) (r1.getDistance() * 100d) + r1.getBumpiness(), (int) (r2.getDistance() * 100d) + r2.getBumpiness()));
 	
 	@Override
-	public Result doSearch(XYZ targetColor, StatusReporter reporter) {
+	public Result doSearch(XYZ targetColor, SpectralPowerDistribution startingSPD, StatusReporter reporter) {
 		
 		if (executor == null)
 			this.executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(parallelism));
@@ -94,13 +93,12 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 			newMemberSupplier = () -> getUniformSPD(binCount, 0.5d);
 			break;
 		default:
-			throw new RuntimeException(
-					"Unrecognized new-member selector. Please use one of 'RANDOM', 'WHITE', 'EVEN'.");
+			newMemberSupplier = () -> startingSPD;
 		}
 		
 		List<SpectrumSearch.Result> currentGeneration = new ArrayList<>(generationSize);
 		for (int i = 0; i < generationSize; i++)
-			currentGeneration.add(SpectrumSearch.evaluateSPD(newMemberSupplier.get(), targetColor));
+			currentGeneration.add(SpectrumSearch.evaluateSPD(rescale(startingSPD, targetColor), targetColor));
 		
 		int generationCount = 0;
 		
@@ -109,8 +107,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 			generationCount++;
 			
 			if (generationCount % 64 == 0)
-				LOG.info("Processing generation #{} (best = {})", generationCount,
-						XYZ.fromSpectrum(bestResult.getSpd()).to(RGB.class).toString());
+				LOG.info("Processing generation #{}", generationCount);
 			
 			final var fixedCurrentGeneration = currentGeneration;
 			final List<ListenableFuture<Result>> nextGenerationFutures = new ArrayList<>(generationSize);
@@ -119,8 +116,8 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 					.forEach(r -> nextGenerationFutures.add(Futures.immediateFuture(r)));
 			
 			if (generationCount % newMemberSeedInterval == 0)
-				IntStream.range(0, newMemberSeed).forEach(i -> nextGenerationFutures.add(
-						Futures.immediateFuture(SpectrumSearch.evaluateSPD(getRandomizedSPD(binCount), targetColor))));
+				IntStream.range(0, newMemberSeed).forEach(i -> nextGenerationFutures.add(Futures.immediateFuture(
+						SpectrumSearch.evaluateSPD(rescale(newMemberSupplier.get(), targetColor), targetColor))));
 			
 			while (nextGenerationFutures.size() < generationSize) {
 				nextGenerationFutures.add(executor.submit(() -> {
@@ -133,7 +130,9 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 							.mapToObj(i -> fixedCurrentGeneration.get(RND.nextInt(fixedCurrentGeneration.size())))
 							.reduce((r1, r2) -> (RESULT_COMPARATOR.compare(r1, r2) == 1) ? r2 : r1).get();
 					
-					return SpectrumSearch.evaluateSPD(mutate(cross(parent1.getSpd(), parent2.getSpd())), targetColor);
+					final var offspring = rescale(mutate(cross(parent1.getSpd(), parent2.getSpd())), targetColor);
+					
+					return SpectrumSearch.evaluateSPD(offspring, targetColor);
 				}));
 			}
 			
@@ -146,14 +145,20 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 								LOG.error("Interrupted!", e);
 								return null;
 							}
-						}).filter(r -> r != null).collect(Collectors.toList()), executor).get();
+						}).filter(r -> r != null).filter(r -> !Double.isNaN(r.getDistance()))
+								.filter(r -> !Double.isNaN(r.getDistance()))
+								.filter(r -> !Double.isNaN(r.getRgb().getRed()))
+								.filter(r -> !Double.isNaN(r.getRgb().getGreen()))
+								.filter(r -> !Double.isNaN(r.getRgb().getBlue())).collect(Collectors.toList()),
+								executor)
+						.get();
 			} catch (InterruptedException | ExecutionException e) {
 				LOG.error("Interrupted!", e);
 				return bestResult;
 			}
 			
 			bestResult = getBestResult(currentGeneration);
-			reporter.reportResult(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd());
+			reporter.reportResult(bestResult);
 			
 		} while (!(bestResult.getDistance() <= targetDistance && bestResult.getBumpiness() <= targetBumpiness
 				&& generationCount > minGenerations) && generationCount < maxGenerations);
@@ -161,7 +166,8 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		executor.shutdown();
 		executor = null;
 		
-		return new Result(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getSpd().normalize());
+		return new Result(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getXyz(), bestResult.getRgb(),
+				bestResult.getSpd().normalize());
 	}
 	
 	private SpectrumSearch.Result getBestResult(Collection<SpectrumSearch.Result> results) {
@@ -223,11 +229,15 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		return new SpectralPowerDistribution(spd.getBounds().get(), entries);
 	}
 	
-	private SpectralPowerDistribution scaleSPD(SpectralPowerDistribution spd, XYZ targetColor) {
+	private SpectralPowerDistribution rescale(SpectralPowerDistribution spd, XYZ targetColor) {
 		
-		final double brightness = targetColor.getY();
+		final double targetBrightness = targetColor.getY();
+		final double currentBrightness = XYZ.fromSpectrum(spd).getY();
 		
-		return (SpectralPowerDistribution) spd.multiply(brightness);
+		if (currentBrightness == 0d)
+			return spd;
+		
+		return (SpectralPowerDistribution) spd.multiply(targetBrightness / currentBrightness);
 	}
 	
 	public int getGenerationSize() {

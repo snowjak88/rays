@@ -3,15 +3,20 @@ package org.snowjak.rays.specgen;
 import static org.apache.commons.math3.util.FastMath.max;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snowjak.rays.Settings;
+import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
@@ -46,6 +51,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 public class SpectrumGenerator implements CommandLineRunner {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SpectrumGenerator.class);
+	private static final Random RND = new Random(System.currentTimeMillis());
 	
 	@Value("${generator-type}")
 	private String generatorType;
@@ -70,6 +76,11 @@ public class SpectrumGenerator implements CommandLineRunner {
 	
 	@Value("${max-energy}")
 	private double maxEnergy;
+	
+	@Value("${starting-spd}")
+	private String startingSPDName;
+	
+	private SpectralPowerDistribution startingSpd = null;
 	
 	@Autowired
 	private StochasticSpectrumSearch stochastic;
@@ -144,11 +155,33 @@ public class SpectrumGenerator implements CommandLineRunner {
 			LOG.warn(
 					"WARNING -- you've selected an allowed maximum-energy of greater than 1. This will allow the Generator to generate non-physical Spectral Power Distributions.");
 		
+		startingSpd = getRandomizedSPD(binCount);
+		if (startingSPDName.equalsIgnoreCase("D65"))
+			startingSpd = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
+		
+		else if (startingSPDName != null && !startingSPDName.trim().equals("")) {
+			
+			final Optional<String> spdFileName = Arrays.stream(directory.list())
+					.filter(fn -> fn.equalsIgnoreCase(startingSPDName + ".csv")).findFirst();
+			
+			if (spdFileName.isPresent())
+				startingSpd = SpectralPowerDistribution
+						.loadFromCSV(new FileInputStream(new File(directory, spdFileName.get())));
+			
+		}
+		
 		for (String color : colors.split(","))
 			runFor(generatorType, parallelism, color, binCount, new RGB(new Triplet(spectrumGeneratorProperties
 					.getColorDefinitions().get(color).stream().mapToDouble(d -> d).toArray())),
 					new File(directory, color + ".csv"));
 		
+	}
+	
+	private SpectralPowerDistribution getRandomizedSPD(int binCount) {
+		
+		return new SpectralPowerDistribution(IntStream.range(0, binCount)
+				.mapToObj(i -> new Point(RND.nextDouble() * (maxEnergy - minEnergy) + minEnergy))
+				.toArray(len -> new Point[len]));
 	}
 	
 	public void runFor(String generatorType, int parallelism, String name, int binCount, RGB rgb, File outputCsv)
@@ -160,10 +193,10 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		switch (generatorType) {
 		case "STOCHASTIC":
-			result = stochastic.doSearch(rgb.to(XYZ.class), new StatusReporter(name, 9, 40));
+			result = stochastic.doSearch(rgb.to(XYZ.class), startingSpd, new StatusReporter(name, 9, 40));
 			break;
 		case "BRUTE-FORCE":
-			result = bruteForce.doSearch(rgb.to(XYZ.class), new StatusReporter(name, 9, 40));
+			result = bruteForce.doSearch(rgb.to(XYZ.class), startingSpd, new StatusReporter(name, 9, 40));
 			break;
 		default:
 			result = null;
@@ -196,6 +229,8 @@ public class SpectrumGenerator implements CommandLineRunner {
 		private final int graphRows, graphColumns;
 		
 		private double bestDistance, bestBumpiness;
+		private XYZ bestXYZ;
+		private RGB bestRGB;
 		private SpectralPowerDistribution bestSPD = null;
 		
 		public StatusReporter(String name) {
@@ -218,23 +253,27 @@ public class SpectrumGenerator implements CommandLineRunner {
 			this.graphColumns = graphColumns;
 		}
 		
-		public void reportResult(double distance, double bumpiness, SpectralPowerDistribution spd) {
+		public void reportResult(SpectrumSearch.Result result) {
 			
 			synchronized (this) {
-				if (bestSPD == null || (distance < bestDistance)) {
-					bestDistance = distance;
-					bestBumpiness = bumpiness;
-					bestSPD = spd;
+				if (bestSPD == null || (result.getDistance() < bestDistance)) {
+					bestDistance = result.getDistance();
+					bestBumpiness = result.getBumpiness();
+					bestXYZ = result.getXyz();
+					bestRGB = result.getRgb();
+					bestSPD = result.getSpd();
 					
 					LOG.info("{}: Best SPD: Distance: {} / Bumpiness: {}", name, bestDistance, bestBumpiness);
+					LOG.info("{}: XYZ: {}", name, bestXYZ.toString());
+					LOG.info("{}: RGB: {}", name, bestRGB.toString());
 					
 					if (this.graphEnabled) {
-						final double lowBound = spd.getBounds().get().getFirst(),
-								highBound = spd.getBounds().get().getSecond();
+						final double lowBound = bestSPD.getBounds().get().getFirst(),
+								highBound = bestSPD.getBounds().get().getSecond();
 						final double colSpan = (highBound - lowBound) / ((double) graphColumns - 1d);
 						
 						final double[] measurements = IntStream.range(0, graphColumns - 1)
-								.mapToDouble(i -> ((double) i * colSpan) + lowBound).map(k -> spd.get(k).get(0))
+								.mapToDouble(i -> ((double) i * colSpan) + lowBound).map(k -> bestSPD.get(k).get(0))
 								.toArray();
 						
 						final double maxMeasurement = Arrays.stream(measurements).max().getAsDouble();

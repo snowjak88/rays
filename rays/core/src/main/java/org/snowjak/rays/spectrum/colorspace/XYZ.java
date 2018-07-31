@@ -48,7 +48,7 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 				Settings.getInstance().getCieXyzIntegrationStepCount(), (lambda) -> cmf.get(lambda).get(1));
 		final var result = new XYZ(numerator.divide(denominator));
 		
-		return new XYZ(result.get().apply(c -> c / result.getY()));
+		return new XYZ(result.get());
 		
 	}
 	
