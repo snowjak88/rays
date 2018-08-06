@@ -164,9 +164,11 @@ public class SpectrumGenerator implements CommandLineRunner {
 			final Optional<String> spdFileName = Arrays.stream(directory.list())
 					.filter(fn -> fn.equalsIgnoreCase(startingSPDName + ".csv")).findFirst();
 			
-			if (spdFileName.isPresent())
+			if (spdFileName.isPresent()) {
+				LOG.info("Loading existing SPD {} as starting-SPD.", spdFileName.get());
 				startingSpd = SpectralPowerDistribution
 						.loadFromCSV(new FileInputStream(new File(directory, spdFileName.get())));
+			}
 			
 		}
 		

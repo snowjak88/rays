@@ -2,13 +2,18 @@ package org.snowjak.rays.specgen;
 
 import static org.apache.commons.math3.util.FastMath.abs;
 import static org.apache.commons.math3.util.FastMath.max;
+import static org.apache.commons.math3.util.FastMath.min;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
+import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.specgen.SpectrumGenerator.StatusReporter;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
@@ -22,6 +27,7 @@ import org.springframework.stereotype.Component;
 public class BruteForceSpectrumSearch implements SpectrumSearch {
 	
 	private double searchStep;
+	private double searchWindow;
 	
 	@Value("${parallelism}")
 	private int parallelism;
@@ -53,7 +59,7 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 		if (forkJoinPool == null)
 			forkJoinPool = new ForkJoinPool(parallelism);
 		
-		final var spdTable = startingSPD.getTable();
+		final var spdTable = startingSPD.resize(binCount).getTable();
 		final var startingPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
 				.toArray(len -> new Point[len]);
 		
@@ -61,39 +67,43 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 		final var vector = table.navigableKeySet().stream().map(k -> table.get(k)).toArray(len -> new Point[len]);
 		
 		return forkJoinPool.submit(new BruteForceSpectrumSearchRecursiveTask(targetColor, minEnergy, maxEnergy,
-				searchStep, startingPoints, reporter, vector)).join();
+				searchWindow, searchStep, startingPoints, reporter, vector)).join();
 	}
 	
 	public static class BruteForceSpectrumSearchRecursiveTask extends RecursiveTask<SpectrumSearch.Result> {
 		
 		private static final long serialVersionUID = -3715483293390660280L;
+		private static final Logger LOG = LoggerFactory.getLogger(BruteForceSpectrumSearchRecursiveTask.class);
 		
 		private final XYZ target;
-		private final double searchMin, searchMax;
+		private final double searchMin, searchMax, searchWindow;
 		private final double searchStep;
 		private final Point[] startingPoints;
 		private final StatusReporter reporter;
 		private final Point[] vector;
 		private final int currentIndex;
 		
-		public BruteForceSpectrumSearchRecursiveTask(XYZ target, double searchMin, double searchMax, double searchStep,
-				Point[] startingPoints, StatusReporter reporter, Point[] vector) {
+		public BruteForceSpectrumSearchRecursiveTask(XYZ target, double searchMin, double searchMax,
+				double searchWindow, double searchStep, Point[] startingPoints, StatusReporter reporter,
+				Point[] vector) {
 			
-			this(target, searchMin, searchMax, searchStep, startingPoints, reporter, vector, 0);
+			this(target, searchMin, searchMax, searchWindow, searchStep, startingPoints, reporter, vector, 0);
 		}
 		
-		public BruteForceSpectrumSearchRecursiveTask(XYZ target, double searchMin, double searchMax, double searchStep,
-				Point[] startingPoints, StatusReporter reporter, Point[] vector, int currentIndex) {
+		public BruteForceSpectrumSearchRecursiveTask(XYZ target, double searchMin, double searchMax,
+				double searchWindow, double searchStep, Point[] startingPoints, StatusReporter reporter, Point[] vector,
+				int currentIndex) {
 			
 			super();
 			
 			this.target = target;
 			this.searchMin = searchMin;
 			this.searchMax = searchMax;
+			this.searchWindow = searchWindow;
 			this.searchStep = searchStep;
 			this.startingPoints = startingPoints;
 			this.reporter = reporter;
-			this.vector = vector;
+			this.vector = Arrays.copyOf(vector, vector.length);
 			this.currentIndex = currentIndex;
 		}
 		
@@ -104,39 +114,24 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 			final Collection<ForkJoinTask<SpectrumSearch.Result>> subtasks = new LinkedList<>();
 			
 			final double origin = vector[currentIndex].get(0);
-			for (double v = searchStep; v <= max(abs(origin - searchMin), abs(origin - searchMax)); v += searchStep) {
+			
+			final double windowStart = max(searchMin, origin - abs(searchWindow / 2d));
+			final double windowEnd = min(searchMax, origin + abs(searchWindow / 2d));
+			
+			for (double v = windowStart; v <= windowEnd; v += searchStep) {
 				
-				if (origin + v <= searchMax) {
-					vector[currentIndex] = new Point(origin + v);
-					final var spd = rescale(constructSPD(vector), target);
-					final var eval = SpectrumSearch.evaluateSPD(spd, target);
-					
-					if (bestResult == null || (eval.getDistance() <= bestResult.getDistance()
-							&& eval.getBumpiness() <= bestResult.getBumpiness()))
-						bestResult = new Result(eval.getDistance(), eval.getBumpiness(), eval.getXyz(), eval.getRgb(),
-								spd);
-					
-					if (currentIndex < vector.length - 1)
-						subtasks.add(new BruteForceSpectrumSearchRecursiveTask(target, searchMin, searchMax, searchStep,
-								startingPoints, reporter, vector, currentIndex + 1).fork());
-				}
+				vector[currentIndex] = new Point(v);
+				final var spd = rescale(constructSPD(vector), target);
+				final var eval = SpectrumSearch.evaluateSPD(spd, target);
 				
-				if (origin - v >= searchMin) {
-					vector[currentIndex] = new Point(origin - v);
-					final var spd = rescale(constructSPD(vector), target);
-					final var eval = SpectrumSearch.evaluateSPD(spd, target);
-					
-					if (bestResult == null || (eval.getDistance() <= bestResult.getDistance()
-							&& eval.getBumpiness() <= bestResult.getBumpiness()))
-						bestResult = eval;
-					// bestResult = new Result(eval.getDistance(), eval.getBumpiness(),
-					// eval.getRgb(),
-					// scaleSPD(spd, originalTarget));
-					
-					if (currentIndex < vector.length - 1)
-						subtasks.add(new BruteForceSpectrumSearchRecursiveTask(target, searchMin, searchMax, searchStep,
-								startingPoints, reporter, vector, currentIndex + 1).fork());
-				}
+				if (bestResult == null || (eval.getDistance() <= bestResult.getDistance()
+						&& eval.getBumpiness() <= bestResult.getBumpiness()))
+					bestResult = new Result(eval.getDistance(), eval.getBumpiness(), eval.getXyz(), eval.getRgb(), spd);
+				
+				if (currentIndex < vector.length - 1)
+					subtasks.add(new BruteForceSpectrumSearchRecursiveTask(target, searchMin, searchMax, searchWindow,
+							searchStep, startingPoints, reporter, vector, currentIndex + 1).fork());
+				
 			}
 			
 			for (ForkJoinTask<SpectrumSearch.Result> t : subtasks) {
@@ -175,6 +170,16 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 	public void setSearchStep(double searchStep) {
 		
 		this.searchStep = searchStep;
+	}
+	
+	public double getSearchWindow() {
+		
+		return searchWindow;
+	}
+	
+	public void setSearchWindow(double searchWindow) {
+		
+		this.searchWindow = searchWindow;
 	}
 	
 }
