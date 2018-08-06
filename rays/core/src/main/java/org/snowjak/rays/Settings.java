@@ -1,6 +1,10 @@
 package org.snowjak.rays;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
@@ -22,6 +26,22 @@ import com.google.common.math.DoubleMath;
  *
  */
 public class Settings {
+	
+	public enum ComponentSpectrumName {
+		RED("red"), GREEN("green"), BLUE("blue"), CYAN("cyan"), MAGENTA("magenta"), YELLOW("yellow");
+		
+		private String name;
+		
+		ComponentSpectrumName(String name) {
+			
+			this.name = name;
+		}
+		
+		public String getName() {
+			
+			return name;
+		}
+	}
 	
 	/**
 	 * @see #getDoubleEqualityEpsilon()
@@ -61,6 +81,11 @@ public class Settings {
 	 * @see #getIlluminatorSpectralPowerDistribution()
 	 */
 	private SpectralPowerDistribution illuminatorSpectralPowerDistribution = null;
+	
+	/**
+	 * @see #getComponentSpectra()
+	 */
+	private Map<ComponentSpectrumName, SpectralPowerDistribution> componentSpectra = null;
 	
 	/**
 	 * @see #getCieXyzIntegrationStepSize()
@@ -238,6 +263,31 @@ public class Settings {
 			}
 		
 		return illuminatorSpectralPowerDistribution;
+	}
+	
+	public Map<ComponentSpectrumName, SpectralPowerDistribution> getComponentSpectra() {
+		
+		if (componentSpectra == null) {
+			componentSpectra = new HashMap<>();
+			
+			for (ComponentSpectrumName name : ComponentSpectrumName.values()) {
+				
+				final String filePath = coreSettings.getProperty("org.snowjak.rays.component-spectra-path")
+						+ File.separator + name.getName() + ".csv";
+				try {
+					
+					final InputStream stream = this.getClass().getClassLoader().getResourceAsStream(filePath);
+					componentSpectra.put(name, SpectralPowerDistribution.loadFromCSV(stream));
+					
+				} catch (IOException e) {
+					//
+					//
+					throw new RuntimeException("Could not load component-spectrum from [" + filePath + "].", e);
+				}
+			}
+		}
+		
+		return componentSpectra;
 	}
 	
 	/**

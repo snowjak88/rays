@@ -160,6 +160,71 @@ public class SpectralPowerDistributionTest {
 	}
 	
 	@Test
+	public void testFromRGB_RED() {
+		
+		final var expected = RGB.RED;
+		final var spd = SpectralPowerDistribution.fromRGB(expected);
+		final var result = spd.toRGB();
+		
+		assertEquals("RGB(R) not as expected.", expected.getRed(), result.getRed(), 0.05);
+		assertEquals("RGB(G) not as expected.", expected.getGreen(), result.getGreen(), 0.05);
+		assertEquals("RGB(B) not as expected.", expected.getBlue(), result.getBlue(), 0.05);
+		
+	}
+	
+	@Test
+	public void testFromRGB_CYAN() {
+		
+		final var expected = new RGB(0d, 1d, 1d);
+		final var spd = SpectralPowerDistribution.fromRGB(expected);
+		final var result = spd.toRGB();
+		
+		assertEquals("RGB(R) not as expected.", expected.getRed(), result.getRed(), 0.05);
+		assertEquals("RGB(G) not as expected.", expected.getGreen(), result.getGreen(), 0.05);
+		assertEquals("RGB(B) not as expected.", expected.getBlue(), result.getBlue(), 0.05);
+		
+	}
+	
+	@Test
+	public void testFromRGB_WHITE() {
+		
+		final var expected = RGB.WHITE;
+		final var spd = SpectralPowerDistribution.fromRGB(expected);
+		final var result = spd.toRGB();
+		
+		assertEquals("RGB(R) not as expected.", expected.getRed(), result.getRed(), 0.05);
+		assertEquals("RGB(G) not as expected.", expected.getGreen(), result.getGreen(), 0.05);
+		assertEquals("RGB(B) not as expected.", expected.getBlue(), result.getBlue(), 0.05);
+		
+	}
+	
+	@Test
+	public void testFromRGB_BLACK() {
+		
+		final var expected = RGB.BLACK;
+		final var spd = SpectralPowerDistribution.fromRGB(expected);
+		final var result = spd.toRGB();
+		
+		assertEquals("RGB(R) not as expected.", expected.getRed(), result.getRed(), 0.05);
+		assertEquals("RGB(G) not as expected.", expected.getGreen(), result.getGreen(), 0.05);
+		assertEquals("RGB(B) not as expected.", expected.getBlue(), result.getBlue(), 0.05);
+		
+	}
+	
+	@Test
+	public void testFromRGB_GRAY() {
+		
+		final var expected = new RGB(0.5, 0.5, 0.5);
+		final var spd = SpectralPowerDistribution.fromRGB(expected);
+		final var result = spd.toRGB();
+		
+		assertEquals("RGB(R) not as expected.", expected.getRed(), result.getRed(), 0.05);
+		assertEquals("RGB(G) not as expected.", expected.getGreen(), result.getGreen(), 0.05);
+		assertEquals("RGB(B) not as expected.", expected.getBlue(), result.getBlue(), 0.05);
+		
+	}
+	
+	@Test
 	public void testToRGB() {
 		
 		final var d65 = Settings.getInstance().getIlluminatorSpectralPowerDistribution();

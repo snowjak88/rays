@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.Settings.ComponentSpectrumName;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.colorspace.RGB;
@@ -28,6 +29,79 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	
 	private static final long serialVersionUID = -1097611220827388034L;
 	private static final Pattern __surrounding_doublequotes_pattern = Pattern.compile("\"(.*)\"");
+	
+	/**
+	 * Given an {@link RGB} triplet, select a SpectralPowerDistribution that can
+	 * represent this triplet.
+	 * <p>
+	 * There are an arbitrary number of SPDs that can represent any single RGB
+	 * triplet. As such, the SPD selected by this method must be inherently
+	 * arbitrary and approximate. However, it is nevertheless a desirable
+	 * approximation, because energy-transport can be more accurately modeled using
+	 * an energy-distribution.
+	 * </p>
+	 * <p>
+	 * The algorithm used here is given by Brian Smits
+	 * ({@link http://www.cs.utah.edu/~bes/papers/color/}). It is reliant upon
+	 * component-specific spectra generated using the companion "spectrum-generator"
+	 * sub-project.
+	 * </p>
+	 * 
+	 * @param rgb
+	 * @return
+	 */
+	public static SpectralPowerDistribution fromRGB(RGB rgb) {
+		
+		Spectrum spd = null;
+		
+		final SpectralPowerDistribution white = Settings.getInstance().getIlluminatorSpectralPowerDistribution(),
+				red = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.RED),
+				green = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.GREEN),
+				blue = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.BLUE),
+				cyan = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.CYAN),
+				magenta = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.MAGENTA),
+				yellow = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.YELLOW);
+		
+		if (rgb.getRed() <= rgb.getGreen() && rgb.getRed() <= rgb.getBlue()) {
+			
+			spd = white.multiply(rgb.getRed());
+			
+			if (rgb.getGreen() <= rgb.getBlue()) {
+				spd = spd.add(cyan.multiply(rgb.getGreen() - rgb.getRed()));
+				spd = spd.add(blue.multiply(rgb.getBlue() - rgb.getGreen()));
+			} else {
+				spd = spd.add(cyan.multiply(rgb.getBlue() - rgb.getRed()));
+				spd = spd.add(green.multiply(rgb.getGreen() - rgb.getBlue()));
+			}
+			
+		} else if (rgb.getGreen() <= rgb.getRed() && rgb.getGreen() <= rgb.getBlue()) {
+			
+			spd = white.multiply(rgb.getGreen());
+			
+			if (rgb.getRed() <= rgb.getBlue()) {
+				spd = spd.add(magenta.multiply(rgb.getRed() - rgb.getGreen()));
+				spd = spd.add(blue.multiply(rgb.getBlue() - rgb.getRed()));
+			} else {
+				spd = spd.add(magenta.multiply(rgb.getBlue() - rgb.getGreen()));
+				spd = spd.add(red.multiply(rgb.getRed() - rgb.getBlue()));
+			}
+			
+		} else {
+			
+			spd = white.multiply(rgb.getBlue());
+			
+			if (rgb.getRed() <= rgb.getGreen()) {
+				spd = spd.add(yellow.multiply(rgb.getRed() - rgb.getBlue()));
+				spd = spd.add(green.multiply(rgb.getGreen() - rgb.getRed()));
+			} else {
+				spd = spd.add(yellow.multiply(rgb.getGreen() - rgb.getBlue()));
+				spd = spd.add(red.multiply(rgb.getRed() - rgb.getGreen()));
+			}
+			
+		}
+		
+		return (SpectralPowerDistribution) spd;
+	}
 	
 	/**
 	 * Load a SpectralPowerDistribution from a CSV-formatted {@link InputStream}.
@@ -285,6 +359,13 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	protected static String buildCSVLine(double point, Point value) {
 		
 		return Double.toString(point) + "," + Double.toString(value.get(0));
+	}
+	
+	@Override
+	public String toString() {
+		
+		final RGB rgb = this.toRGB();
+		return "SpectralPowerDistribution [ " + rgb.toString() + " ]";
 	}
 	
 }
