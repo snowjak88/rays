@@ -37,6 +37,7 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 	public static XYZ fromSpectrum(SpectralPowerDistribution spd) {
 		
 		final var cmf = Settings.getInstance().getColorMappingFunctions();
+		final var illuminant = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
 		
 		final double lowLambda = spd.getBounds().get().getFirst();
 		final double highLambda = spd.getBounds().get().getSecond();
@@ -45,7 +46,8 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 				Settings.getInstance().getCieXyzIntegrationStepCount(),
 				(lambda) -> cmf.get(lambda).multiply(spd.get(lambda).get(0)));
 		final var denominator = Util.integrate(lowLambda, highLambda,
-				Settings.getInstance().getCieXyzIntegrationStepCount(), (lambda) -> cmf.get(lambda).get(1));
+				Settings.getInstance().getCieXyzIntegrationStepCount(),
+				(lambda) -> cmf.get(lambda).get(1) * illuminant.get(lambda).get(0));
 		final var result = new XYZ(numerator.divide(denominator));
 		
 		return new XYZ(result.get());

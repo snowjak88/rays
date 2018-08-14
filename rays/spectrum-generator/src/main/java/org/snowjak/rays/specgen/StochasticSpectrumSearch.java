@@ -72,8 +72,9 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		
 	}
 	
-	private static final Comparator<SpectrumSearch.Result> RESULT_COMPARATOR = (r1, r2) -> (Double.compare(
-			(int) (r1.getDistance() * 100d) + r1.getBumpiness(), (int) (r2.getDistance() * 100d) + r2.getBumpiness()));
+	private static final Comparator<SpectrumSearch.Result> RESULT_COMPARATOR = (r1,
+			r2) -> (Double.compare((int) (r1.getDistance() * 10000d) + r1.getBumpiness(),
+					(int) (r2.getDistance() * 10000d) + r2.getBumpiness()));
 	
 	@Override
 	public Result doSearch(XYZ targetColor, SpectralPowerDistribution startingSPD, StatusReporter reporter) {
@@ -146,7 +147,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 								return null;
 							}
 						}).filter(r -> r != null).filter(r -> !Double.isNaN(r.getDistance()))
-								.filter(r -> !Double.isNaN(r.getDistance()))
+								.filter(r -> !Double.isNaN(r.getBumpiness()))
 								.filter(r -> !Double.isNaN(r.getRgb().getRed()))
 								.filter(r -> !Double.isNaN(r.getRgb().getGreen()))
 								.filter(r -> !Double.isNaN(r.getRgb().getBlue())).collect(Collectors.toList()),
@@ -166,8 +167,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		executor.shutdown();
 		executor = null;
 		
-		return new Result(bestResult.getDistance(), bestResult.getBumpiness(), bestResult.getXyz(), bestResult.getRgb(),
-				bestResult.getSpd().normalize());
+		return bestResult;
 	}
 	
 	private SpectrumSearch.Result getBestResult(Collection<SpectrumSearch.Result> results) {

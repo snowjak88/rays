@@ -4,12 +4,15 @@ import static org.apache.commons.math3.util.FastMath.max;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -80,7 +83,12 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Value("${starting-spd}")
 	private String startingSPDName;
 	
+	@Value("${output}")
+	private String outputName;
+	
 	private SpectralPowerDistribution startingSpd = null;
+	
+	private Function<String, OutputStream> outputSupplier = null;
 	
 	@Autowired
 	private StochasticSpectrumSearch stochastic;
@@ -172,10 +180,36 @@ public class SpectrumGenerator implements CommandLineRunner {
 			
 		}
 		
+		if (!spectrumGeneratorProperties.getAvailableOutputs().contains(outputName)) {
+			LOG.error("Given --output \"{}\" is not recognized. Please use one of: {}", outputName,
+					spectrumGeneratorProperties.getAvailableOutputs().stream().collect(Collectors.joining(", ")));
+			return;
+		} else {
+			
+			switch (outputName) {
+			case "FILE":
+				outputSupplier = (color) -> {
+					try {
+						return new FileOutputStream(new File(directory, color + ".csv"));
+					} catch (FileNotFoundException e) {
+						//
+						//
+						e.printStackTrace();
+					}
+					return null;
+				};
+				break;
+			case "CONSOLE":
+			default:
+				outputSupplier = (color) -> System.out;
+				break;
+			}
+			
+		}
+		
 		for (String color : colors.split(","))
 			runFor(generatorType, parallelism, color, binCount, new RGB(new Triplet(spectrumGeneratorProperties
-					.getColorDefinitions().get(color).stream().mapToDouble(d -> d).toArray())),
-					new File(directory, color + ".csv"));
+					.getColorDefinitions().get(color).stream().mapToDouble(d -> d).toArray())));
 		
 	}
 	
@@ -186,7 +220,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 				.toArray(len -> new Point[len]));
 	}
 	
-	public void runFor(String generatorType, int parallelism, String name, int binCount, RGB rgb, File outputCsv)
+	public void runFor(String generatorType, int parallelism, String name, int binCount, RGB rgb)
 			throws IOException, InterruptedException, ExecutionException {
 		
 		LOG.info("Generating a spectrum fit for: \"{}\" ({} / {})", name, rgb.toString(), rgb.to(XYZ.class).toString());
@@ -211,13 +245,10 @@ public class SpectrumGenerator implements CommandLineRunner {
 		LOG.info("{}: Distance: {}", name, result.getDistance());
 		LOG.info("{}: Bumpiness: {}", name, result.getBumpiness());
 		
-		LOG.info("{}: Writing spectrum as CSV ...", name);
-		try (var csv = new FileOutputStream(outputCsv)) {
-			result.getSpd().saveToCSV(csv);
-		} catch (IOException e) {
-			LOG.error("{}: Could not write spectrum to {}: {}, \"{}\"", name, outputCsv.getPath(),
-					e.getClass().getSimpleName(), e.getMessage());
-		}
+		LOG.info("{}: Writing spectrum ...", name);
+		final OutputStream os = outputSupplier.apply(name);
+		if (os != null)
+			result.getSpd().saveToCSV(os);
 		
 	}
 	
@@ -313,6 +344,21 @@ public class SpectrumGenerator implements CommandLineRunner {
 					}
 				}
 			}
+		}
+		
+		public double getBestDistance() {
+			
+			return bestDistance;
+		}
+		
+		public double getBestBumpiness() {
+			
+			return bestBumpiness;
+		}
+		
+		public SpectralPowerDistribution getBestSPD() {
+			
+			return bestSPD;
 		}
 	}
 	

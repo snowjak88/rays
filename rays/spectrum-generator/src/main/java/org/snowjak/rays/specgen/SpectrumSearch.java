@@ -21,11 +21,8 @@ public interface SpectrumSearch {
 		final XYZ xyz = XYZ.fromSpectrum(spd);
 		final RGB rgb = xyz.to(RGB.class);
 		
-		 final double targetDistance = pow(rgb.getRed() - targetRGB.getRed(), 2)
-		 + pow(rgb.getGreen() - targetRGB.getGreen(), 2) + pow(rgb.getBlue() -
-		 targetRGB.getBlue(), 2);
-		//final double targetDistance = pow(xyz.getX() - targetColor.getX(), 2) + pow(xyz.getY() - targetColor.getY(), 2)
-		//		+ pow(xyz.getZ() - targetColor.getZ(), 2);
+		final double targetDistance = pow(rgb.getRed() - targetRGB.getRed(), 2)
+				+ pow(rgb.getGreen() - targetRGB.getGreen(), 2) + pow(rgb.getBlue() - targetRGB.getBlue(), 2);
 		
 		final var spdTable = spd.getTable();
 		final Point[] spdPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))

@@ -13,9 +13,15 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties("spectrum-generator")
 public class SpectrumGeneratorProperties {
 	
+	private Set<String> availableOutputs = new HashSet<>();
 	private Set<String> availableGenerators = new HashSet<>();
 	private Set<String> availableColors = new HashSet<>();
 	private Map<String, List<Double>> colorDefinitions = new HashMap<>();
+	
+	public Set<String> getAvailableOutputs() {
+		
+		return availableOutputs;
+	}
 	
 	public Set<String> getAvailableGenerators() {
 		

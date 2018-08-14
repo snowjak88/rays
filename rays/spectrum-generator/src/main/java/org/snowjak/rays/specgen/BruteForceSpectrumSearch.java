@@ -10,7 +10,6 @@ import java.util.LinkedList;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,14 +102,15 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 			this.searchStep = searchStep;
 			this.startingPoints = startingPoints;
 			this.reporter = reporter;
-			this.vector = Arrays.copyOf(vector, vector.length);
+			this.vector = vector;
 			this.currentIndex = currentIndex;
 		}
 		
 		@Override
 		protected SpectrumSearch.Result compute() {
 			
-			SpectrumSearch.Result bestResult = null;
+			SpectrumSearch.Result bestResult = SpectrumSearch.evaluateSPD(rescale(constructSPD(vector), target),
+					target);
 			final Collection<ForkJoinTask<SpectrumSearch.Result>> subtasks = new LinkedList<>();
 			
 			final double origin = vector[currentIndex].get(0);
@@ -118,25 +118,27 @@ public class BruteForceSpectrumSearch implements SpectrumSearch {
 			final double windowStart = max(searchMin, origin - abs(searchWindow / 2d));
 			final double windowEnd = min(searchMax, origin + abs(searchWindow / 2d));
 			
-			for (double v = windowStart; v <= windowEnd; v += searchStep) {
+			for (double v = windowStart; v <= windowEnd; v += abs(searchStep)) {
 				
-				vector[currentIndex] = new Point(v);
-				final var spd = rescale(constructSPD(vector), target);
+				final var newVector = Arrays.copyOf(vector, vector.length);
+				newVector[currentIndex] = new Point(v);
+				final var spd = rescale(constructSPD(newVector), target);
 				final var eval = SpectrumSearch.evaluateSPD(spd, target);
 				
-				if (bestResult == null || (eval.getDistance() <= bestResult.getDistance()
-						&& eval.getBumpiness() <= bestResult.getBumpiness()))
-					bestResult = new Result(eval.getDistance(), eval.getBumpiness(), eval.getXyz(), eval.getRgb(), spd);
+				if ((bestResult == null || eval.getDistance() < bestResult.getDistance())
+						&& !Double.isNaN(eval.getDistance()) && !Double.isNaN(eval.getBumpiness()))
+					bestResult = eval;
 				
-				if (currentIndex < vector.length - 1)
+				if (currentIndex < newVector.length - 1)
 					subtasks.add(new BruteForceSpectrumSearchRecursiveTask(target, searchMin, searchMax, searchWindow,
-							searchStep, startingPoints, reporter, vector, currentIndex + 1).fork());
+							searchStep, startingPoints, reporter, newVector, currentIndex + 1).fork());
 				
 			}
 			
 			for (ForkJoinTask<SpectrumSearch.Result> t : subtasks) {
 				var p = t.join();
-				if (p.getDistance() <= bestResult.getDistance() && p.getBumpiness() <= bestResult.getBumpiness())
+				if (p.getDistance() < bestResult.getDistance() && !Double.isNaN(p.getDistance())
+						&& !Double.isNaN(p.getBumpiness()))
 					bestResult = p;
 			}
 			
