@@ -13,6 +13,10 @@ public class BoxFilter implements Filter {
 	private final int extent;
 	private final int pixelsInBox;
 	
+	/**
+	 * @see BoxFilter
+	 * @param extent
+	 */
 	public BoxFilter(int extent) {
 		
 		this.extent = extent;
@@ -37,7 +41,10 @@ public class BoxFilter implements Filter {
 		if (!isContributing(sample, pixelX, pixelY))
 			return 0d;
 		
-		return 1d / ((double) pixelsInBox * sample.getSampler().getSamplesPerPixel());
+		if (pixelsInBox == 0)
+			return 1d;
+		
+		return 1d / (double) pixelsInBox;
 	}
 	
 }

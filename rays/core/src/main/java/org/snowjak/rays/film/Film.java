@@ -4,7 +4,6 @@ import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 
 import java.awt.image.BufferedImage;
-import java.awt.image.RenderedImage;
 
 import org.snowjak.rays.filter.Filter;
 import org.snowjak.rays.sample.EstimatedSample;
@@ -81,7 +80,7 @@ public class Film {
 	 * 
 	 * @return
 	 */
-	public RenderedImage getImage() {
+	public BufferedImage getImage() {
 		
 		final var image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		
@@ -97,6 +96,16 @@ public class Film {
 		
 		return image;
 		
+	}
+	
+	public int getWidth() {
+		
+		return width;
+	}
+	
+	public int getHeight() {
+		
+		return height;
 	}
 	
 }

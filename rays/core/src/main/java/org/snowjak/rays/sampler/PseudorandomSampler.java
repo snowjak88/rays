@@ -37,8 +37,6 @@ public class PseudorandomSampler extends Sampler {
 	 * @param xEnd
 	 * @param yEnd
 	 * @param samplesPerPixel
-	 * @param additional1dSamples
-	 * @param additional2dSamples
 	 */
 	public PseudorandomSampler(int xStart, int yStart, int xEnd, int yEnd, int samplesPerPixel) {
 		
