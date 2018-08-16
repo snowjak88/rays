@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
-import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.sampler.BestCandidateSampler;
 import org.snowjak.rays.spectrum.ColorMappingFunctions;
@@ -28,7 +27,7 @@ import com.google.common.math.DoubleMath;
 public class Settings {
 	
 	public enum ComponentSpectrumName {
-		RED("red"), GREEN("green"), BLUE("blue"), CYAN("cyan"), MAGENTA("magenta"), YELLOW("yellow");
+		WHITE("white"), RED("red"), GREEN("green"), BLUE("blue"), CYAN("cyan"), MAGENTA("magenta"), YELLOW("yellow");
 		
 		private String name;
 		
@@ -88,9 +87,9 @@ public class Settings {
 	private Map<ComponentSpectrumName, SpectralPowerDistribution> componentSpectra = null;
 	
 	/**
-	 * @see #getCieXyzIntegrationStepSize()
+	 * @see #getCieXyzIntegrationStepCount()
 	 */
-	private double cieXyzIntegrationStepSize = 5.0;
+	private int cieXyzIntegrationStepCount = 32;
 	
 	/**
 	 * A shared {@link Random} instance.
@@ -139,8 +138,9 @@ public class Settings {
 			spectrumRangeHigh = Double.parseDouble(coreSettings.getProperty("org.snowjak.rays.spectrum-range-high",
 					Double.toString(getSpectrumRangeHigh())));
 			
-			cieXyzIntegrationStepSize = Double.parseDouble(coreSettings.getProperty(
-					"org.snowjak.rays.cie-xyz-integration-step-size", Double.toString(getCieXyzIntegrationStepSize())));
+			cieXyzIntegrationStepCount = Integer
+					.parseInt(coreSettings.getProperty("org.snowjak.rays.cie-xyz-integration-step-count",
+							Integer.toString(getCieXyzIntegrationStepCount())));
 			
 		} catch (Throwable t) {
 			throw new CannotLoadSettingsException("Cannot load core settings!", t);
@@ -292,21 +292,13 @@ public class Settings {
 	
 	/**
 	 * When calculating a CIE XYZ triplet from a {@link SpectralPowerDistribution},
-	 * we need to compute a definite integral across a range of wavelengths. What
-	 * step-size (nm) should we use when calculating that definite integral?
-	 */
-	public double getCieXyzIntegrationStepSize() {
-		
-		return cieXyzIntegrationStepSize;
-	}
-	
-	/**
-	 * Given {@link #getCieXyzIntegrationStepSize()}, how many total steps will each
-	 * integration consist of?
+	 * we need to compute a definite integral across a range of wavelengths. How
+	 * many steps should we divide the total integral-range into, when calculating
+	 * that definite integral?
 	 */
 	public int getCieXyzIntegrationStepCount() {
 		
-		return (int) FastMath.ceil((830.0 - 360.0) / getCieXyzIntegrationStepSize());
+		return cieXyzIntegrationStepCount;
 		
 	}
 	

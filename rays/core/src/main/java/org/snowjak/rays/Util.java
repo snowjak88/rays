@@ -43,8 +43,13 @@ public class Util {
 		final double end = (intervalEnd > intervalStart) ? intervalEnd : intervalStart;
 		final double intervalStep = (end - start) / ((double) intervalCount);
 		
-		return DoubleStream.iterate(start + intervalStep / 2d, d -> d <= end - intervalStep / 2d, d -> d + intervalStep)
-				.map(d -> f.applyAsDouble(d)).reduce(0d, (d1, d2) -> d1 + d2) * intervalStep;
+		//@formatter:off
+		return DoubleStream
+						.iterate(start + intervalStep / 2d, d -> d <= end - intervalStep / 2d, d -> d + intervalStep)
+						.map(d -> f.applyAsDouble(d))
+						.reduce(0d, (d1, d2) -> d1 + d2)
+					* intervalStep;
+		//@formatter:on
 	}
 	
 	/**

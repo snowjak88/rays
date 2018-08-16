@@ -54,7 +54,8 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 		
 		Spectrum spd = null;
 		
-		final SpectralPowerDistribution white = Settings.getInstance().getIlluminatorSpectralPowerDistribution(),
+		final SpectralPowerDistribution white = Settings.getInstance().getComponentSpectra()
+				.get(ComponentSpectrumName.WHITE),
 				red = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.RED),
 				green = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.GREEN),
 				blue = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.BLUE),
@@ -100,7 +101,14 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 			
 		}
 		
-		return (SpectralPowerDistribution) spd;
+		final double currentSpdY = XYZ.fromSpectrum((SpectralPowerDistribution) spd).getY();
+		if (Settings.getInstance().nearlyEqual(currentSpdY, 0d))
+			return (SpectralPowerDistribution) spd;
+		
+		final double targetY = rgb.to(XYZ.class).getY();
+		final double scaleFactor = targetY / currentSpdY;
+		
+		return (SpectralPowerDistribution) spd.multiply(scaleFactor);
 	}
 	
 	/**

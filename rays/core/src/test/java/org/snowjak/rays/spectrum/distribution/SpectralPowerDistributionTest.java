@@ -212,9 +212,35 @@ public class SpectralPowerDistributionTest {
 	}
 	
 	@Test
-	public void testFromRGB_GRAY() {
+	public void testFromRGB_GRAY1() {
 		
 		final var expected = new RGB(0.5, 0.5, 0.5);
+		final var spd = SpectralPowerDistribution.fromRGB(expected);
+		final var result = spd.toRGB();
+		
+		assertEquals("RGB(R) not as expected.", expected.getRed(), result.getRed(), 0.05);
+		assertEquals("RGB(G) not as expected.", expected.getGreen(), result.getGreen(), 0.05);
+		assertEquals("RGB(B) not as expected.", expected.getBlue(), result.getBlue(), 0.05);
+		
+	}
+	
+	@Test
+	public void testFromRGB_GRAY2() {
+		
+		final var expected = new RGB(0.25, 0.25, 0.25);
+		final var spd = SpectralPowerDistribution.fromRGB(expected);
+		final var result = spd.toRGB();
+		
+		assertEquals("RGB(R) not as expected.", expected.getRed(), result.getRed(), 0.05);
+		assertEquals("RGB(G) not as expected.", expected.getGreen(), result.getGreen(), 0.05);
+		assertEquals("RGB(B) not as expected.", expected.getBlue(), result.getBlue(), 0.05);
+		
+	}
+	
+	@Test
+	public void testFromRGB_GRAY3() {
+		
+		final var expected = new RGB(0.75, 0.75, 0.75);
 		final var spd = SpectralPowerDistribution.fromRGB(expected);
 		final var result = spd.toRGB();
 		
