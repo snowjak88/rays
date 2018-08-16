@@ -43,6 +43,7 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	private int minGenerations;
 	private int maxGenerations;
 	private double mutation;
+	private double mutationWindow;
 	private int newMemberSeed;
 	private int newMemberSeedInterval;
 	private double crossover;
@@ -224,7 +225,8 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		
 		for (int i = 0; i < entries.length; i++)
 			if (RND.nextDouble() < mutation)
-				entries[i] = entries[i].add(RND.nextDouble() * 0.2d - 0.1d).clamp(minEnergy, maxEnergy);
+				entries[i] = entries[i].add(RND.nextDouble() * mutationWindow - (mutationWindow / 2d)).clamp(minEnergy,
+						maxEnergy);
 			
 		return new SpectralPowerDistribution(spd.getBounds().get(), entries);
 	}
@@ -298,6 +300,16 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	public void setMutation(double mutation) {
 		
 		this.mutation = mutation;
+	}
+	
+	public double getMutationWindow() {
+		
+		return mutationWindow;
+	}
+	
+	public void setMutationWindow(double mutationWindow) {
+		
+		this.mutationWindow = mutationWindow;
 	}
 	
 	public int getNewMemberSeed() {

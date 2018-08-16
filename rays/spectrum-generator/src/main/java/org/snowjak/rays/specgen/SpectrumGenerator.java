@@ -317,14 +317,17 @@ public class SpectrumGenerator implements CommandLineRunner {
 							
 							final var graphBuilder = new StringBuilder();
 							
+							final double rowBoundLow = (double) (graphRows - row - 2) * rowSpan;
+							final double rowBoundHigh = (double) (graphRows - row - 1) * rowSpan;
+							
 							final var isLastRow = (row == graphRows - 1);
+							final var isTickRow = ( rowBoundLow <= 1d && rowBoundHigh >= 1d );
 							if (isLastRow)
+								graphBuilder.append("+");
+							else if (isTickRow)
 								graphBuilder.append("+");
 							else
 								graphBuilder.append("|");
-							
-							final double rowBoundLow = (double) (graphRows - row - 2) * rowSpan;
-							final double rowBoundHigh = (double) (graphRows - row - 1) * rowSpan;
 							
 							for (int col = 0; col < graphColumns - 1; col++) {
 								
@@ -334,6 +337,8 @@ public class SpectrumGenerator implements CommandLineRunner {
 									
 									if (measurements[col] > rowBoundLow && measurements[col] <= rowBoundHigh)
 										graphBuilder.append("*");
+									else if (isTickRow)
+										graphBuilder.append("-");
 									else
 										graphBuilder.append(" ");
 								}
