@@ -40,6 +40,22 @@ public interface Spectrum extends Serializable {
 	
 	/**
 	 * Convert this Spectrum to a RGB-trio for subsequent display.
+	 * <p>
+	 * <strong>Note</strong> that it is assumed that this Spectrum represents a
+	 * non-emissive energy-distribution.
+	 * </p>
 	 */
-	public RGB toRGB();
+	public default RGB toRGB() {
+		
+		return this.toRGB(false);
+	}
+	
+	/**
+	 * Convert this Spectrum to a RGB-trio for subsequent display. You must specify
+	 * whether this Spectrum represents an emissive energy-distribution or not.
+	 * 
+	 * @param isEmissive
+	 * @return
+	 */
+	public RGB toRGB(boolean isEmissive);
 }

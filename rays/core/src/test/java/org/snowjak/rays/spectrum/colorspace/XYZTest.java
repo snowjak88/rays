@@ -31,7 +31,7 @@ public class XYZTest {
 	public void testFromSpectrum_standardIlluminator() {
 		
 		final var spd = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
-		final XYZ xyz = XYZ.fromSpectrum(spd);
+		final XYZ xyz = XYZ.fromSpectrum(spd, false);
 		
 		assertEquals("XYZ (X) is not as expected!", 0.95047, xyz.getX() / xyz.getY(), 0.01);
 		assertEquals("XYZ (Y) is not as expected!", 1.00000, xyz.getY() / xyz.getY(), 0.01);

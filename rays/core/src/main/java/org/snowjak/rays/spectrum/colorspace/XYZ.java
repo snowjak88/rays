@@ -30,11 +30,30 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 	 * Calculate the CIE XYZ tristimulus triplet derived from the given spectral
 	 * power-distribution (given as a mapping of wavelengths (nm) to spectral
 	 * radiance (W/sr*m^2)).
+	 * <p>
+	 * <strong>Note</strong> that it is assumed that the given SPD represents a
+	 * non-emissive energy-distribution.
+	 * </p>
 	 * 
 	 * @param spd
 	 * @return
+	 * @see #fromSpectrum(SpectralPowerDistribution, boolean)
 	 */
 	public static XYZ fromSpectrum(SpectralPowerDistribution spd) {
+		
+		return fromSpectrum(spd, false);
+	}
+	
+	/**
+	 * Calculate the CIE XYZ tristimulus triplet derived from the given spectral
+	 * power-distribution (given as a mapping of wavelengths (nm) to spectral
+	 * radiance (W/sr*m^2)).
+	 * 
+	 * @param spd
+	 * @param isEmissive
+	 * @return
+	 */
+	public static XYZ fromSpectrum(SpectralPowerDistribution spd, boolean isEmissive) {
 		
 		final var cmf = Settings.getInstance().getColorMappingFunctions();
 		final var illuminant = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
@@ -48,9 +67,14 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 		final var denominator = Util.integrate(lowLambda, highLambda,
 				Settings.getInstance().getCieXyzIntegrationStepCount(),
 				(lambda) -> cmf.get(lambda).get(1) * illuminant.get(lambda).get(0));
-		final var result = new XYZ(numerator.divide(denominator));
 		
-		return new XYZ(result.get());
+		final XYZ result;
+		if (isEmissive)
+			result = new XYZ(numerator);
+		else
+			result = new XYZ(numerator.divide(denominator));
+		
+		return result;
 		
 	}
 	

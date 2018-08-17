@@ -7,8 +7,8 @@ import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 
 /**
- * An Interaction defines how and where a {@link Ray} interacts with a
- * {@link Primitive}.
+ * An Interaction defines how and where a {@link Ray} interacts with an
+ * {@link Interactable}.
  * 
  * @author snowjak88
  */

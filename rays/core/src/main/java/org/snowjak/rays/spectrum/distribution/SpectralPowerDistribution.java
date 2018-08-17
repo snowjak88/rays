@@ -346,9 +346,9 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	}
 	
 	@Override
-	public RGB toRGB() {
+	public RGB toRGB(boolean isEmissive) {
 		
-		return XYZ.fromSpectrum(this).to(RGB.class);
+		return XYZ.fromSpectrum(this, isEmissive).to(RGB.class);
 	}
 	
 	protected static Pair<Double, Point> parseCSVLine(String line) throws NumberFormatException {
