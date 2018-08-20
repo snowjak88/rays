@@ -76,6 +76,46 @@ public class AABBTest {
 	}
 	
 	@Test
+	public void testContaining_true() {
+		
+		AABB aabb1 = new AABB(new Point3D(-1, -1, -1), new Point3D(1, 1, 1));
+		AABB aabb2 = new AABB(new Point3D(-0.5, -0.5, -0.5), new Point3D(0.5, 0.5, 0.5));
+		
+		assertTrue(aabb1.isContaining(aabb2));
+		assertFalse(aabb2.isContaining(aabb1));
+	}
+	
+	@Test
+	public void testContaining_false() {
+		
+		AABB aabb1 = new AABB(new Point3D(-1, -1, -1), new Point3D(0, 0, 0));
+		AABB aabb2 = new AABB(new Point3D(-0.5, -0.5, -0.5), new Point3D(0.5, 0.5, 0.5));
+		
+		assertFalse(aabb1.isContaining(aabb2));
+		assertFalse(aabb2.isContaining(aabb1));
+	}
+	
+	@Test
+	public void testOverlapping_true() {
+		
+		AABB aabb1 = new AABB(new Point3D(-1, -1, -1), new Point3D(0.5, 0.5, 0.5));
+		AABB aabb2 = new AABB(new Point3D(0, 0, 0), new Point3D(1, 1, 1));
+		
+		assertTrue(aabb1.isOverlapping(aabb2));
+		assertTrue(aabb2.isOverlapping(aabb1));
+	}
+	
+	@Test
+	public void testOverlapping_false() {
+		
+		AABB aabb1 = new AABB(new Point3D(-1, -1, -1), new Point3D(-0.5, -0.5, -0.5));
+		AABB aabb2 = new AABB(new Point3D(0, 0, 0), new Point3D(1, 1, 1));
+		
+		assertFalse(aabb1.isOverlapping(aabb2));
+		assertFalse(aabb2.isOverlapping(aabb1));
+	}
+	
+	@Test
 	public void testIsIntersecting() {
 		
 		AABB aabb = new AABB(new Point3D(0, 0, 0), new Point3D(2, 2, 2));

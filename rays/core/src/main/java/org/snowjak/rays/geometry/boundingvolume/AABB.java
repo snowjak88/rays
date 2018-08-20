@@ -18,7 +18,8 @@ import org.snowjak.rays.transform.Transform;
  * <strong>B</strong>ox is an "acceleration structure" used to help speed up the
  * rejection of Shapes when performing Ray-intersection testing. Unlike a
  * more-general "bounding box", an AABB is always axis-aligned (i.e., it can be
- * represented by only 2 points in global coordinates).
+ * represented by only 2 points in global coordinates), and is therefore much
+ * simpler to implement.
  * 
  * @author snowjak88
  */
@@ -122,6 +123,42 @@ public class AABB {
 	}
 	
 	/**
+	 * Return <code>true</code> if this AABB fully contains the given {@code other}
+	 * AABB.
+	 * 
+	 * @param other
+	 * @return
+	 */
+	public boolean isContaining(AABB other) {
+		
+		return this.isContained(other.getMinExtent()) && this.isContained(other.getMaxExtent());
+	}
+	
+	/**
+	 * Return <code>true</code> if this AABB contains the given {@link Point3D}.
+	 * 
+	 * @param point
+	 * @return
+	 */
+	public boolean isContained(Point3D point) {
+		
+		return (this.getMinExtent().getX() <= point.getX() && this.getMaxExtent().getX() >= point.getX())
+				&& (this.getMinExtent().getY() <= point.getY() && this.getMaxExtent().getY() >= point.getY())
+				&& (this.getMinExtent().getZ() <= point.getZ() && this.getMaxExtent().getZ() >= point.getZ());
+	}
+	
+	/**
+	 * Return <code>true</code> if this AABB overlaps the given {@code other} AABB.
+	 * 
+	 * @param other
+	 * @return
+	 */
+	public boolean isOverlapping(AABB other) {
+		
+		return this.isContained(other.getMinExtent()) || this.isContained(other.getMaxExtent());
+	}
+	
+	/**
 	 * @return a {@link Collection} containing all 8 corners of this AABB, in no
 	 *         particular order.
 	 */
@@ -184,13 +221,6 @@ public class AABB {
 		
 		if ((tmin > tzmax) || (tzmin > tmax))
 			return false;
-		
-		// Commented out because non-effective.
-		/*
-		 * if (tzmin > tmin) tmin = tzmin;
-		 * 
-		 * if (tzmax < tmax) tmax = tzmax;
-		 */
 		
 		return true;
 	}
