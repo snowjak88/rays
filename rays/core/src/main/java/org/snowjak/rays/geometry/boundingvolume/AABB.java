@@ -102,6 +102,17 @@ public class AABB {
 	 * @param boundingBoxes
 	 * @return
 	 */
+	public static AABB union(AABB... boundingBoxes) {
+		
+		return AABB.union(Arrays.asList(boundingBoxes));
+	}
+	
+	/**
+	 * Given a set of {@link AABB}s, compute the AABB that encompasses them all.
+	 * 
+	 * @param boundingBoxes
+	 * @return
+	 */
 	public static AABB union(Collection<AABB> boundingBoxes) {
 		
 		return new AABB(boundingBoxes.stream().collect(LinkedList::new, (l, aabb) -> {

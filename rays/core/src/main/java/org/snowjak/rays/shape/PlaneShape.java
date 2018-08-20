@@ -28,12 +28,12 @@ public class PlaneShape extends Shape {
 	
 	public PlaneShape(Transform... worldToLocal) {
 		
-		super(worldToLocal);
+		super(null, worldToLocal);
 	}
 	
 	public PlaneShape(List<Transform> worldToLocal) {
 		
-		super(worldToLocal);
+		super(null, worldToLocal);
 	}
 	
 	@Override

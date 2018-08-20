@@ -22,7 +22,7 @@ public class ShapeTest {
 	@Before
 	public void setUp() {
 		
-		shape = new Shape(Collections.emptyList()) {
+		shape = new Shape(null, Collections.emptyList()) {
 			
 			@SuppressWarnings("unchecked")
 			@Override

@@ -10,7 +10,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.snowjak.rays.geometry.Point3D;
+import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
+import org.snowjak.rays.geometry.boundingvolume.AABB;
 import org.snowjak.rays.interact.DescribesSurface;
 import org.snowjak.rays.transform.Transform;
 import org.snowjak.rays.transform.Transformable;
@@ -24,23 +26,51 @@ import org.snowjak.rays.transform.Transformable;
 public abstract class Shape implements Transformable, DescribesSurface {
 	
 	private final Deque<Transform> worldToLocal, localToWorld;
+	private final AABB aabb;
 	
 	public Shape() {
 		
-		this(Collections.emptyList());
+		this(null);
 	}
 	
-	public Shape(Transform... worldToLocal) {
+	public Shape(AABB aabb) {
 		
-		this(Arrays.asList(worldToLocal));
+		this(aabb, Collections.emptyList());
 	}
 	
-	public Shape(List<Transform> worldToLocal) {
+	public Shape(AABB aabb, Transform... worldToLocal) {
 		
+		this(aabb, Arrays.asList(worldToLocal));
+	}
+	
+	public Shape(AABB aabb, List<Transform> worldToLocal) {
+		
+		this.aabb = aabb;
 		this.worldToLocal = new LinkedList<>();
 		this.localToWorld = new LinkedList<>();
 		
 		worldToLocal.forEach(t -> this.appendTransform(t));
+	}
+	
+	public boolean hasBoundingVolume() {
+		
+		return (aabb != null);
+	}
+	
+	public AABB getBoundingVolume() {
+		
+		return aabb;
+	}
+	
+	@Override
+	public boolean isIntersectableWith(Ray ray) {
+		
+		// If we don't have a bounding-volume, better go ahead and flag this shape as
+		// worth-checking-out.
+		if (!hasBoundingVolume())
+			return true;
+		
+		return aabb.isIntersecting(worldToLocal(ray));
 	}
 	
 	@SuppressWarnings("unchecked")

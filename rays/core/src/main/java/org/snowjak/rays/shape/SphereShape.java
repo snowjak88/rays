@@ -25,7 +25,6 @@ import org.snowjak.rays.transform.Transform;
 
 public class SphereShape extends Shape {
 	
-	private final AABB aabb;
 	private final double radius;
 	
 	public SphereShape(double radius) {
@@ -40,15 +39,8 @@ public class SphereShape extends Shape {
 	
 	public SphereShape(double radius, List<Transform> worldToLocal) {
 		
-		super(worldToLocal);
+		super(new AABB(new Point3D(-radius, -radius, -radius), new Point3D(+radius, +radius, +radius)), worldToLocal);
 		this.radius = radius;
-		this.aabb = new AABB(new Point3D(-radius, -radius, -radius), new Point3D(+radius, +radius, +radius));
-	}
-	
-	@Override
-	public boolean isIntersectableWith(Ray ray) {
-		
-		return aabb.isIntersecting(worldToLocal(ray));
 	}
 	
 	@SuppressWarnings("unchecked")
