@@ -17,9 +17,21 @@ public class Vector3D extends Triplet implements Serializable {
 	
 	private static final long serialVersionUID = -997240497037355891L;
 	
+	/**
+	 * Represents the zero-vector {@code [0, 0, 0]}
+	 */
 	public static final Vector3D ZERO = new Vector3D(0, 0, 0);
+	/**
+	 * Represents the basis vector {@code [1, 0, 0]}
+	 */
 	public static final Vector3D I = new Vector3D(1, 0, 0);
+	/**
+	 * Represents the basis vector {@code [0, 1, 0]}
+	 */
 	public static final Vector3D J = new Vector3D(0, 1, 0);
+	/**
+	 * Represents the basis vector {@code [0, 0, 1]}
+	 */
 	public static final Vector3D K = new Vector3D(0, 0, 1);
 	
 	private double magnitude = -1d, magnitudeSq = -1d;
