@@ -13,6 +13,6 @@ import org.snowjak.rays.interact.SurfaceDescriptor;
  */
 public interface TextureMapping {
 	
-	public <T extends DescribesSurface> Point2D transform(SurfaceDescriptor<T> surfaceDescriptor);
+	public <S extends DescribesSurface<S>> Point2D transform(SurfaceDescriptor<S> surfaceDescriptor);
 	
 }

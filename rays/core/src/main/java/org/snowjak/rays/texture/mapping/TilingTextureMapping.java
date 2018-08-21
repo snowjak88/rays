@@ -17,7 +17,7 @@ import org.snowjak.rays.interact.SurfaceDescriptor;
 public class TilingTextureMapping implements TextureMapping {
 	
 	@Override
-	public <T extends DescribesSurface> Point2D transform(SurfaceDescriptor<T> surfaceDescriptor) {
+	public <T extends DescribesSurface<T>> Point2D transform(SurfaceDescriptor<T> surfaceDescriptor) {
 		
 		final double x = surfaceDescriptor.getParam().getX(), y = surfaceDescriptor.getParam().getY();
 		return new Point2D(x - floor(x), y - floor(y));

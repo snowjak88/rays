@@ -54,9 +54,8 @@ public class PlaneShape extends Shape {
 				&& !(Settings.getInstance().nearlyEqual(rayDirectionY, 0d));
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<PlaneShape> getSurface(Ray ray) {
+	public SurfaceDescriptor<Shape> getSurface(Ray ray) {
 		
 		final Ray localRay = worldToLocal(ray);
 		
@@ -69,22 +68,20 @@ public class PlaneShape extends Shape {
 		Point3D intersectionPoint = intersectingRay.getPointAlong();
 		Point2D surfaceParam = getParamFromLocalSurface(intersectionPoint);
 		
-		return localToWorld(new SurfaceDescriptor<PlaneShape>(this, intersectionPoint, localNormal, surfaceParam));
+		return localToWorld(new SurfaceDescriptor<>(this, intersectionPoint, localNormal, surfaceParam));
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<PlaneShape> getSurfaceNearestTo(Point3D neighbor) {
+	public SurfaceDescriptor<Shape> getSurfaceNearestTo(Point3D neighbor) {
 		
 		Point3D localNeighbor = worldToLocal(neighbor);
 		Point3D surfacePoint = new Point3D(localNeighbor.getX(), 0.0, localNeighbor.getZ());
-		return localToWorld(new SurfaceDescriptor<PlaneShape>(this, surfacePoint, localNormal,
-				getParamFromLocalSurface(surfacePoint)));
+		return localToWorld(
+				new SurfaceDescriptor<>(this, surfacePoint, localNormal, getParamFromLocalSurface(surfacePoint)));
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<PlaneShape> sampleSurface(Sample sample) {
+	public SurfaceDescriptor<Shape> sampleSurface(Sample sample) {
 		
 		final Point2D samplePoint = sample.getAdditional2DSample();
 		final double x = (samplePoint.getX() - 0.5) * Double.MAX_VALUE;
@@ -93,13 +90,12 @@ public class PlaneShape extends Shape {
 		
 		final Point3D surfacePoint = new Point3D(x, y, z);
 		
-		return localToWorld(new SurfaceDescriptor<PlaneShape>(this, surfacePoint, localNormal,
-				getParamFromLocalSurface(surfacePoint)));
+		return localToWorld(
+				new SurfaceDescriptor<>(this, surfacePoint, localNormal, getParamFromLocalSurface(surfacePoint)));
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<PlaneShape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
+	public SurfaceDescriptor<Shape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
 		
 		return sampleSurface(sample);
 	}

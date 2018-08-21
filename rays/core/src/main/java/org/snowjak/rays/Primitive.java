@@ -5,7 +5,6 @@ import java.util.List;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
-import org.snowjak.rays.interact.DescribesSurface;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.interact.SurfaceDescriptor;
@@ -60,27 +59,27 @@ public class Primitive implements Interactable<Primitive> {
 	}
 	
 	@Override
-	public <T extends DescribesSurface> SurfaceDescriptor<T> getSurface(Ray ray) {
+	public SurfaceDescriptor<Primitive> getSurface(Ray ray) {
 		
-		return shape.getSurface(ray);
+		return new SurfaceDescriptor<>(this, shape.getSurface(ray));
 	}
 	
 	@Override
-	public <T extends DescribesSurface> SurfaceDescriptor<T> getSurfaceNearestTo(Point3D neighbor) {
+	public SurfaceDescriptor<Primitive> getSurfaceNearestTo(Point3D neighbor) {
 		
-		return shape.getSurfaceNearestTo(neighbor);
+		return new SurfaceDescriptor<>(this, shape.getSurfaceNearestTo(neighbor));
 	}
 	
 	@Override
-	public <T extends DescribesSurface> SurfaceDescriptor<T> sampleSurface(Sample sample) {
+	public SurfaceDescriptor<Primitive> sampleSurface(Sample sample) {
 		
-		return shape.sampleSurface(sample);
+		return new SurfaceDescriptor<>(this, shape.sampleSurface(sample));
 	}
 	
 	@Override
-	public <T extends DescribesSurface> SurfaceDescriptor<T> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
+	public SurfaceDescriptor<Primitive> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
 		
-		return shape.sampleSurfaceFacing(neighbor, sample);
+		return new SurfaceDescriptor<>(this, shape.sampleSurfaceFacing(neighbor, sample));
 	}
 	
 	@Override

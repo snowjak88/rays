@@ -31,7 +31,7 @@ public interface BxDF {
 	 * @param sample
 	 * @return
 	 */
-	public <T extends Interactable> Vector3D getReflection(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> Vector3D getReflectionV(Interaction<T> interaction, Sample sample);
 	
 	/**
 	 * For the given {@link Interaction} and previously-selected
@@ -43,7 +43,7 @@ public interface BxDF {
 	 * @param direction
 	 * @return
 	 */
-	public <T extends Interactable> double getReflectionP(Interaction<T> interaction, Vector3D direction);
+	public <T extends Interactable<T>> double getReflectionP(Interaction<T> interaction, Vector3D direction);
 	
 	/**
 	 * Indicates whether this BxDF should be queried for transmission.
@@ -62,7 +62,7 @@ public interface BxDF {
 	 * @param sample
 	 * @return
 	 */
-	public <T extends Interactable> Vector3D getTransmission(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> Vector3D getTransmissionV(Interaction<T> interaction, Sample sample);
 	
 	/**
 	 * For the given {@link Interaction} and previously-selected
@@ -74,7 +74,7 @@ public interface BxDF {
 	 * @param direction
 	 * @return
 	 */
-	public <T extends Interactable> double getTransmissionP(Interaction<T> interaction, Vector3D direction);
+	public <T extends Interactable<T>> double getTransmissionP(Interaction<T> interaction, Vector3D direction);
 	
 	/**
 	 * Indicates whether this BxDF should be queried for emission.
@@ -93,7 +93,7 @@ public interface BxDF {
 	 * @param sample
 	 * @return
 	 */
-	public <T extends Interactable> Vector3D getEmission(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> Vector3D getEmission(Interaction<T> interaction, Sample sample);
 	
 	/**
 	 * For the given {@link Interaction} and previously-selected emission-direction,
@@ -104,6 +104,6 @@ public interface BxDF {
 	 * @param direction
 	 * @return
 	 */
-	public <T extends Interactable> double getEmissionP(Interaction<T> interaction, Vector3D direction);
+	public <T extends Interactable<T>> double getEmissionP(Interaction<T> interaction, Vector3D direction);
 	
 }

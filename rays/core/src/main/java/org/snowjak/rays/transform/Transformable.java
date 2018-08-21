@@ -171,10 +171,10 @@ public interface Transformable {
 	 * @param surfaceDescriptor
 	 * @return
 	 */
-	public default <T extends DescribesSurface> SurfaceDescriptor<T> worldToLocal(
-			SurfaceDescriptor<T> surfaceDescriptor) {
+	public default <S extends DescribesSurface<S>> SurfaceDescriptor<S> worldToLocal(
+			SurfaceDescriptor<S> surfaceDescriptor) {
 		
-		SurfaceDescriptor<T> working = surfaceDescriptor;
+		SurfaceDescriptor<S> working = surfaceDescriptor;
 		for (Transform t : getWorldToLocalTransforms())
 			working = t.worldToLocal(working);
 		
@@ -188,10 +188,10 @@ public interface Transformable {
 	 * @param surfaceDescriptor
 	 * @return
 	 */
-	public default <T extends DescribesSurface> SurfaceDescriptor<T> localToWorld(
-			SurfaceDescriptor<T> surfaceDescriptor) {
+	public default <S extends DescribesSurface<S>> SurfaceDescriptor<S> localToWorld(
+			SurfaceDescriptor<S> surfaceDescriptor) {
 		
-		SurfaceDescriptor<T> working = surfaceDescriptor;
+		SurfaceDescriptor<S> working = surfaceDescriptor;
 		for (Transform t : getLocalToWorldTransforms())
 			working = t.localToWorld(working);
 		
@@ -204,9 +204,9 @@ public interface Transformable {
 	 * @param interaction
 	 * @return
 	 */
-	public default <T extends Interactable<T>> Interaction<T> worldToLocal(Interaction<T> interaction) {
+	public default <I extends Interactable<I>> Interaction<I> worldToLocal(Interaction<I> interaction) {
 		
-		Interaction<T> working = interaction;
+		Interaction<I> working = interaction;
 		for (Transform t : getWorldToLocalTransforms())
 			working = t.worldToLocal(working);
 		
@@ -219,9 +219,9 @@ public interface Transformable {
 	 * @param interaction
 	 * @return
 	 */
-	public default <T extends Interactable<T>> Interaction<T> localToWorld(Interaction<T> interaction) {
+	public default <I extends Interactable<I>> Interaction<I> localToWorld(Interaction<I> interaction) {
 		
-		Interaction<T> working = interaction;
+		Interaction<I> working = interaction;
 		for (Transform t : getLocalToWorldTransforms())
 			working = t.localToWorld(working);
 		

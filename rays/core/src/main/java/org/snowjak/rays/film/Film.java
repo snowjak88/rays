@@ -12,8 +12,13 @@ import org.snowjak.rays.sampler.Sampler;
 import org.snowjak.rays.spectrum.Spectrum;
 
 /**
- * A film object is responsible for accepting a series of {@link FixedSample}s
- * and converting them into an image.
+ * A film object is responsible for accepting a series of
+ * {@link EstimatedSample}s and converting them into an image.
+ * <p>
+ * <strong>Note</strong> that Film is <strong>thread-safe</strong>. This means
+ * that multiple threads can all utilize the same Film instance without issue
+ * (apart from waiting for any pertinent synchronization locks to be freed).
+ * </p>
  * 
  * @author snowjak88
  *

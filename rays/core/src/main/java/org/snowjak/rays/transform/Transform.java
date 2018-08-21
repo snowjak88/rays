@@ -87,9 +87,9 @@ public interface Transform {
 	 * @param surface
 	 * @return the transformed Normal
 	 */
-	public default <T extends DescribesSurface> SurfaceDescriptor<T> worldToLocal(SurfaceDescriptor<T> surface) {
+	public default <S extends DescribesSurface<S>> SurfaceDescriptor<S> worldToLocal(SurfaceDescriptor<S> surface) {
 		
-		return new SurfaceDescriptor<T>(surface.getDescribed(), worldToLocal(surface.getPoint()),
+		return new SurfaceDescriptor<S>(surface.getDescribed(), worldToLocal(surface.getPoint()),
 				worldToLocal(surface.getNormal()), surface.getParam());
 	}
 	
@@ -99,9 +99,9 @@ public interface Transform {
 	 * @param surface
 	 * @return the transformed Normal
 	 */
-	public default <T extends DescribesSurface> SurfaceDescriptor<T> localToWorld(SurfaceDescriptor<T> surface) {
+	public default <S extends DescribesSurface<S>> SurfaceDescriptor<S> localToWorld(SurfaceDescriptor<S> surface) {
 		
-		return new SurfaceDescriptor<T>(surface.getDescribed(), localToWorld(surface.getPoint()),
+		return new SurfaceDescriptor<S>(surface.getDescribed(), localToWorld(surface.getPoint()),
 				localToWorld(surface.getNormal()), surface.getParam());
 	}
 	

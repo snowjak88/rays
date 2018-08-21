@@ -24,7 +24,7 @@ import org.snowjak.rays.transform.Transformable;
  * 
  * @author snowjak88
  */
-public abstract class Shape implements Transformable, DescribesSurface {
+public abstract class Shape implements Transformable, DescribesSurface<Shape> {
 	
 	private final Deque<Transform> worldToLocal, localToWorld;
 	private AABB worldAabb = null;

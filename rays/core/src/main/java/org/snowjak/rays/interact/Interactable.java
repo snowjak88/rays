@@ -9,7 +9,7 @@ import org.snowjak.rays.transform.Transformable;
  * 
  * @author snowjak88
  */
-public interface Interactable<T extends Interactable<T>> extends Transformable, DescribesSurface {
+public interface Interactable<I extends Interactable<I>> extends Transformable, DescribesSurface<I> {
 	
 	/**
 	 * Given a {@link Ray} (considered to be in the global reference-frame),
@@ -19,5 +19,5 @@ public interface Interactable<T extends Interactable<T>> extends Transformable, 
 	 * @param ray
 	 * @return
 	 */
-	public Interaction<T> getInteraction(Ray ray);
+	public Interaction<I> getInteraction(Ray ray);
 }

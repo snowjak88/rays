@@ -43,9 +43,8 @@ public class SphereShape extends Shape {
 		this.radius = radius;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<SphereShape> getSurface(Ray ray) {
+	public SurfaceDescriptor<Shape> getSurface(Ray ray) {
 		
 		final Ray localRay = worldToLocal(ray);
 		final Double localIntersectionT = getLocalIntersectionT(localRay, false);
@@ -56,8 +55,8 @@ public class SphereShape extends Shape {
 		final Point3D localPoint = localRay.getPointAlong(localIntersectionT);
 		final Normal3D localNormal = Normal3D.from(Vector3D.from(localPoint).normalize());
 		
-		return localToWorld(new SurfaceDescriptor<SphereShape>(this, localPoint, localNormal,
-				getParamFromLocalSurface(localPoint)));
+		return localToWorld(
+				new SurfaceDescriptor<>(this, localPoint, localNormal, getParamFromLocalSurface(localPoint)));
 	}
 	
 	/**
@@ -113,16 +112,14 @@ public class SphereShape extends Shape {
 			return t1;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<SphereShape> getSurfaceNearestTo(Point3D neighbor) {
+	public SurfaceDescriptor<Shape> getSurfaceNearestTo(Point3D neighbor) {
 		
 		return getSurface(new Ray(neighbor, Vector3D.from(getObjectZero().subtract(neighbor))));
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<SphereShape> sampleSurface(Sample sample) {
+	public SurfaceDescriptor<Shape> sampleSurface(Sample sample) {
 		
 		final Point2D samplePoint = sample.getAdditional2DSample();
 		
@@ -139,13 +136,12 @@ public class SphereShape extends Shape {
 		//
 		final Vector3D samplePoint_local = new Vector3D(x, y, z).multiply(radius);
 		final Normal3D normal_local = Normal3D.from(samplePoint_local.normalize());
-		return localToWorld(new SurfaceDescriptor<SphereShape>(this, Point3D.from(samplePoint_local), normal_local,
+		return localToWorld(new SurfaceDescriptor<>(this, Point3D.from(samplePoint_local), normal_local,
 				getParamFromLocalSurface(Point3D.from(samplePoint_local))));
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
-	public SurfaceDescriptor<SphereShape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
+	public SurfaceDescriptor<Shape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
 		
 		final Vector3D towardsV_local = Vector3D.from(worldToLocal(neighbor));
 		
@@ -171,7 +167,7 @@ public class SphereShape extends Shape {
 		final Vector3D samplePoint_local = (Vector3D) I.multiply(x).add(J.multiply(y)).add(K.multiply(z))
 				.multiply(radius);
 		final Normal3D normal_local = Normal3D.from(samplePoint_local.normalize());
-		return localToWorld(new SurfaceDescriptor<SphereShape>(this, Point3D.from(samplePoint_local), normal_local,
+		return localToWorld(new SurfaceDescriptor<>(this, Point3D.from(samplePoint_local), normal_local,
 				getParamFromLocalSurface(Point3D.from(samplePoint_local))));
 	}
 	

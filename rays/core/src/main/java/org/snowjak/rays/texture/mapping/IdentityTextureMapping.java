@@ -15,7 +15,7 @@ import org.snowjak.rays.interact.SurfaceDescriptor;
 public class IdentityTextureMapping implements TextureMapping {
 	
 	@Override
-	public <T extends DescribesSurface> Point2D transform(SurfaceDescriptor<T> surfaceDescriptor) {
+	public <S extends DescribesSurface<S>> Point2D transform(SurfaceDescriptor<S> surfaceDescriptor) {
 		
 		return new Point2D(surfaceDescriptor.getParam().clamp(0, 1).getAll());
 	}

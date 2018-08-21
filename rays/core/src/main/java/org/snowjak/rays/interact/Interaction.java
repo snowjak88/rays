@@ -28,7 +28,7 @@ public class Interaction<T extends Interactable<T>> extends SurfaceDescriptor<T>
 	 * @param normal
 	 * @param param
 	 */
-	public Interaction(T interacted, Ray interactingRay, SurfaceDescriptor<? extends DescribesSurface> surface) {
+	public Interaction(T interacted, Ray interactingRay, SurfaceDescriptor<? extends DescribesSurface<?>> surface) {
 		
 		this(interacted, interactingRay, surface.getPoint(), surface.getNormal(), surface.getParam());
 	}

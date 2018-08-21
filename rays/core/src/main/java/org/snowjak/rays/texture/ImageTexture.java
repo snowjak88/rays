@@ -42,7 +42,7 @@ public class ImageTexture extends Texture {
 	 * </p>
 	 */
 	@Override
-	public <T extends DescribesSurface> RGB getRGB(SurfaceDescriptor<T> surfaceDescriptor) {
+	public <S extends DescribesSurface<S>> RGB getRGB(SurfaceDescriptor<S> surfaceDescriptor) {
 		
 		final Point2D imgPoint = getTextureMapping().transform(surfaceDescriptor);
 		

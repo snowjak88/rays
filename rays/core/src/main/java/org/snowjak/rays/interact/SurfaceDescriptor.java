@@ -12,14 +12,19 @@ import org.snowjak.rays.geometry.Point3D;
  * 
  * @author snowjak88
  */
-public class SurfaceDescriptor<T extends DescribesSurface> {
+public class SurfaceDescriptor<S extends DescribesSurface<S>> {
 	
-	private final T described;
+	private final S described;
 	private final Point3D point;
 	private final Normal3D normal;
 	private final Point2D param;
 	
-	public SurfaceDescriptor(T described, Point3D point, Normal3D normal, Point2D param) {
+	public <D extends DescribesSurface<D>> SurfaceDescriptor(S described, SurfaceDescriptor<D> toCopy) {
+		
+		this(described, toCopy.getPoint(), toCopy.getNormal(), toCopy.getParam());
+	}
+	
+	public SurfaceDescriptor(S described, Point3D point, Normal3D normal, Point2D param) {
 		
 		this.described = described;
 		this.point = point;
@@ -30,7 +35,7 @@ public class SurfaceDescriptor<T extends DescribesSurface> {
 	/**
 	 * @return the object with the described surface
 	 */
-	public T getDescribed() {
+	public S getDescribed() {
 		
 		return described;
 	}

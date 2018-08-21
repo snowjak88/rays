@@ -49,6 +49,6 @@ public abstract class Texture {
 	 * @param surfaceDescriptor
 	 * @return
 	 */
-	public abstract <T extends DescribesSurface> RGB getRGB(SurfaceDescriptor<T> surfaceDescriptor);
+	public abstract <S extends DescribesSurface<S>> RGB getRGB(SurfaceDescriptor<S> surfaceDescriptor);
 	
 }

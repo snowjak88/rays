@@ -24,7 +24,6 @@ public class ShapeTest {
 		
 		shape = new Shape(null, Collections.emptyList()) {
 			
-			@SuppressWarnings("unchecked")
 			@Override
 			public SurfaceDescriptor<Shape> getSurfaceNearestTo(Point3D point) {
 				
@@ -33,7 +32,6 @@ public class ShapeTest {
 				return null;
 			}
 			
-			@SuppressWarnings("unchecked")
 			@Override
 			public SurfaceDescriptor<Shape> sampleSurface(Sample sample) {
 				
@@ -42,7 +40,6 @@ public class ShapeTest {
 				return null;
 			}
 			
-			@SuppressWarnings("unchecked")
 			@Override
 			public SurfaceDescriptor<Shape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
 				
@@ -59,7 +56,6 @@ public class ShapeTest {
 				return 0;
 			}
 			
-			@SuppressWarnings("unchecked")
 			@Override
 			public SurfaceDescriptor<Shape> getSurface(Ray ray) {
 				

@@ -12,7 +12,7 @@ import org.snowjak.rays.transform.Transformable;
  * 
  * @author snowjak88
  */
-public interface DescribesSurface extends Transformable {
+public interface DescribesSurface<D extends DescribesSurface<D>> extends Transformable {
 	
 	/**
 	 * Returns <code>true</code> if the given {@link Ray} at least comes
@@ -34,7 +34,7 @@ public interface DescribesSurface extends Transformable {
 	 * @param ray
 	 * @return
 	 */
-	public <T extends DescribesSurface> SurfaceDescriptor<T> getSurface(Ray ray);
+	public SurfaceDescriptor<D> getSurface(Ray ray);
 	
 	/**
 	 * Given a <code>neighbor</code>ing point in 3-space, select the point on the
@@ -43,7 +43,7 @@ public interface DescribesSurface extends Transformable {
 	 * @param neighbor
 	 * @return
 	 */
-	public <T extends DescribesSurface> SurfaceDescriptor<T> getSurfaceNearestTo(Point3D neighbor);
+	public SurfaceDescriptor<D> getSurfaceNearestTo(Point3D neighbor);
 	
 	/**
 	 * Sample a point from the surface of this object.
@@ -51,7 +51,7 @@ public interface DescribesSurface extends Transformable {
 	 * @param sample
 	 * @return
 	 */
-	public <T extends DescribesSurface> SurfaceDescriptor<T> sampleSurface(Sample sample);
+	public SurfaceDescriptor<D> sampleSurface(Sample sample);
 	
 	/**
 	 * Sample a point from the surface of this object such that the sampled point is
@@ -61,7 +61,7 @@ public interface DescribesSurface extends Transformable {
 	 * @param sample
 	 * @return
 	 */
-	public <T extends DescribesSurface> SurfaceDescriptor<T> sampleSurfaceFacing(Point3D neighbor, Sample sample);
+	public SurfaceDescriptor<D> sampleSurfaceFacing(Point3D neighbor, Sample sample);
 	
 	/**
 	 * Given a neighboring point <code>viewedFrom</code>, compute the solid-angle
