@@ -12,7 +12,7 @@ import org.snowjak.rays.geometry.Vector3D;
  * 
  * @author snowjak88
  */
-public class Interaction<T extends Interactable> extends SurfaceDescriptor<T> {
+public class Interaction<T extends Interactable<T>> extends SurfaceDescriptor<T> {
 	
 	private final Ray interactingRay;
 	

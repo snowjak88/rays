@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
@@ -26,40 +27,46 @@ import org.snowjak.rays.transform.Transformable;
 public abstract class Shape implements Transformable, DescribesSurface {
 	
 	private final Deque<Transform> worldToLocal, localToWorld;
-	private final AABB aabb;
+	private AABB worldAabb = null;
 	
 	public Shape() {
 		
 		this(null);
 	}
 	
-	public Shape(AABB aabb) {
+	public Shape(AABB localAabb) {
 		
-		this(aabb, Collections.emptyList());
+		this(localAabb, Collections.emptyList());
 	}
 	
-	public Shape(AABB aabb, Transform... worldToLocal) {
+	public Shape(AABB localAabb, Transform... worldToLocal) {
 		
-		this(aabb, Arrays.asList(worldToLocal));
+		this(localAabb, Arrays.asList(worldToLocal));
 	}
 	
-	public Shape(AABB aabb, List<Transform> worldToLocal) {
+	public Shape(AABB localAabb, List<Transform> worldToLocal) {
 		
-		this.aabb = aabb;
 		this.worldToLocal = new LinkedList<>();
 		this.localToWorld = new LinkedList<>();
 		
 		worldToLocal.forEach(t -> this.appendTransform(t));
+		
+		if (localAabb != null)
+			this.worldAabb = new AABB(
+					localAabb.getCorners().stream().map(p -> localToWorld(p)).collect(Collectors.toList()));
 	}
 	
 	public boolean hasBoundingVolume() {
 		
-		return (aabb != null);
+		return (worldAabb != null);
 	}
 	
+	/**
+	 * @return this Shape's (world-frame) AABB
+	 */
 	public AABB getBoundingVolume() {
 		
-		return aabb;
+		return worldAabb;
 	}
 	
 	@Override
@@ -70,7 +77,7 @@ public abstract class Shape implements Transformable, DescribesSurface {
 		if (!hasBoundingVolume())
 			return true;
 		
-		return aabb.isIntersecting(worldToLocal(ray));
+		return worldAabb.isIntersecting(worldToLocal(ray));
 	}
 	
 	@SuppressWarnings("unchecked")

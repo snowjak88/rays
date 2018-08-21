@@ -111,7 +111,7 @@ public interface Transform {
 	 * @param interaction
 	 * @return the transformed Normal
 	 */
-	public default <T extends Interactable> Interaction<T> worldToLocal(Interaction<T> interaction) {
+	public default <T extends Interactable<T>> Interaction<T> worldToLocal(Interaction<T> interaction) {
 		
 		return new Interaction<T>(interaction.getInteracted(), worldToLocal(interaction.getInteractingRay()),
 				worldToLocal(interaction.getPoint()), worldToLocal(interaction.getNormal()), interaction.getParam());
@@ -123,7 +123,7 @@ public interface Transform {
 	 * @param interaction
 	 * @return the transformed Normal
 	 */
-	public default <T extends Interactable> Interaction<T> localToWorld(Interaction<T> interaction) {
+	public default <T extends Interactable<T>> Interaction<T> localToWorld(Interaction<T> interaction) {
 		
 		return new Interaction<T>(interaction.getInteracted(), localToWorld(interaction.getInteractingRay()),
 				localToWorld(interaction.getPoint()), localToWorld(interaction.getNormal()), interaction.getParam());

@@ -204,7 +204,7 @@ public interface Transformable {
 	 * @param interaction
 	 * @return
 	 */
-	public default <T extends Interactable> Interaction<T> worldToLocal(Interaction<T> interaction) {
+	public default <T extends Interactable<T>> Interaction<T> worldToLocal(Interaction<T> interaction) {
 		
 		Interaction<T> working = interaction;
 		for (Transform t : getWorldToLocalTransforms())
@@ -219,7 +219,7 @@ public interface Transformable {
 	 * @param interaction
 	 * @return
 	 */
-	public default <T extends Interactable> Interaction<T> localToWorld(Interaction<T> interaction) {
+	public default <T extends Interactable<T>> Interaction<T> localToWorld(Interaction<T> interaction) {
 		
 		Interaction<T> working = interaction;
 		for (Transform t : getLocalToWorldTransforms())

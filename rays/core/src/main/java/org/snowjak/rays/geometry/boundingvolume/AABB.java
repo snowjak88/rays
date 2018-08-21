@@ -1,8 +1,10 @@
 package org.snowjak.rays.geometry.boundingvolume;
 
+import static org.apache.commons.math3.util.FastMath.abs;
 import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 
+import java.beans.Transient;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -26,6 +28,7 @@ import org.snowjak.rays.transform.Transform;
 public class AABB {
 	
 	private Point3D minExtent, maxExtent;
+	private double volume = -1;
 	
 	/**
 	 * Given an existing AABB (assumed to be given in object-local coordinates), and
@@ -233,6 +236,7 @@ public class AABB {
 	protected void setMinExtent(Point3D minExtent) {
 		
 		this.minExtent = minExtent;
+		this.volume = -1;
 	}
 	
 	public Point3D getMaxExtent() {
@@ -243,6 +247,17 @@ public class AABB {
 	protected void setMaxExtent(Point3D maxExtent) {
 		
 		this.maxExtent = maxExtent;
+		this.volume = -1;
+	}
+	
+	@Transient
+	public double getVolume() {
+		
+		if (this.volume < 0d)
+			this.volume = abs(maxExtent.getX() - minExtent.getX()) + abs(maxExtent.getY() - minExtent.getY())
+					+ abs(maxExtent.getZ() - minExtent.getZ());
+		
+		return this.volume;
 	}
 	
 }
