@@ -10,6 +10,9 @@ import java.util.Properties;
 import java.util.Random;
 
 import org.apache.commons.math3.util.Pair;
+import org.snowjak.rays.camera.Camera;
+import org.snowjak.rays.camera.OrthographicCamera;
+import org.snowjak.rays.camera.PinholeCamera;
 import org.snowjak.rays.sampler.BestCandidateSampler;
 import org.snowjak.rays.serialization.IsLoadable;
 import org.snowjak.rays.shape.PlaneShape;
@@ -213,6 +216,17 @@ public class Settings {
 						.of(Colorspace.class, "type")
 						.registerSubtype(RGB.class, "rgb")
 						.registerSubtype(XYZ.class, "xyz"));
+			//@formatter:on
+			
+			//
+			// Register type-adapter for Camera implementations.
+			//
+			//@formatter:off
+			gb.registerTypeAdapterFactory(
+				RuntimeTypeAdapterFactory
+						.of(Camera.class, "type")
+						.registerSubtype(OrthographicCamera.class, "orthographic")
+						.registerSubtype(PinholeCamera.class, "pinhole"));
 			//@formatter:on
 			
 			this.gson = gb.create();

@@ -33,31 +33,41 @@ import org.snowjak.rays.transform.Transform;
  */
 public class PinholeCamera extends Camera {
 	
-	private final Vector3D focalPoint;
+	private double focalLength;
+	private transient Vector3D focalPoint;
 	
-	public PinholeCamera(double focalLength) {
+	public PinholeCamera(double width, double height, double focalLength) {
 		
-		this(focalLength, Collections.emptyList());
+		this(width, height, focalLength, Collections.emptyList());
 	}
 	
-	public PinholeCamera(double focalLength, Transform... worldToLocal) {
+	public PinholeCamera(double width, double height, double focalLength, Transform... worldToLocal) {
 		
-		this(focalLength, Arrays.asList(worldToLocal));
+		this(width, height, focalLength, Arrays.asList(worldToLocal));
 	}
 	
-	public PinholeCamera(double focalLength, Collection<Transform> worldToLocal) {
+	public PinholeCamera(double width, double height, double focalLength, Collection<Transform> worldToLocal) {
 		
-		super(worldToLocal);
-		focalPoint = new Vector3D(0, 0, focalLength);
+		super(width, height, worldToLocal);
+		this.focalLength = focalLength;
 	}
 	
 	@Override
 	public TracedSample trace(Sample sample) {
 		
-		final var imagePlanePoint = new Point3D(sample.getFilmPoint().getX(), -sample.getFilmPoint().getY(), 0);
+		if (focalPoint == null)
+			focalPoint = new Vector3D(0, 0, focalLength);
+		
+		final var imagePlanePoint = new Point3D(sample.getFilmPoint().getX() - getHalfWidth(),
+				-(sample.getFilmPoint().getY() - getHalfHeight()), 0);
 		final var direction = focalPoint.subtract(imagePlanePoint).normalize();
 		
 		return new TracedSample(sample, localToWorld(new Ray(imagePlanePoint, direction)));
+	}
+	
+	public double getFocalLength() {
+		
+		return focalLength;
 	}
 	
 }

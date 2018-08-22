@@ -3,47 +3,48 @@ package org.snowjak.rays.camera;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.sample.TracedSample;
-import org.snowjak.rays.sampler.Sampler;
 import org.snowjak.rays.transform.Transform;
 import org.snowjak.rays.transform.Transformable;
 
 /**
  * Models a camera, translating {@link Sample}s into {@link TracedSample}s
  * (i.e., computing the {@link Ray}s resulting from Samples).
- * <p>
- * <strong>Note</strong> that Camera instances expect incoming Samples to have
- * their film-points distributed about {@code (0,0,0)}. Ensure that your
- * selected {@link Sampler} is configured appropriately.
- * </p>
  * 
  * @author snowjak88
  *
  */
 public abstract class Camera implements Transformable {
 	
-	private final Deque<Transform> worldToLocal, localToWorld;
+	private double width, height;
+	private transient double halfWidth, halfHeight;
+	private LinkedList<Transform> worldToLocal;
+	private transient LinkedList<Transform> localToWorld = null;
 	
-	public Camera() {
+	public Camera(double width, double height) {
 		
-		this(Collections.emptyList());
+		this(width, height, Collections.emptyList());
 	}
 	
-	public Camera(Transform... worldToLocal) {
+	public Camera(double width, double height, Transform... worldToLocal) {
 		
-		this(Arrays.asList(worldToLocal));
+		this(width, height, Arrays.asList(worldToLocal));
 	}
 	
-	public Camera(Collection<Transform> worldToLocal) {
+	public Camera(double width, double height, Collection<Transform> worldToLocal) {
+		
+		this.width = width;
+		this.height = height;
+		
+		this.halfWidth = width / 2d;
+		this.halfHeight = height / 2d;
 		
 		this.worldToLocal = new LinkedList<>();
-		this.localToWorld = new LinkedList<>();
 		worldToLocal.stream().forEach(t -> this.appendTransform(t));
 	}
 	
@@ -57,16 +58,19 @@ public abstract class Camera implements Transformable {
 	 */
 	public abstract TracedSample trace(Sample sample);
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public List<Transform> getWorldToLocalTransforms() {
 		
 		return (List<Transform>) worldToLocal;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public List<Transform> getLocalToWorldTransforms() {
+		
+		if (localToWorld == null) {
+			localToWorld = new LinkedList<>(worldToLocal);
+			Collections.reverse(localToWorld);
+		}
 		
 		return (List<Transform>) localToWorld;
 	}
@@ -75,6 +79,25 @@ public abstract class Camera implements Transformable {
 	public void appendTransform(Transform transform) {
 		
 		worldToLocal.addLast(transform);
-		localToWorld.addFirst(transform);
+	}
+	
+	public double getWidth() {
+		
+		return width;
+	}
+	
+	public double getHeight() {
+		
+		return height;
+	}
+	
+	public double getHalfWidth() {
+		
+		return halfWidth;
+	}
+	
+	public double getHalfHeight() {
+		
+		return halfHeight;
 	}
 }
