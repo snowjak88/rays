@@ -1,8 +1,16 @@
 package org.snowjak.rays.geometry;
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
 
 import org.snowjak.rays.geometry.util.Pair;
+import org.snowjak.rays.serialization.IsLoadable;
+
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
 
 /**
  * Semantic repackaging of {@link Pair}.
@@ -139,4 +147,33 @@ public class Point2D extends Pair implements Serializable {
 		return Point2D.from(super.divide(divisor));
 	}
 	
+	public static class Loader implements IsLoadable<Point2D> {
+		
+		@Override
+		public Point2D deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+				throws JsonParseException {
+			
+			if (!json.isJsonObject())
+				throw new JsonParseException("Cannot deserialize Point2D from JSON -- expecting a JSON object!");
+			
+			final var obj = json.getAsJsonObject();
+			
+			final var x = obj.get("x").getAsDouble();
+			final var y = obj.get("y").getAsDouble();
+			
+			return new Point2D(x, y);
+		}
+		
+		@Override
+		public JsonElement serialize(Point2D src, Type typeOfSrc, JsonSerializationContext context) {
+			
+			final var obj = new JsonObject();
+			
+			obj.addProperty("x", src.getX());
+			obj.addProperty("y", src.getY());
+			
+			return obj;
+		}
+		
+	}
 }

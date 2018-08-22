@@ -1,8 +1,16 @@
 package org.snowjak.rays.geometry;
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
 
 import org.snowjak.rays.geometry.util.Triplet;
+import org.snowjak.rays.serialization.IsLoadable;
+
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
 
 /**
  * Semantic repackaging of {@link Triplet}.
@@ -141,4 +149,35 @@ public class Point3D extends Triplet implements Serializable {
 		return Point3D.from(super.divide(divisor));
 	}
 	
+	public static class Loader implements IsLoadable<Point3D> {
+		
+		@Override
+		public Point3D deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+				throws JsonParseException {
+			
+			if (!json.isJsonObject())
+				throw new JsonParseException("Cannot deserialize Point3D from JSON -- expecting a JSON object!");
+			
+			final var obj = json.getAsJsonObject();
+			
+			final var x = obj.get("x").getAsDouble();
+			final var y = obj.get("y").getAsDouble();
+			final var z = obj.get("z").getAsDouble();
+			
+			return new Point3D(x, y, z);
+		}
+		
+		@Override
+		public JsonElement serialize(Point3D src, Type typeOfSrc, JsonSerializationContext context) {
+			
+			final var obj = new JsonObject();
+			
+			obj.addProperty("x", src.getX());
+			obj.addProperty("y", src.getY());
+			obj.addProperty("z", src.getZ());
+			
+			return obj;
+		}
+		
+	}
 }

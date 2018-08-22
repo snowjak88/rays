@@ -1,6 +1,16 @@
 package org.snowjak.rays.geometry;
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
+
+import org.snowjak.rays.Settings;
+import org.snowjak.rays.serialization.IsLoadable;
+
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
 
 /**
  * A Ray combines a {@link Point3D} ("origin") and a {@link Vector3D}
@@ -218,4 +228,61 @@ public class Ray implements Serializable {
 				+ depth + ", windowMinT=" + windowMinT + ", windowMaxT=" + windowMaxT + "]";
 	}
 	
+	public static class Loader implements IsLoadable<Ray> {
+		
+		@Override
+		public Ray deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+				throws JsonParseException {
+			
+			if (!json.isJsonObject())
+				throw new JsonParseException("Cannot deserialize Ray from JSON -- expecting a JSON object!");
+			
+			final var obj = json.getAsJsonObject();
+			
+			final Point3D origin = context.deserialize(obj.get("o"), Point3D.class);
+			final Vector3D direction = context.deserialize(obj.get("d"), Vector3D.class);
+			
+			double t = 0;
+			if (obj.has("t"))
+				t = obj.get("t").getAsDouble();
+			
+			int depth = 0;
+			if (obj.has("depth"))
+				depth = obj.get("depth").getAsInt();
+			
+			double windowMinT = Double.NEGATIVE_INFINITY;
+			if (obj.has("minT"))
+				windowMinT = obj.get("minT").getAsDouble();
+			
+			double windowMaxT = Double.POSITIVE_INFINITY;
+			if (obj.has("maxT"))
+				windowMaxT = obj.get("maxT").getAsDouble();
+			
+			return new Ray(origin, direction, t, depth, windowMinT, windowMaxT);
+		}
+		
+		@Override
+		public JsonElement serialize(Ray src, Type typeOfSrc, JsonSerializationContext context) {
+			
+			final var obj = new JsonObject();
+			
+			obj.add("o", context.serialize(src.getOrigin()));
+			obj.add("d", context.serialize(src.getDirection()));
+			
+			if (!Settings.getInstance().nearlyEqual(src.getT(), 0))
+				obj.addProperty("t", src.getT());
+			
+			if (src.getDepth() != 0)
+				obj.addProperty("depth", src.getDepth());
+			
+			if (!Settings.getInstance().nearlyEqual(src.getWindowMinT(), Double.NEGATIVE_INFINITY))
+				obj.addProperty("minT", src.getWindowMinT());
+			
+			if (!Settings.getInstance().nearlyEqual(src.getWindowMaxT(), Double.POSITIVE_INFINITY))
+				obj.addProperty("maxT", src.getWindowMaxT());
+			
+			return obj;
+		}
+		
+	}
 }

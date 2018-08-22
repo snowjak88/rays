@@ -3,6 +3,7 @@ package org.snowjak.rays;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -10,12 +11,19 @@ import java.util.Random;
 
 import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.sampler.BestCandidateSampler;
+import org.snowjak.rays.serialization.IsLoadable;
 import org.snowjak.rays.spectrum.ColorMappingFunctions;
 import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctions;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.spectrum.distribution.TabulatedColorMappingFunctions;
 
 import com.google.common.math.DoubleMath;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ClassRefTypeSignature;
 
 /**
  * Represents application-wide defaults. Typically these will be given by
@@ -96,6 +104,11 @@ public class Settings {
 	 */
 	public static final Random RND = new Random(System.currentTimeMillis());
 	
+	/**
+	 * @see #getGson()
+	 */
+	private Gson gson = null;
+	
 	private final Properties coreSettings;
 	private static Settings __INSTANCE = null;
 	
@@ -144,6 +157,24 @@ public class Settings {
 			
 		} catch (Throwable t) {
 			throw new CannotLoadSettingsException("Cannot load core settings!", t);
+		}
+		
+		try (var scan = new ClassGraph().enableAllInfo().whitelistPackages("org.snowjak.rays").scan()) {
+			
+			final var gb = new GsonBuilder();
+			
+			for (ClassInfo ci : scan.getClassesImplementing(IsLoadable.class.getName())) {
+				final var loadableClass = ((ClassRefTypeSignature) ci.getMethodInfo("deserialize").get(0)
+						.getTypeDescriptor().getResultType()).getClassInfo().loadClass();
+				
+				gb.registerTypeAdapter(loadableClass, ci.loadClass().getConstructor().newInstance());
+			}
+			
+			this.gson = gb.create();
+			
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+				| NoSuchMethodException | SecurityException e) {
+			throw new RuntimeException("Cannot register JSON-serialization handler.", e);
 		}
 	}
 	
@@ -300,6 +331,11 @@ public class Settings {
 		
 		return cieXyzIntegrationStepCount;
 		
+	}
+	
+	public Gson getGson() {
+		
+		return gson;
 	}
 	
 	/**

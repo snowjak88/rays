@@ -4,9 +4,17 @@ import static org.apache.commons.math3.util.FastMath.pow;
 import static org.apache.commons.math3.util.FastMath.sqrt;
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.util.Random;
 
 import org.snowjak.rays.geometry.util.Triplet;
+import org.snowjak.rays.serialization.IsLoadable;
+
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
 
 /**
  * Represents a vector in 3-space -- direction plus magnitude.
@@ -272,4 +280,35 @@ public class Vector3D extends Triplet implements Serializable {
 		return Vector3D.from(super.divide(divisor));
 	}
 	
+	public static class Loader implements IsLoadable<Vector3D> {
+		
+		@Override
+		public Vector3D deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+				throws JsonParseException {
+			
+			if (!json.isJsonObject())
+				throw new JsonParseException("Cannot deserialize Vector3D from JSON -- expecting a JSON object!");
+			
+			final var obj = json.getAsJsonObject();
+			
+			final var x = obj.get("x").getAsDouble();
+			final var y = obj.get("y").getAsDouble();
+			final var z = obj.get("z").getAsDouble();
+			
+			return new Vector3D(x, y, z);
+		}
+		
+		@Override
+		public JsonElement serialize(Vector3D src, Type typeOfSrc, JsonSerializationContext context) {
+			
+			final var obj = new JsonObject();
+			
+			obj.addProperty("x", src.getX());
+			obj.addProperty("y", src.getY());
+			obj.addProperty("z", src.getZ());
+			
+			return obj;
+		}
+		
+	}
 }

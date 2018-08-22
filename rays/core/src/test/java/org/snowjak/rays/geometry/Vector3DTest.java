@@ -2,9 +2,10 @@ package org.snowjak.rays.geometry;
 
 import static org.apache.commons.math3.util.FastMath.sqrt;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import org.junit.Test;
-import org.snowjak.rays.geometry.Vector3D;
+import org.snowjak.rays.Settings;
 
 public class Vector3DTest {
 	
@@ -63,4 +64,26 @@ public class Vector3DTest {
 		assertEquals(77d, v.getMagnitudeSq(), 0.00001);
 	}
 	
+	@Test
+	public void testSerialize() {
+		
+		final Vector3D p = new Vector3D(-6, 2, 4);
+		final var expected = "{\"x\":-6.0,\"y\":2.0,\"z\":4.0}";
+		
+		assertEquals(expected, Settings.getInstance().getGson().toJson(p));
+	}
+	
+	@Test
+	public void testDeserialize() {
+		
+		final var json = "{\"x\":-6.0,\"y\":2.0,\"z\":4.0}";
+		final Vector3D p = new Vector3D(-6, 2, 4);
+		
+		final var result = Settings.getInstance().getGson().fromJson(json, Vector3D.class);
+		
+		assertNotNull(result);
+		assertEquals(p.getX(), result.getX(), 0.00001);
+		assertEquals(p.getY(), result.getY(), 0.00001);
+		assertEquals(p.getZ(), result.getZ(), 0.00001);
+	}
 }

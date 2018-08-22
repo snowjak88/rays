@@ -1,9 +1,17 @@
 package org.snowjak.rays.geometry;
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
 
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
 import org.snowjak.rays.geometry.util.Triplet;
+import org.snowjak.rays.serialization.IsLoadable;
+
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
 
 /**
  * A Normal3D is distinct from a {@link Vector3D} in that a Normal3D does not
@@ -136,6 +144,38 @@ public class Normal3D extends Triplet implements Serializable {
 	public Normal3D divide(double divisor) {
 		
 		return Normal3D.from(super.divide(divisor));
+	}
+	
+	public static class Loader implements IsLoadable<Normal3D> {
+		
+		@Override
+		public Normal3D deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+				throws JsonParseException {
+			
+			if (!json.isJsonObject())
+				throw new JsonParseException("Cannot deserialize Normal3D from JSON -- expecting a JSON object!");
+			
+			final var obj = json.getAsJsonObject();
+			
+			final var x = obj.get("x").getAsDouble();
+			final var y = obj.get("y").getAsDouble();
+			final var z = obj.get("z").getAsDouble();
+			
+			return new Normal3D(x, y, z);
+		}
+		
+		@Override
+		public JsonElement serialize(Normal3D src, Type typeOfSrc, JsonSerializationContext context) {
+			
+			final var obj = new JsonObject();
+			
+			obj.addProperty("x", src.getX());
+			obj.addProperty("y", src.getY());
+			obj.addProperty("z", src.getZ());
+			
+			return obj;
+		}
+		
 	}
 	
 }
