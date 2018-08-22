@@ -11,6 +11,7 @@ import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
+import org.snowjak.rays.geometry.boundingvolume.AABB;
 import org.snowjak.rays.interact.SurfaceDescriptor;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.transform.Transform;
@@ -24,16 +25,22 @@ import org.snowjak.rays.transform.Transform;
  */
 public class PlaneShape extends Shape {
 	
-	private Normal3D localNormal = Normal3D.from(Vector3D.J);
+	private static final Normal3D LOCAL_NORMAL = Normal3D.from(Vector3D.J);
 	
 	public PlaneShape(Transform... worldToLocal) {
 		
-		super(null, worldToLocal);
+		super(worldToLocal);
 	}
 	
 	public PlaneShape(List<Transform> worldToLocal) {
 		
-		super(null, worldToLocal);
+		super(worldToLocal);
+	}
+	
+	@Override
+	public AABB getLocalBoundingVolume() {
+		
+		return null;
 	}
 	
 	@Override
@@ -68,7 +75,7 @@ public class PlaneShape extends Shape {
 		Point3D intersectionPoint = intersectingRay.getPointAlong();
 		Point2D surfaceParam = getParamFromLocalSurface(intersectionPoint);
 		
-		return localToWorld(new SurfaceDescriptor<>(this, intersectionPoint, localNormal, surfaceParam));
+		return localToWorld(new SurfaceDescriptor<>(this, intersectionPoint, LOCAL_NORMAL, surfaceParam));
 	}
 	
 	@Override
@@ -77,7 +84,7 @@ public class PlaneShape extends Shape {
 		Point3D localNeighbor = worldToLocal(neighbor);
 		Point3D surfacePoint = new Point3D(localNeighbor.getX(), 0.0, localNeighbor.getZ());
 		return localToWorld(
-				new SurfaceDescriptor<>(this, surfacePoint, localNormal, getParamFromLocalSurface(surfacePoint)));
+				new SurfaceDescriptor<>(this, surfacePoint, LOCAL_NORMAL, getParamFromLocalSurface(surfacePoint)));
 	}
 	
 	@Override
@@ -91,7 +98,7 @@ public class PlaneShape extends Shape {
 		final Point3D surfacePoint = new Point3D(x, y, z);
 		
 		return localToWorld(
-				new SurfaceDescriptor<>(this, surfacePoint, localNormal, getParamFromLocalSurface(surfacePoint)));
+				new SurfaceDescriptor<>(this, surfacePoint, LOCAL_NORMAL, getParamFromLocalSurface(surfacePoint)));
 	}
 	
 	@Override

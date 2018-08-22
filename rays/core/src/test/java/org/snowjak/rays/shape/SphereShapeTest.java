@@ -3,11 +3,13 @@ package org.snowjak.rays.shape;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
@@ -57,4 +59,46 @@ public class SphereShapeTest {
 		assertNull("Expected miss was actually a hit!", hit);
 	}
 	
+	@Test
+	public void testSerialization() {
+		
+		final var sphere = new SphereShape(0.5, new TranslationTransform(1, 2, 3));
+		
+		final var expected = "{\"type\":\"sphere\",\"radius\":0.5,\"worldToLocal\":[{\"type\":\"translate\",\"dx\":1.0,\"dy\":2.0,\"dz\":3.0}]}";
+		
+		final var result = Settings.getInstance().getGson().toJson(sphere);
+		
+		assertEquals(expected, result);
+	}
+	
+	@Test
+	public void testDeserialization() {
+		
+		final var json = "{\"type\":\"sphere\",\"radius\":0.5,\"worldToLocal\":[{\"type\":\"translate\",\"dx\":1.0,\"dy\":2.0,\"dz\":3.0}]}";
+		
+		final var expected = new SphereShape(0.5, new TranslationTransform(1, 2, 3));
+		
+		final var result = Settings.getInstance().getGson().fromJson(json, Shape.class);
+		
+		assertNotNull(result);
+		
+		assertTrue(SphereShape.class.isAssignableFrom(result.getClass()));
+		
+		final var sphere = (SphereShape) result;
+		
+		assertEquals(expected.getRadius(), sphere.getRadius(), 0.00001);
+		assertEquals(expected.getWorldToLocalTransforms().size(), sphere.getWorldToLocalTransforms().size());
+		assertEquals(expected.getWorldToLocalTransforms().size(), 1);
+		
+		assertTrue(TranslationTransform.class.isAssignableFrom(expected.getWorldToLocalTransforms().get(0).getClass()));
+		assertTrue(TranslationTransform.class.isAssignableFrom(sphere.getWorldToLocalTransforms().get(0).getClass()));
+		
+		assertEquals(((TranslationTransform) expected.getWorldToLocalTransforms().get(0)).getDx(),
+				((TranslationTransform) sphere.getWorldToLocalTransforms().get(0)).getDx(), 0.00001);
+		assertEquals(((TranslationTransform) expected.getWorldToLocalTransforms().get(0)).getDy(),
+				((TranslationTransform) sphere.getWorldToLocalTransforms().get(0)).getDy(), 0.00001);
+		assertEquals(((TranslationTransform) expected.getWorldToLocalTransforms().get(0)).getDz(),
+				((TranslationTransform) sphere.getWorldToLocalTransforms().get(0)).getDz(), 0.00001);
+		
+	}
 }

@@ -12,6 +12,9 @@ import java.util.Random;
 import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.sampler.BestCandidateSampler;
 import org.snowjak.rays.serialization.IsLoadable;
+import org.snowjak.rays.shape.PlaneShape;
+import org.snowjak.rays.shape.Shape;
+import org.snowjak.rays.shape.SphereShape;
 import org.snowjak.rays.spectrum.ColorMappingFunctions;
 import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctions;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
@@ -175,6 +178,9 @@ public class Settings {
 				gb.registerTypeAdapter(loadableClass, ci.loadClass().getConstructor().newInstance());
 			}
 			
+			//
+			// Register type-adapter for Transform implementations.
+			//
 			//@formatter:off
 			gb.registerTypeAdapterFactory(
 				RuntimeTypeAdapterFactory
@@ -182,6 +188,17 @@ public class Settings {
 						.registerSubtype(RotationTransform.class, "rotate")
 						.registerSubtype(ScaleTransform.class, "scale")
 						.registerSubtype(TranslationTransform.class, "translate"));
+			//@formatter:on
+			
+			//
+			// Register type-adapter for Shape implementations.
+			//
+			//@formatter:off
+			gb.registerTypeAdapterFactory(
+				RuntimeTypeAdapterFactory
+						.of(Shape.class, "type")
+						.registerSubtype(PlaneShape.class, "plane")
+						.registerSubtype(SphereShape.class, "sphere"));
 			//@formatter:on
 			
 			this.gson = gb.create();

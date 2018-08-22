@@ -10,6 +10,7 @@ import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
+import org.snowjak.rays.geometry.boundingvolume.AABB;
 import org.snowjak.rays.interact.SurfaceDescriptor;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.transform.RotationTransform;
@@ -22,7 +23,7 @@ public class ShapeTest {
 	@Before
 	public void setUp() {
 		
-		shape = new Shape(null, Collections.emptyList()) {
+		shape = new Shape(Collections.emptyList()) {
 			
 			@Override
 			public SurfaceDescriptor<Shape> getSurfaceNearestTo(Point3D point) {
@@ -74,6 +75,14 @@ public class ShapeTest {
 			
 			@Override
 			public Point2D getParamFromLocalSurface(Point3D point) {
+				
+				// We don't care about this method for the purposes of this
+				// test.
+				return null;
+			}
+			
+			@Override
+			public AABB getLocalBoundingVolume() {
 				
 				// We don't care about this method for the purposes of this
 				// test.

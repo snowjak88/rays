@@ -5,7 +5,6 @@ import static org.apache.commons.math3.util.FastMath.sqrt;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,45 +25,51 @@ import org.snowjak.rays.transform.Transformable;
  */
 public abstract class Shape implements Transformable, DescribesSurface<Shape> {
 	
-	private final Deque<Transform> worldToLocal, localToWorld;
-	private AABB worldAabb = null;
+	private LinkedList<Transform> worldToLocal;
+	private transient LinkedList<Transform> localToWorld = null;
+	private transient AABB worldAabb = null;
 	
 	public Shape() {
 		
-		this(null);
+		this(Collections.emptyList());
 	}
 	
-	public Shape(AABB localAabb) {
+	public Shape(Transform... worldToLocal) {
 		
-		this(localAabb, Collections.emptyList());
+		this(Arrays.asList(worldToLocal));
 	}
 	
-	public Shape(AABB localAabb, Transform... worldToLocal) {
-		
-		this(localAabb, Arrays.asList(worldToLocal));
-	}
-	
-	public Shape(AABB localAabb, List<Transform> worldToLocal) {
+	public Shape(List<Transform> worldToLocal) {
 		
 		this.worldToLocal = new LinkedList<>();
-		this.localToWorld = new LinkedList<>();
 		
 		worldToLocal.forEach(t -> this.appendTransform(t));
-		
-		if (localAabb != null)
-			this.worldAabb = new AABB(
-					localAabb.getCorners().stream().map(p -> localToWorld(p)).collect(Collectors.toList()));
 	}
 	
 	public boolean hasBoundingVolume() {
 		
-		return (worldAabb != null);
+		return (getLocalBoundingVolume() != null);
 	}
 	
 	/**
-	 * @return this Shape's (world-frame) AABB
+	 * @return this Shape's (local-frame) {@link AABB}, or <code>null</code> if this
+	 *         Shape has no bounding-volume
+	 */
+	public abstract AABB getLocalBoundingVolume();
+	
+	/**
+	 * @return this Shape's (world-frame) {@link AABB}, or <code>null</code> if this
+	 *         Shape has no bounding-volume
 	 */
 	public AABB getBoundingVolume() {
+		
+		if (worldAabb == null) {
+			final var localAabb = getLocalBoundingVolume();
+			
+			if (localAabb != null)
+				this.worldAabb = new AABB(
+						localAabb.getCorners().stream().map(p -> localToWorld(p)).collect(Collectors.toList()));
+		}
 		
 		return worldAabb;
 	}
@@ -80,25 +85,27 @@ public abstract class Shape implements Transformable, DescribesSurface<Shape> {
 		return worldAabb.isIntersecting(worldToLocal(ray));
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public List<Transform> getWorldToLocalTransforms() {
 		
-		return (List<Transform>) worldToLocal;
+		return worldToLocal;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public List<Transform> getLocalToWorldTransforms() {
 		
-		return (List<Transform>) localToWorld;
+		if (localToWorld == null || localToWorld.size() != worldToLocal.size()) {
+			localToWorld = new LinkedList<>(worldToLocal);
+			Collections.reverse(localToWorld);
+		}
+		
+		return localToWorld;
 	}
 	
 	@Override
 	public void appendTransform(Transform transform) {
 		
 		worldToLocal.addLast(transform);
-		localToWorld.addFirst(transform);
 	}
 	
 	/**

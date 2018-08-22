@@ -1,12 +1,14 @@
 package org.snowjak.rays.shape;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.Collections;
 
 import org.junit.Test;
+import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
@@ -85,4 +87,33 @@ public class PlaneShapeTest {
 		assertEquals("Nearby surface param-Y not as expected!", 2, surfaceParam.getY(), 0.00001);
 	}
 	
+	@Test
+	public void testSerialization() {
+		
+		final var plane = new PlaneShape();
+		
+		final var expected = "{\"type\":\"plane\",\"worldToLocal\":[]}";
+		
+		final var result = Settings.getInstance().getGson().toJson(plane);
+		
+		assertEquals(expected, result);
+	}
+	
+	@Test
+	public void testDeserialization() {
+		
+		final var json = "{\"type\":\"plane\",\"worldToLocal\":[]}";
+		
+		final var expected = new PlaneShape();
+		
+		final var result = Settings.getInstance().getGson().fromJson(json, Shape.class);
+		
+		assertNotNull(result);
+		
+		assertTrue(PlaneShape.class.isAssignableFrom(result.getClass()));
+		
+		final var plane = (PlaneShape) result;
+		
+		assertTrue(expected.getWorldToLocalTransforms().equals(plane.getWorldToLocalTransforms()));
+	}
 }

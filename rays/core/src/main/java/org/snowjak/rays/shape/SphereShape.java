@@ -25,7 +25,9 @@ import org.snowjak.rays.transform.Transform;
 
 public class SphereShape extends Shape {
 	
-	private final double radius;
+	private double radius;
+	
+	private transient AABB localAabb = null;
 	
 	public SphereShape(double radius) {
 		
@@ -39,8 +41,17 @@ public class SphereShape extends Shape {
 	
 	public SphereShape(double radius, List<Transform> worldToLocal) {
 		
-		super(new AABB(new Point3D(-radius, -radius, -radius), new Point3D(+radius, +radius, +radius)), worldToLocal);
+		super(worldToLocal);
 		this.radius = radius;
+	}
+	
+	@Override
+	public AABB getLocalBoundingVolume() {
+		
+		if (localAabb == null)
+			localAabb = new AABB(new Point3D(-radius, -radius, -radius), new Point3D(+radius, +radius, +radius));
+		
+		return localAabb;
 	}
 	
 	@Override
