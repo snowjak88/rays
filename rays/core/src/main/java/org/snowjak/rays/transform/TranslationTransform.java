@@ -17,8 +17,8 @@ public class TranslationTransform implements Transform {
 	private double dy;
 	private double dz;
 	
-	private Matrix worldToLocal = null;
-	private Matrix localToWorld = null;
+	private transient Matrix worldToLocal = null;
+	private transient Matrix localToWorld = null;
 	
 	/**
 	 * Create a new TranslationTransform, with the specified

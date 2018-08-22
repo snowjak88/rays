@@ -1,9 +1,11 @@
 package org.snowjak.rays.transform;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Vector3D;
@@ -84,4 +86,32 @@ public class TranslationTransformTest {
 		assertEquals("Transformed Z not as expected!", 5, transformed.getZ(), 0.00001);
 	}
 	
+	@Test
+	public void testSerialize() {
+		
+		final var transform = new TranslationTransform(1, 2, 3);
+		
+		final var expected = "{\"type\":\"translate\",\"dx\":1.0,\"dy\":2.0,\"dz\":3.0}";
+		
+		final var result = Settings.getInstance().getGson().toJson(transform);
+		
+		assertEquals(expected, result);
+	}
+	
+	@Test
+	public void testDeserialize() {
+		
+		final var json = "{\"type\":\"translate\",\"dx\":1.0,\"dy\":2.0,\"dz\":3.0}";
+		final var expected = new TranslationTransform(1, 2, 3);
+		
+		final var result = Settings.getInstance().getGson().fromJson(json, Transform.class);
+		
+		assertTrue(TranslationTransform.class.isAssignableFrom(result.getClass()));
+		
+		final var translation = (TranslationTransform) result;
+		
+		assertEquals(expected.getDx(), translation.getDx(), 0.00001);
+		assertEquals(expected.getDy(), translation.getDy(), 0.00001);
+		assertEquals(expected.getDz(), translation.getDz(), 0.00001);
+	}
 }

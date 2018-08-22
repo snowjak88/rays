@@ -17,10 +17,10 @@ public class ScaleTransform implements Transform {
 	private double sy;
 	private double sz;
 	
-	private Matrix worldToLocal = null;
-	private Matrix worldToLocal_inverseTranspose = null;
-	private Matrix localToWorld = null;
-	private Matrix localToWorld_inverseTranspose = null;
+	private transient Matrix worldToLocal = null;
+	private transient Matrix worldToLocal_inverseTranspose = null;
+	private transient Matrix localToWorld = null;
+	private transient Matrix localToWorld_inverseTranspose = null;
 	
 	/**
 	 * Create a new ScaleTransform, with the specified

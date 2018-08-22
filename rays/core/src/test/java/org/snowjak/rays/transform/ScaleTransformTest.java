@@ -2,9 +2,11 @@ package org.snowjak.rays.transform;
 
 import static org.apache.commons.math3.util.FastMath.sqrt;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
@@ -175,4 +177,32 @@ public class ScaleTransformTest {
 		assertEquals("#2-Depth is not as expected!", 1, transformed2.getDepth());
 	}
 	
+	@Test
+	public void testSerialize() {
+		
+		final var transform = new ScaleTransform(1, 2, 3);
+		
+		final var expected = "{\"type\":\"scale\",\"sx\":1.0,\"sy\":2.0,\"sz\":3.0}";
+		
+		final var result = Settings.getInstance().getGson().toJson(transform);
+		
+		assertEquals(expected, result);
+	}
+	
+	@Test
+	public void testDeserialize() {
+		
+		final var json = "{\"type\":\"scale\",\"sx\":1.0,\"sy\":2.0,\"sz\":3.0}";
+		final var expected = new ScaleTransform(1, 2, 3);
+		
+		final var result = Settings.getInstance().getGson().fromJson(json, Transform.class);
+		
+		assertTrue(ScaleTransform.class.isAssignableFrom(result.getClass()));
+		
+		final var scale = (ScaleTransform) result;
+		
+		assertEquals(expected.getSx(), scale.getSx(), 0.00001);
+		assertEquals(expected.getSy(), scale.getSy(), 0.00001);
+		assertEquals(expected.getSz(), scale.getSz(), 0.00001);
+	}
 }

@@ -16,10 +16,15 @@ import org.snowjak.rays.spectrum.ColorMappingFunctions;
 import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctions;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.spectrum.distribution.TabulatedColorMappingFunctions;
+import org.snowjak.rays.transform.RotationTransform;
+import org.snowjak.rays.transform.ScaleTransform;
+import org.snowjak.rays.transform.Transform;
+import org.snowjak.rays.transform.TranslationTransform;
 
 import com.google.common.math.DoubleMath;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.typeadapters.RuntimeTypeAdapterFactory;
 
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
@@ -170,11 +175,20 @@ public class Settings {
 				gb.registerTypeAdapter(loadableClass, ci.loadClass().getConstructor().newInstance());
 			}
 			
+			//@formatter:off
+			gb.registerTypeAdapterFactory(
+				RuntimeTypeAdapterFactory
+						.of(Transform.class, "type")
+						.registerSubtype(RotationTransform.class, "rotate")
+						.registerSubtype(ScaleTransform.class, "scale")
+						.registerSubtype(TranslationTransform.class, "translate"));
+			//@formatter:on
+			
 			this.gson = gb.create();
 			
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
-			throw new RuntimeException("Cannot register JSON-serialization handler.", e);
+			throw new RuntimeException("Cannot register JSON de/serialization handlers!", e);
 		}
 	}
 	

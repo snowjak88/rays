@@ -18,11 +18,11 @@ public class RotationTransform implements Transform {
 	private Vector3D axis;
 	private double degreesOfRotation;
 	
-	private Matrix worldToLocal = null;
-	private Matrix localToWorld = null;
+	private transient Matrix worldToLocal = null;
+	private transient Matrix localToWorld = null;
 	
-	private Matrix worldToLocal_inverseTranspose = null;
-	private Matrix localToWorld_inverseTranspose = null;
+	private transient Matrix worldToLocal_inverseTranspose = null;
+	private transient Matrix localToWorld_inverseTranspose = null;
 	
 	/**
 	 * Construct a new RotationTransform, representing a rotation about the
