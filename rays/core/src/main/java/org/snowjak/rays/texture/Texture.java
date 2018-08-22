@@ -17,7 +17,7 @@ import org.snowjak.rays.texture.mapping.TextureMapping;
  */
 public abstract class Texture {
 	
-	private final TextureMapping textureMapping;
+	private final TextureMapping mapping;
 	
 	/**
 	 * Construct a new Texture with the default {@link IdentityTextureMapping}.
@@ -34,12 +34,12 @@ public abstract class Texture {
 	 */
 	public Texture(TextureMapping textureMapping) {
 		
-		this.textureMapping = (textureMapping != null) ? textureMapping : new IdentityTextureMapping();
+		this.mapping = (textureMapping != null) ? textureMapping : new IdentityTextureMapping();
 	}
 	
 	public TextureMapping getTextureMapping() {
 		
-		return textureMapping;
+		return mapping;
 	}
 	
 	/**

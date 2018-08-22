@@ -111,7 +111,7 @@ public class RGBTest {
 	public void testSerialize() {
 		
 		final var rgb = RGB.GREEN;
-		final var expected = "{\"type\":\"rgb\",\"v\":[0.0,1.0,0.0]}";
+		final var expected = "[0.0,1.0,0.0]";
 		
 		final var result = Settings.getInstance().getGson().toJson(rgb);
 		
@@ -121,10 +121,10 @@ public class RGBTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "{\"type\":\"rgb\",\"v\":[0.0,1.0,0.0]}";
+		final var json = "[0.0,1.0,0.0]";
 		final var expected = RGB.GREEN;
 		
-		final var result = Settings.getInstance().getGson().fromJson(json, Colorspace.class);
+		final var result = Settings.getInstance().getGson().fromJson(json, RGB.class);
 		
 		assertTrue(RGB.class.isAssignableFrom(result.getClass()));
 		

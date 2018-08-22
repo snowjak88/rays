@@ -63,7 +63,7 @@ public class XYZTest {
 	public void testSerialize() {
 		
 		final var xyz = new XYZ(0.5, 0.4, 0.3);
-		final var expected = "{\"type\":\"xyz\",\"v\":[0.5,0.4,0.3]}";
+		final var expected = "[0.5,0.4,0.3]";
 		
 		final var result = Settings.getInstance().getGson().toJson(xyz);
 		
@@ -73,10 +73,10 @@ public class XYZTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "{\"type\":\"xyz\",\"v\":[0.5,0.4,0.3]}";
+		final var json = "[0.5,0.4,0.3]";
 		final var expected = new XYZ(0.5, 0.4, 0.3);
 		
-		final var result = Settings.getInstance().getGson().fromJson(json, Colorspace.class);
+		final var result = Settings.getInstance().getGson().fromJson(json, XYZ.class);
 		
 		assertTrue(XYZ.class.isAssignableFrom(result.getClass()));
 		

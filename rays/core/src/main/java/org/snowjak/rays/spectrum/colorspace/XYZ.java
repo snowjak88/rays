@@ -2,11 +2,21 @@ package org.snowjak.rays.spectrum.colorspace;
 
 import static org.apache.commons.math3.util.FastMath.pow;
 
+import java.lang.reflect.Type;
+
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.Util;
 import org.snowjak.rays.geometry.util.Matrix;
 import org.snowjak.rays.geometry.util.Triplet;
+import org.snowjak.rays.serialization.IsLoadable;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
 
 /**
  * Represents the CIE 1931 XYZ tristimulus colorspace.
@@ -149,4 +159,34 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 		return "XYZ [X=" + getX() + ", Y=" + getY() + ", Z=" + getZ() + "]";
 	}
 	
+	public static class Loader implements IsLoadable<XYZ> {
+		
+		@Override
+		public XYZ deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+				throws JsonParseException {
+			
+			if (!json.isJsonArray())
+				throw new JsonParseException("Cannot deserialize a XYZ from JSON that is not given as an array!");
+			
+			final var array = json.getAsJsonArray();
+			
+			final var values = new double[array.size()];
+			for (int i = 0; i < values.length; i++)
+				values[i] = array.get(i).getAsDouble();
+			
+			return new XYZ(new Triplet(values));
+		}
+		
+		@Override
+		public JsonElement serialize(XYZ src, Type typeOfSrc, JsonSerializationContext context) {
+			
+			final var array = new JsonArray(3);
+			array.add(new JsonPrimitive(src.getX()));
+			array.add(new JsonPrimitive(src.getY()));
+			array.add(new JsonPrimitive(src.getZ()));
+			
+			return array;
+		}
+		
+	}
 }

@@ -19,12 +19,15 @@ import org.snowjak.rays.shape.PlaneShape;
 import org.snowjak.rays.shape.Shape;
 import org.snowjak.rays.shape.SphereShape;
 import org.snowjak.rays.spectrum.ColorMappingFunctions;
-import org.snowjak.rays.spectrum.colorspace.Colorspace;
-import org.snowjak.rays.spectrum.colorspace.RGB;
-import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctions;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.spectrum.distribution.TabulatedColorMappingFunctions;
+import org.snowjak.rays.texture.ConstantTexture;
+import org.snowjak.rays.texture.ImageTexture;
+import org.snowjak.rays.texture.Texture;
+import org.snowjak.rays.texture.mapping.IdentityTextureMapping;
+import org.snowjak.rays.texture.mapping.TextureMapping;
+import org.snowjak.rays.texture.mapping.TilingTextureMapping;
 import org.snowjak.rays.transform.RotationTransform;
 import org.snowjak.rays.transform.ScaleTransform;
 import org.snowjak.rays.transform.Transform;
@@ -208,17 +211,6 @@ public class Settings {
 			//@formatter:on
 			
 			//
-			// Register type-adapter for Colorspace implementations.
-			//
-			//@formatter:off
-			gb.registerTypeAdapterFactory(
-				RuntimeTypeAdapterFactory
-						.of(Colorspace.class, "type")
-						.registerSubtype(RGB.class, "rgb")
-						.registerSubtype(XYZ.class, "xyz"));
-			//@formatter:on
-			
-			//
 			// Register type-adapter for Camera implementations.
 			//
 			//@formatter:off
@@ -227,6 +219,28 @@ public class Settings {
 						.of(Camera.class, "type")
 						.registerSubtype(OrthographicCamera.class, "orthographic")
 						.registerSubtype(PinholeCamera.class, "pinhole"));
+			//@formatter:on
+			
+			//
+			// Register type-adapter for TextureMapping implementations.
+			//
+			//@formatter:off
+			gb.registerTypeAdapterFactory(
+				RuntimeTypeAdapterFactory
+						.of(TextureMapping.class, "type")
+						.registerSubtype(IdentityTextureMapping.class, "identity")
+						.registerSubtype(TilingTextureMapping.class, "tiling"));
+			//@formatter:on
+			
+			//
+			// Register type-adapter for Texture implementations.
+			//
+			//@formatter:off
+			gb.registerTypeAdapterFactory(
+				RuntimeTypeAdapterFactory
+						.of(Texture.class, "type")
+						.registerSubtype(ImageTexture.class, "image")
+						.registerSubtype(ConstantTexture.class, "constant"));
 			//@formatter:on
 			
 			this.gson = gb.create();

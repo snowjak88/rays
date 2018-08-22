@@ -1,5 +1,7 @@
 package org.snowjak.rays.texture;
 
+import org.snowjak.rays.interact.DescribesSurface;
+import org.snowjak.rays.interact.SurfaceDescriptor;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 
 /**
@@ -8,7 +10,7 @@ import org.snowjak.rays.spectrum.colorspace.RGB;
  * @author snowjak88
  *
  */
-public class ConstantTexture {
+public class ConstantTexture extends Texture {
 	
 	private final RGB rgb;
 	
@@ -17,7 +19,8 @@ public class ConstantTexture {
 		this.rgb = rgb;
 	}
 	
-	public RGB getRgb() {
+	@Override
+	public <S extends DescribesSurface<S>> RGB getRGB(SurfaceDescriptor<S> surfaceDescriptor) {
 		
 		return rgb;
 	}

@@ -14,7 +14,7 @@ import org.snowjak.rays.geometry.util.AbstractVector;
  */
 public abstract class Colorspace<C extends Colorspace<C, T>, T extends AbstractVector<T>> {
 	
-	private T v;
+	private T representation;
 	private transient Map<Class<? extends Colorspace<?, ?>>, Converter<C, ?>> converters;
 	
 	/**
@@ -24,7 +24,7 @@ public abstract class Colorspace<C extends Colorspace<C, T>, T extends AbstractV
 	 */
 	public Colorspace(T representation) {
 		
-		this.v = representation;
+		this.representation = representation;
 		this.converters = new HashMap<>();
 		registerConverters(converters::put);
 	}
@@ -44,7 +44,7 @@ public abstract class Colorspace<C extends Colorspace<C, T>, T extends AbstractV
 	 */
 	public T get() {
 		
-		return v;
+		return representation;
 	}
 	
 	/**

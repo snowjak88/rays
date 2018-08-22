@@ -1,6 +1,12 @@
 package org.snowjak.rays.texture;
 
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Base64;
+
+import javax.imageio.ImageIO;
 
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.interact.DescribesSurface;
@@ -18,7 +24,8 @@ import org.snowjak.rays.texture.mapping.TextureMapping;
  */
 public class ImageTexture extends Texture {
 	
-	private final BufferedImage image;
+	private String png;
+	private transient BufferedImage image;
 	
 	public ImageTexture(BufferedImage image) {
 		
@@ -29,8 +36,26 @@ public class ImageTexture extends Texture {
 		
 		super(textureMapping);
 		
+		try {
+			
+			final var imageDataOS = new ByteArrayOutputStream();
+			ImageIO.write(image, "png", ImageIO.createImageOutputStream(imageDataOS));
+			
+			png = Base64.getEncoder().encodeToString(imageDataOS.toByteArray());
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		assert (image != null);
 		this.image = image;
+	}
+	
+	public ImageTexture(String pngBase64, TextureMapping textureMapping) {
+		
+		super(textureMapping);
+		
+		this.png = pngBase64;
 	}
 	
 	/**
@@ -46,13 +71,28 @@ public class ImageTexture extends Texture {
 		
 		final Point2D imgPoint = getTextureMapping().transform(surfaceDescriptor);
 		
-		final int imgX = (int) (imgPoint.getX() * (double) image.getWidth());
-		final int imgY = (int) (imgPoint.getY() * (double) image.getHeight());
+		final int imgX = (int) (imgPoint.getX() * (double) getImage().getWidth());
+		final int imgY = (int) (imgPoint.getY() * (double) getImage().getHeight());
 		
-		if (imgX < 0 || imgX >= image.getWidth() || imgY < 0 || imgY >= image.getHeight())
+		if (imgX < 0 || imgX >= getImage().getWidth() || imgY < 0 || imgY >= getImage().getHeight())
 			return RGB.BLACK;
 		
-		return RGB.fromPacked(image.getRGB(imgX, imgY));
+		return RGB.fromPacked(getImage().getRGB(imgX, imgY));
+	}
+	
+	public BufferedImage getImage() {
+		
+		if (image == null)
+			try {
+				
+				final var imageDataIS = new ByteArrayInputStream(Base64.getDecoder().decode(this.png));
+				image = ImageIO.read(imageDataIS);
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		
+		return image;
 	}
 	
 }
