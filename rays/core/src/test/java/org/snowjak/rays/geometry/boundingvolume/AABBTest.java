@@ -2,11 +2,13 @@ package org.snowjak.rays.geometry.boundingvolume;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
 import org.junit.Test;
+import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
@@ -125,6 +127,35 @@ public class AABBTest {
 		
 		assertFalse("Expected miss is a hit!", aabb.isIntersecting(rayMiss));
 		assertTrue("Expected hit is a miss!", aabb.isIntersecting(rayHit));
+	}
+	
+	@Test
+	public void testSerialization() {
+		
+		final var aabb = new AABB(new Point3D(1, 2, 3), new Point3D(2, 3, 4));
+		final var expected = "{\"minExtent\":{\"x\":1.0,\"y\":2.0,\"z\":3.0},\"maxExtent\":{\"x\":2.0,\"y\":3.0,\"z\":4.0}}";
+		
+		final var result = Settings.getInstance().getGson().toJson(aabb);
+		
+		assertEquals(expected, result);
+	}
+	
+	@Test
+	public void testDeserialization() {
+		
+		final var json = "{\"minExtent\":{\"x\":1.0,\"y\":2.0,\"z\":3.0},\"maxExtent\":{\"x\":2.0,\"y\":3.0,\"z\":4.0}}";
+		final var expected = new AABB(new Point3D(1, 2, 3), new Point3D(2, 3, 4));
+		
+		final var result = Settings.getInstance().getGson().fromJson(json, AABB.class);
+		
+		assertNotNull(result);
+		assertEquals(expected.getMinExtent().getX(), result.getMinExtent().getX(), 0.00001);
+		assertEquals(expected.getMinExtent().getY(), result.getMinExtent().getY(), 0.00001);
+		assertEquals(expected.getMinExtent().getZ(), result.getMinExtent().getZ(), 0.00001);
+		
+		assertEquals(expected.getMaxExtent().getX(), result.getMaxExtent().getX(), 0.00001);
+		assertEquals(expected.getMaxExtent().getY(), result.getMaxExtent().getY(), 0.00001);
+		assertEquals(expected.getMaxExtent().getZ(), result.getMaxExtent().getZ(), 0.00001);
 	}
 	
 }

@@ -28,7 +28,8 @@ import org.snowjak.rays.transform.Transform;
 public class AABB {
 	
 	private Point3D minExtent, maxExtent;
-	private double volume = -1;
+	
+	private transient double volume = -1;
 	
 	/**
 	 * Given an existing AABB (assumed to be given in object-local coordinates), and
@@ -165,6 +166,7 @@ public class AABB {
 	 * @return a {@link Collection} containing all 8 corners of this AABB, in no
 	 *         particular order.
 	 */
+	@Transient
 	public Collection<Point3D> getCorners() {
 		
 		return Arrays.asList(minExtent, maxExtent, new Point3D(minExtent.getX(), minExtent.getY(), maxExtent.getZ()),

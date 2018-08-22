@@ -15,16 +15,16 @@ public class Matrix {
 	//
 	// Computing the determinant is an expensive operation.
 	// We will compute it only once, and cache it here.
-	private double determinant;
-	private boolean determinantSet = false;
+	private transient double determinant;
+	private transient boolean determinantSet = false;
 	
 	//
 	// Ditto for the matrix's transpose.
-	private Matrix transpose = null;
+	private transient Matrix transpose = null;
 	
 	//
 	// Ditto for the matrix's inverse.
-	private Matrix inverse = null;
+	private transient Matrix inverse = null;
 	
 	//@formatter:off
 	/**

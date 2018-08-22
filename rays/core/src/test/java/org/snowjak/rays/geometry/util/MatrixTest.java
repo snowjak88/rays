@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Matrix;
 
 public class MatrixTest {
@@ -97,6 +98,26 @@ public class MatrixTest {
 		double result = a.trace();
 		
 		assertEquals(-4d, result, 0.0001);
+	}
+	
+	@Test
+	public void testSerialization() {
+		
+		final var expected = "{\"values\":[[1.0,3.0,-8.0,4.0],[-4.0,3.0,6.0,7.0],[2.0,7.0,-9.0,5.0],[5.0,2.0,0.0,1.0]]}";
+		
+		final var result = Settings.getInstance().getGson().toJson(this.a);
+		
+		assertEquals(expected, result);
+	}
+	
+	@Test
+	public void testDeserialization() {
+		
+		final var json = "{\"values\":[[1.0,3.0,-8.0,4.0],[-4.0,3.0,6.0,7.0],[2.0,7.0,-9.0,5.0],[5.0,2.0,0.0,1.0]]}";
+		
+		final var result = Settings.getInstance().getGson().fromJson(json, Matrix.class);
+		
+		assertTrue(this.a.equals(result));
 	}
 	
 }
