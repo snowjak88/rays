@@ -12,8 +12,9 @@ import org.snowjak.rays.material.Material;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.shape.Shape;
 import org.snowjak.rays.transform.Transform;
+import org.snowjak.rays.transform.Transformable;
 
-public class Primitive implements Interactable<Primitive> {
+public class Primitive implements Interactable<Primitive>, Transformable {
 	
 	private final Shape shape;
 	private final Material material;

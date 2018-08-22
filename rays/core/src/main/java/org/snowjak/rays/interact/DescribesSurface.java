@@ -4,7 +4,6 @@ import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.sample.Sample;
-import org.snowjak.rays.transform.Transformable;
 
 /**
  * Denotes that an object can report {@link SurfaceDescriptor}s for various
@@ -12,7 +11,7 @@ import org.snowjak.rays.transform.Transformable;
  * 
  * @author snowjak88
  */
-public interface DescribesSurface<D extends DescribesSurface<D>> extends Transformable {
+public interface DescribesSurface<D extends DescribesSurface<D>> {
 	
 	/**
 	 * Returns <code>true</code> if the given {@link Ray} at least comes

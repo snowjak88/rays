@@ -2,6 +2,8 @@ package org.snowjak.rays;
 
 import org.snowjak.rays.acceleration.AccelerationStructure;
 import org.snowjak.rays.camera.Camera;
+import org.snowjak.rays.geometry.Ray;
+import org.snowjak.rays.interact.Interaction;
 
 /**
  * A Scene represents everything to be rendered:
@@ -33,5 +35,17 @@ public class Scene {
 	public Camera getCamera() {
 		
 		return camera;
+	}
+	
+	/**
+	 * Get the {@link Interaction} closest to the given {@link Ray}'s origin, or
+	 * <code>null</code> if no such Interaction exists.
+	 * 
+	 * @param ray
+	 * @return
+	 */
+	public Interaction<Primitive> getInteraction(Ray ray) {
+		
+		return accelerationStructure.getInteraction(ray);
 	}
 }
