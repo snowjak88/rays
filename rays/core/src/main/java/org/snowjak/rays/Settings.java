@@ -16,6 +16,9 @@ import org.snowjak.rays.shape.PlaneShape;
 import org.snowjak.rays.shape.Shape;
 import org.snowjak.rays.shape.SphereShape;
 import org.snowjak.rays.spectrum.ColorMappingFunctions;
+import org.snowjak.rays.spectrum.colorspace.Colorspace;
+import org.snowjak.rays.spectrum.colorspace.RGB;
+import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctions;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.spectrum.distribution.TabulatedColorMappingFunctions;
@@ -199,6 +202,17 @@ public class Settings {
 						.of(Shape.class, "type")
 						.registerSubtype(PlaneShape.class, "plane")
 						.registerSubtype(SphereShape.class, "sphere"));
+			//@formatter:on
+			
+			//
+			// Register type-adapter for Colorspace implementations.
+			//
+			//@formatter:off
+			gb.registerTypeAdapterFactory(
+				RuntimeTypeAdapterFactory
+						.of(Colorspace.class, "type")
+						.registerSubtype(RGB.class, "rgb")
+						.registerSubtype(XYZ.class, "xyz"));
 			//@formatter:on
 			
 			this.gson = gb.create();

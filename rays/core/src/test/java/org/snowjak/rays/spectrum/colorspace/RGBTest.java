@@ -1,8 +1,10 @@
 package org.snowjak.rays.spectrum.colorspace;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
+import org.snowjak.rays.Settings;
 
 public class RGBTest {
 	
@@ -105,4 +107,31 @@ public class RGBTest {
 		assertEquals("XYZ (Z) is not as expected!", 0.95050, xyz.getZ(), 0.0001);
 	}
 	
+	@Test
+	public void testSerialize() {
+		
+		final var rgb = RGB.GREEN;
+		final var expected = "{\"type\":\"rgb\",\"v\":[0.0,1.0,0.0]}";
+		
+		final var result = Settings.getInstance().getGson().toJson(rgb);
+		
+		assertEquals(expected, result);
+	}
+	
+	@Test
+	public void testDeserialize() {
+		
+		final var json = "{\"type\":\"rgb\",\"v\":[0.0,1.0,0.0]}";
+		final var expected = RGB.GREEN;
+		
+		final var result = Settings.getInstance().getGson().fromJson(json, Colorspace.class);
+		
+		assertTrue(RGB.class.isAssignableFrom(result.getClass()));
+		
+		final var rgb = (RGB) result;
+		
+		assertEquals(expected.getRed(), rgb.getRed(), 0.00001);
+		assertEquals(expected.getGreen(), rgb.getGreen(), 0.00001);
+		assertEquals(expected.getBlue(), rgb.getBlue(), 0.00001);
+	}
 }

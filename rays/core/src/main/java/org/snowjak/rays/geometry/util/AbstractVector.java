@@ -431,5 +431,4 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 			return false;
 		return true;
 	}
-	
 }

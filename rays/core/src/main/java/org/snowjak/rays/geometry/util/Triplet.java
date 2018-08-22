@@ -1,9 +1,19 @@
 package org.snowjak.rays.geometry.util;
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
+
+import org.snowjak.rays.serialization.IsLoadable;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
 
 /**
  * Represents a vector of 3 values.
@@ -58,4 +68,34 @@ public class Triplet extends AbstractVector<Triplet> implements Serializable {
 		return new Triplet(AbstractVector.apply(getAll(), other.getAll(), operator));
 	}
 	
+	public static class Loader implements IsLoadable<Triplet> {
+		
+		@Override
+		public Triplet deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+				throws JsonParseException {
+			
+			if (!json.isJsonArray())
+				throw new JsonParseException("Cannot deserialize a vector from JSON that is not given as an array!");
+			
+			final var array = json.getAsJsonArray();
+			
+			final var values = new double[array.size()];
+			for (int i = 0; i < values.length; i++)
+				values[i] = array.get(i).getAsDouble();
+			
+			return new Triplet(values);
+		}
+		
+		@Override
+		public JsonElement serialize(Triplet src, Type typeOfSrc, JsonSerializationContext context) {
+			
+			final var array = new JsonArray(3);
+			array.add(new JsonPrimitive(src.get(0)));
+			array.add(new JsonPrimitive(src.get(1)));
+			array.add(new JsonPrimitive(src.get(2)));
+			
+			return array;
+		}
+		
+	}
 }

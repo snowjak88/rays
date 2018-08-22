@@ -1,9 +1,19 @@
 package org.snowjak.rays.geometry.util;
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
+
+import org.snowjak.rays.serialization.IsLoadable;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
 
 /**
  * Represents a vector of 1 value.
@@ -57,6 +67,35 @@ public class Point extends AbstractVector<Point> implements Serializable {
 	public Point apply(Point other, BinaryOperator<Double> operator) {
 		
 		return new Point(AbstractVector.apply(getAll(), other.getAll(), operator));
+	}
+	
+	public static class Loader implements IsLoadable<Point> {
+		
+		@Override
+		public Point deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+				throws JsonParseException {
+			
+			if (!json.isJsonArray())
+				throw new JsonParseException("Cannot deserialize a vector from JSON that is not given as an array!");
+			
+			final var array = json.getAsJsonArray();
+			
+			final var values = new double[array.size()];
+			for (int i = 0; i < values.length; i++)
+				values[i] = array.get(i).getAsDouble();
+			
+			return new Point(values);
+		}
+		
+		@Override
+		public JsonElement serialize(Point src, Type typeOfSrc, JsonSerializationContext context) {
+			
+			final var array = new JsonArray(1);
+			array.add(new JsonPrimitive(src.get(0)));
+			
+			return array;
+		}
+		
 	}
 	
 }

@@ -19,23 +19,23 @@ public class RGB extends Colorspace<RGB, Triplet> {
 	/**
 	 * Represents the RGB triplet { 0, 0, 0 }
 	 */
-	public static final RGB BLACK = new RGB(0d, 0d, 0d),
-			/**
-			 * Represents the RGB triplet { 1, 1, 1 }
-			 */
-			WHITE = new RGB(1d, 1d, 1d),
-			/**
-			 * Represents the RGB triplet { 1, 0, 0 }
-			 */
-			RED = new RGB(1d, 0d, 0d),
-			/**
-			 * Represents the RGB triplet { 0, 1, 0 }
-			 */
-			GREEN = new RGB(0d, 1d, 0d),
-			/**
-			 * Represents the RGB triplet { 0, 0, 1 }
-			 */
-			BLUE = new RGB(0d, 0d, 1d);
+	public static final RGB BLACK = new RGB(0d, 0d, 0d);
+	/**
+	 * Represents the RGB triplet { 1, 1, 1 }
+	 */
+	public static final RGB WHITE = new RGB(1d, 1d, 1d);
+	/**
+	 * Represents the RGB triplet { 1, 0, 0 }
+	 */
+	public static final RGB RED = new RGB(1d, 0d, 0d);
+	/**
+	 * Represents the RGB triplet { 0, 1, 0 }
+	 */
+	public static final RGB GREEN = new RGB(0d, 1d, 0d);
+	/**
+	 * Represents the RGB triplet { 0, 0, 1 }
+	 */
+	public static final RGB BLUE = new RGB(0d, 0d, 1d);
 	
 	//@formatter:off
 	private static final Matrix __CONVERSION_TO_XYZ =
