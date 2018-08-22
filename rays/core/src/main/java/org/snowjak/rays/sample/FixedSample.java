@@ -9,7 +9,6 @@ import java.util.NoSuchElementException;
 
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Point2D;
-import org.snowjak.rays.sampler.Sampler;
 
 /**
  * A {@link Sample} implementation that contains pregenerated lists of
@@ -33,8 +32,6 @@ public class FixedSample implements Sample {
 	private static final List<Double> DEFAULT_ADDITIONAL_1D_SAMPLES = Collections.unmodifiableList(Arrays.asList(0.5d));
 	private static final List<Point2D> DEFAULT_ADDITIONAL_2D_SAMPLES = Collections
 			.unmodifiableList(Arrays.asList(new Point2D(0.5, 0.5)));
-	
-	private final Sampler sampler;
 	
 	private Point2D filmPoint;
 	private Point2D lensUV;
@@ -63,9 +60,9 @@ public class FixedSample implements Sample {
 	 * <dd>{ (0.5,0.5) }</dd>
 	 * </dl>
 	 */
-	public FixedSample(Sampler sampler) {
+	public FixedSample() {
 		
-		this(sampler, Point2D.ZERO, Point2D.HALF, 0.5d, DEFAULT_ADDITIONAL_1D_SAMPLES, DEFAULT_ADDITIONAL_2D_SAMPLES);
+		this(Point2D.ZERO, Point2D.HALF, 0.5d, DEFAULT_ADDITIONAL_1D_SAMPLES, DEFAULT_ADDITIONAL_2D_SAMPLES);
 	}
 	
 	/**
@@ -79,12 +76,8 @@ public class FixedSample implements Sample {
 	 * @param additional1DSamples
 	 * @param additional2DSamples
 	 */
-	public FixedSample(Sampler sampler, Point2D filmPoint, Point2D lensUV, double t, List<Double> additional1DSamples,
+	public FixedSample(Point2D filmPoint, Point2D lensUV, double t, List<Double> additional1DSamples,
 			List<Point2D> additional2DSamples) {
-		
-		assert (sampler != null);
-		
-		this.sampler = sampler;
 		
 		this.filmPoint = filmPoint;
 		this.lensUV = lensUV;
@@ -212,12 +205,6 @@ public class FixedSample implements Sample {
 	protected void setT(double t) {
 		
 		this.t = t;
-	}
-	
-	@Override
-	public Sampler getSampler() {
-		
-		return sampler;
 	}
 	
 }

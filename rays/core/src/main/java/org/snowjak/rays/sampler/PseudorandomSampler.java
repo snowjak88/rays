@@ -87,7 +87,7 @@ public class PseudorandomSampler extends Sampler {
 				.mapToObj(i -> new Point2D(Settings.RND.nextDouble(), Settings.RND.nextDouble()))
 				.collect(Collectors.toList());
 		
-		final var result = new FixedSample(this, filmPoint, lensUV, t, additional1dSamples, additional2dSamples);
+		final var result = new FixedSample(filmPoint, lensUV, t, additional1dSamples, additional2dSamples);
 		
 		currentPixelSampleNumber++;
 		if (currentPixelSampleNumber >= getSamplesPerPixel()) {

@@ -131,7 +131,7 @@ public class BestCandidateSampler extends Sampler {
 		final double t = tSamples[currentBlockX * blockSize * getSamplesPerPixel()
 				+ currentBlockY * getSamplesPerPixel() + currentPixelSample];
 		
-		final var result = new FixedSample(this, filmPoint, lensPoint, t, generateSamples(getAdditional1DSamples(),
+		final var result = new FixedSample(filmPoint, lensPoint, t, generateSamples(getAdditional1DSamples(),
 				() -> Settings.RND.nextDouble(), (d1, d2) -> pow(d1 - d2, 2), (d) -> true, (d) -> {
 				}),
 				generateSamples(getAdditional2DSamples(),

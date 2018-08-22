@@ -3,7 +3,6 @@ package org.snowjak.rays.sample;
 import java.io.Serializable;
 
 import org.snowjak.rays.geometry.Point2D;
-import org.snowjak.rays.sampler.Sampler;
 
 /**
  * Represents a single sample-point, along multiple dimensions:
@@ -71,9 +70,4 @@ public interface Sample extends Serializable {
 		
 		return new Point2D(0.5d, 0.5d);
 	}
-	
-	/**
-	 * @return the {@link Sampler} which generated this Sample
-	 */
-	public Sampler getSampler();
 }

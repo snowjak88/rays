@@ -5,8 +5,6 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.sample.Sample;
-import org.snowjak.rays.sampler.PseudorandomSampler;
-import org.snowjak.rays.sampler.Sampler;
 
 public class BoxFilterTest {
 	
@@ -34,12 +32,6 @@ public class BoxFilterTest {
 			public double getT() {
 				
 				return 0;
-			}
-			
-			@Override
-			public Sampler getSampler() {
-				
-				return new PseudorandomSampler(0, 0, 3, 3, 1);
 			}
 			
 		};
