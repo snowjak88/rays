@@ -121,7 +121,7 @@ public abstract class Camera implements Transformable {
 	public Function<Double, Double> getYConverter() {
 		
 		if (this.yConversion == null)
-			this.yConversion = (pixelY) -> (pixelY - pixelHeight / 2d) * (worldHeight / pixelHeight);
+			this.yConversion = (pixelY) -> -(pixelY - pixelHeight / 2d) * (worldHeight / pixelHeight);
 		
 		return yConversion;
 	}

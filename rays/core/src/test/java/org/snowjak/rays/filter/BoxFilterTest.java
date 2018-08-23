@@ -11,7 +11,7 @@ public class BoxFilterTest {
 	@Test
 	public void testGetContribution() {
 		
-		final var f = new BoxFilter(2);
+		final var f = new BoxFilter(1);
 		
 		@SuppressWarnings("serial")
 		final var s = new Sample() {

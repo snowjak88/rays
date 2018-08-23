@@ -20,7 +20,7 @@ public class BoxFilter implements Filter {
 	public BoxFilter(int extent) {
 		
 		this.extent = extent;
-		this.pixelsInBox = extent * extent;
+		this.pixelsInBox = (extent + 1) * (extent + 1);
 	}
 	
 	@Override

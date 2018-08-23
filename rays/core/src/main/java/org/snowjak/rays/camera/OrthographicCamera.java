@@ -46,7 +46,7 @@ public class OrthographicCamera extends Camera {
 		// image-plane -- i.e., in the direction (0,0,1).
 		
 		final var localPoint = new Point3D(getXConverter().apply(sample.getFilmPoint().getX()),
-				-(getYConverter().apply(sample.getFilmPoint().getY())), 0);
+				getYConverter().apply(sample.getFilmPoint().getY()), 0);
 		final var localRay = new Ray(localPoint, Vector3D.K);
 		
 		//

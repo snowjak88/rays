@@ -46,7 +46,8 @@ public class PathTracingRenderer extends Renderer {
 		//
 		//
 		//
-		final var mat = interaction.getInteracted().getMaterial();
+		final var primitive = interaction.getInteracted();
+		final var mat = primitive.getMaterial();
 		
 		Spectrum energy = new SpectralPowerDistribution();
 		
@@ -62,13 +63,14 @@ public class PathTracingRenderer extends Renderer {
 			//
 			// If the direction to the light is on the other side of the surface from the
 			// normal, then we won't be able to see it and it doesn't count.
-			if (lightV.normalize().dotProduct(Vector3D.from(interaction.getNormal())) < 0d)
+			final var cos_i = lightV.normalize().dotProduct(Vector3D.from(interaction.getNormal()));
+			if (cos_i < 0d)
 				continue;
 				
 			//
 			// Calculate the total energy available after falloff.
 			final var falloff = 1d / lightV.getMagnitudeSq();
-			final var lightIrradiance = light.getRadiance(lightP, interaction).multiply(falloff);
+			final var lightIrradiance = light.getRadiance(lightP, interaction).multiply(falloff).multiply(cos_i);
 			
 			totalDirectLightingIrradiance = totalDirectLightingIrradiance.add(lightIrradiance);
 		}

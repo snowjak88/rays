@@ -14,6 +14,7 @@ import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.light.Light;
 import org.snowjak.rays.light.PointLight;
 import org.snowjak.rays.material.LambertianMaterial;
+import org.snowjak.rays.material.PerfectMirrorMaterial;
 import org.snowjak.rays.renderer.PathTracingRenderer;
 import org.snowjak.rays.sampler.PseudorandomSampler;
 import org.snowjak.rays.shape.SphereShape;
@@ -25,10 +26,17 @@ public class Test {
 	
 	public static void main(String[] args) {
 		
-		final var primitives = Arrays
-				.asList(new Primitive(new SphereShape(1.0), new LambertianMaterial(new ConstantTexture(RGB.WHITE))));
-		final var camera = new PinholeCamera(400, 300, 4, 3, 6, new TranslationTransform(0, 0, -10));
-		final Collection<Light> lights = Arrays.asList(new PointLight(new Point3D(0, 3, -1), new RGB(50, 50, 50)));
+		final var primitives = Arrays.asList(
+				new Primitive(new SphereShape(0.5, new TranslationTransform(0, 0, 0)), new PerfectMirrorMaterial()),
+				new Primitive(new SphereShape(0.5, new TranslationTransform(-1, 0, 0)),
+						new LambertianMaterial(new ConstantTexture(RGB.GREEN))),
+				new Primitive(new SphereShape(0.5, new TranslationTransform(+1, 0, 0)),
+						new LambertianMaterial(new ConstantTexture(RGB.RED))));
+		
+		final var camera = new PinholeCamera(400, 300, 4, 3, 6, new TranslationTransform(0, 0, -12));
+		
+		final Collection<Light> lights = Arrays.asList(new PointLight(new Point3D(0, 3, -2),
+				Settings.getInstance().getIlluminatorSpectralPowerDistribution().multiply(6)));
 		
 		final var scene = new Scene(primitives, camera, lights);
 		
@@ -41,7 +49,6 @@ public class Test {
 			ImageIO.write(film.getImage(), "png", new File("result.png"));
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

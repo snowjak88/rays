@@ -63,9 +63,9 @@ public class Film {
 		final int filmX = (int) estimate.getSample().getFilmPoint().getX(),
 				filmY = (int) estimate.getSample().getFilmPoint().getY();
 		
-		for (int pixelX = max(0, filmX - filter.getExtentX()); pixelX <= min(height - 1,
+		for (int pixelX = max(0, filmX - filter.getExtentX()); pixelX <= min(width - 1,
 				filmX + filter.getExtentX()); pixelX++)
-			for (int pixelY = max(0, filmY - filter.getExtentY()); pixelY <= min(width - 1,
+			for (int pixelY = max(0, filmY - filter.getExtentY()); pixelY <= min(height - 1,
 					filmY + filter.getExtentY()); pixelY++)
 				if (filter.isContributing(estimate.getSample(), pixelX, pixelY)) {
 					
