@@ -12,7 +12,8 @@ import org.snowjak.rays.interact.Interaction;
 
 public class HierarchicalBoundingBox implements AccelerationStructure {
 	
-	private TreeNode root = null;
+	private transient TreeNode root = null;
+	private Collection<Primitive> primitives;
 	
 	public HierarchicalBoundingBox(Primitive... primitives) {
 		
@@ -23,6 +24,8 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 		
 		assert (primitives != null);
 		assert (!primitives.isEmpty());
+		
+		this.primitives = primitives;
 		
 		final LinkedList<TreeNode> nodes = primitives.stream().map(p -> new LeafNode(p))
 				.collect(Collectors.toCollection(LinkedList::new));
@@ -99,6 +102,12 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 			return result2;
 		
 		return null;
+	}
+	
+	@Override
+	public Collection<Primitive> getPrimitives() {
+		
+		return primitives;
 	}
 	
 	static abstract class TreeNode {
@@ -223,4 +232,5 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 		}
 		
 	}
+	
 }

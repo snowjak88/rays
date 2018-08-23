@@ -1,6 +1,9 @@
 package org.snowjak.rays;
 
+import java.util.Collection;
+
 import org.snowjak.rays.acceleration.AccelerationStructure;
+import org.snowjak.rays.acceleration.HierarchicalBoundingBox;
 import org.snowjak.rays.camera.Camera;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.interact.Interaction;
@@ -18,8 +21,15 @@ import org.snowjak.rays.interact.Interaction;
  */
 public class Scene {
 	
-	private final AccelerationStructure accelerationStructure;
-	private final Camera camera;
+	private Collection<Primitive> primitives = null;
+	private transient AccelerationStructure accelerationStructure = null;
+	private Camera camera;
+	
+	public Scene(Collection<Primitive> primitives, Camera camera) {
+		
+		this.primitives = primitives;
+		this.camera = camera;
+	}
 	
 	public Scene(AccelerationStructure accelerationStructure, Camera camera) {
 		
@@ -28,6 +38,9 @@ public class Scene {
 	}
 	
 	public AccelerationStructure getAccelerationStructure() {
+		
+		if (accelerationStructure == null)
+			accelerationStructure = new HierarchicalBoundingBox(primitives);
 		
 		return accelerationStructure;
 	}

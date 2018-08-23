@@ -1,5 +1,7 @@
 package org.snowjak.rays.acceleration;
 
+import java.util.Collection;
+
 import org.snowjak.rays.Primitive;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.interact.Interaction;
@@ -22,5 +24,10 @@ public interface AccelerationStructure {
 	 * @return
 	 */
 	public Interaction<Primitive> getInteraction(Ray ray);
+	
+	/**
+	 * @return all {@link Primitive}s held in this AccelerationStructure
+	 */
+	public Collection<Primitive> getPrimitives();
 	
 }
