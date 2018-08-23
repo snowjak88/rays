@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.util.Base64;
 
 import javax.imageio.ImageIO;
@@ -25,6 +26,7 @@ import org.snowjak.rays.texture.mapping.TextureMapping;
 public class ImageTexture extends Texture {
 	
 	private String png;
+	private URL url;
 	private transient BufferedImage image;
 	
 	public ImageTexture(BufferedImage image) {
@@ -51,11 +53,33 @@ public class ImageTexture extends Texture {
 		this.image = image;
 	}
 	
+	public ImageTexture(String pngBase64) {
+		
+		this(pngBase64, null);
+	}
+	
 	public ImageTexture(String pngBase64, TextureMapping textureMapping) {
 		
 		super(textureMapping);
 		
 		this.png = pngBase64;
+	}
+	
+	public ImageTexture(URL image) {
+		
+		this(image, null);
+	}
+	
+	public ImageTexture(URL image, TextureMapping textureMapping) {
+		
+		super(textureMapping);
+		
+		this.url = image;
+		try {
+			this.image = ImageIO.read(url);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -85,8 +109,14 @@ public class ImageTexture extends Texture {
 		if (image == null)
 			try {
 				
-				final var imageDataIS = new ByteArrayInputStream(Base64.getDecoder().decode(this.png));
-				image = ImageIO.read(imageDataIS);
+				if (this.png != null && !this.png.isEmpty()) {
+					final var imageDataIS = new ByteArrayInputStream(Base64.getDecoder().decode(this.png));
+					image = ImageIO.read(imageDataIS);
+				}
+				
+				if (this.url != null) {
+					image = ImageIO.read(url);
+				}
 				
 			} catch (IOException e) {
 				e.printStackTrace();
