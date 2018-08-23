@@ -85,7 +85,7 @@ public class PerfectMirrorMaterial implements Material {
 	 * Computes:
 	 * 
 	 * <pre>
-	 * r = v - 2(v . n)n
+	 * r = -v + 2(v . n)n
 	 * </pre>
 	 * 
 	 * where {@code .} is the dot-product
@@ -99,7 +99,7 @@ public class PerfectMirrorMaterial implements Material {
 		
 		final var nv = Vector3D.from(n).normalize();
 		
-		return v.subtract(nv.multiply(2d * v.dotProduct(nv)));
+		return v.negate().add(nv.multiply(2d * v.dotProduct(nv)));
 	}
 	
 	@Override
