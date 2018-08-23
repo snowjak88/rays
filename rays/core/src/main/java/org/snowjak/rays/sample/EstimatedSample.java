@@ -3,6 +3,7 @@ package org.snowjak.rays.sample;
 import java.io.Serializable;
 
 import org.snowjak.rays.spectrum.Spectrum;
+import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 /**
  * Represents the result of estimating a single {@link Sample}.
@@ -15,6 +16,17 @@ public class EstimatedSample implements Serializable {
 	private static final long serialVersionUID = -2042013448563306365L;
 	private final Sample sample;
 	private final Spectrum radiance;
+	
+	/**
+	 * Construct a 0-energy EstimatedSample.
+	 * 
+	 * @param sample
+	 * @return
+	 */
+	public static EstimatedSample zero(TracedSample sample) {
+		
+		return new EstimatedSample(sample.getSample(), new SpectralPowerDistribution());
+	}
 	
 	public EstimatedSample(Sample sample, Spectrum radiance) {
 		

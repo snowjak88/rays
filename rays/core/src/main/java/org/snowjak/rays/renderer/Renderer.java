@@ -6,6 +6,7 @@ import org.snowjak.rays.sample.EstimatedSample;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.sample.TracedSample;
 import org.snowjak.rays.sampler.Sampler;
+import org.snowjak.rays.spectrum.Spectrum;
 
 /**
  * The Renderer is responsible for taking {@link Sample}s from a
@@ -90,6 +91,11 @@ public abstract class Renderer {
 	/**
 	 * Given a {@link TracedSample}, estimate the incident energy resulting from the
 	 * given {@link Scene}.
+	 * <p>
+	 * Does <strong>not</strong> return <code>null</code>. If a given estimate
+	 * yields no incident energy, then this returns an {@link EstimatedSample} with
+	 * a 0-energy {@link Spectrum}.
+	 * </p>
 	 * 
 	 * @param sample
 	 * @return
