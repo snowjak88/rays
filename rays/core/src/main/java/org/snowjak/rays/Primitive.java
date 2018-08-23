@@ -62,7 +62,11 @@ public class Primitive implements Interactable<Primitive>, Transformable {
 	@Override
 	public SurfaceDescriptor<Primitive> getSurface(Ray ray) {
 		
-		return new SurfaceDescriptor<>(this, shape.getSurface(ray));
+		final var sd = shape.getSurface(ray);
+		if (sd == null)
+			return null;
+		
+		return new SurfaceDescriptor<>(this, sd);
 	}
 	
 	@Override

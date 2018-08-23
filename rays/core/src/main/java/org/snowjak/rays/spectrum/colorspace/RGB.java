@@ -197,7 +197,7 @@ public class RGB extends Colorspace<RGB, Triplet> {
 		registry.register(RGB.class, (rgb) -> rgb);
 		
 		registry.register(XYZ.class, (rgb) -> new XYZ(__CONVERSION_TO_XYZ.multiply(
-				rgb.get().clamp(0d, 1d).apply(c -> (c <= 0.04045d) ? (c / 12.92d) : (pow((c + 0.055d) / 1.055d, 2.4d))),
+				rgb.get().apply(c -> (c <= 0.04045d) ? (c / 12.92d) : (pow((c + 0.055d) / 1.055d, 2.4d))),
 				0d)));
 	}
 	

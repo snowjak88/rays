@@ -36,19 +36,22 @@ public class PinholeCamera extends Camera {
 	private double focalLength;
 	private transient Vector3D focalPoint;
 	
-	public PinholeCamera(double width, double height, double focalLength) {
+	public PinholeCamera(double pixelWidth, double pixelHeight, double worldWidth, double worldHeight,
+			double focalLength) {
 		
-		this(width, height, focalLength, Collections.emptyList());
+		this(pixelWidth, pixelHeight, worldWidth, worldHeight, focalLength, Collections.emptyList());
 	}
 	
-	public PinholeCamera(double width, double height, double focalLength, Transform... worldToLocal) {
+	public PinholeCamera(double pixelWidth, double pixelHeight, double worldWidth, double worldHeight,
+			double focalLength, Transform... worldToLocal) {
 		
-		this(width, height, focalLength, Arrays.asList(worldToLocal));
+		this(pixelWidth, pixelHeight, worldWidth, worldHeight, focalLength, Arrays.asList(worldToLocal));
 	}
 	
-	public PinholeCamera(double width, double height, double focalLength, Collection<Transform> worldToLocal) {
+	public PinholeCamera(double pixelWidth, double pixelHeight, double worldWidth, double worldHeight,
+			double focalLength, Collection<Transform> worldToLocal) {
 		
-		super(width, height, worldToLocal);
+		super(pixelWidth, pixelHeight, worldWidth, worldHeight, worldToLocal);
 		this.focalLength = focalLength;
 	}
 	
@@ -58,8 +61,8 @@ public class PinholeCamera extends Camera {
 		if (focalPoint == null)
 			focalPoint = new Vector3D(0, 0, focalLength);
 		
-		final var imagePlanePoint = new Point3D(sample.getFilmPoint().getX() - getHalfWidth(),
-				-(sample.getFilmPoint().getY() - getHalfHeight()), 0);
+		final var imagePlanePoint = new Point3D(getXConverter().apply(sample.getFilmPoint().getX()),
+				-(getXConverter().apply(sample.getFilmPoint().getY())), 0);
 		final var direction = focalPoint.subtract(imagePlanePoint).normalize();
 		
 		return new TracedSample(sample, localToWorld(new Ray(imagePlanePoint, direction)));

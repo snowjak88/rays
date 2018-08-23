@@ -19,9 +19,9 @@ public class OrthographicCameraTest {
 	@Test
 	public void testTrace() {
 		
-		final OrthographicCamera camera = new OrthographicCamera(4, 4);
+		final OrthographicCamera camera = new OrthographicCamera(400, 400, 4, 4);
 		
-		final var sample = new FixedSample(new Point2D(1, 2), Point2D.ZERO, 0, Collections.emptyList(),
+		final var sample = new FixedSample(new Point2D(100, 200), Point2D.ZERO, 0, Collections.emptyList(),
 				Collections.emptyList());
 		final var result = camera.trace(sample);
 		
@@ -39,10 +39,10 @@ public class OrthographicCameraTest {
 	@Test
 	public void testTrace_transformed() {
 		
-		final OrthographicCamera camera = new OrthographicCamera(4, 4, new TranslationTransform(1, 1, 0),
+		final OrthographicCamera camera = new OrthographicCamera(400, 400, 4, 4, new TranslationTransform(1, 1, 0),
 				new RotationTransform(Vector3D.J, 45));
 		
-		final var sample = new FixedSample(new Point2D(1, 2), Point2D.ZERO, 0, Collections.emptyList(),
+		final var sample = new FixedSample(new Point2D(100, 200), Point2D.ZERO, 0, Collections.emptyList(),
 				Collections.emptyList());
 		final var result = camera.trace(sample);
 		
@@ -60,8 +60,8 @@ public class OrthographicCameraTest {
 	@Test
 	public void testSerialize() {
 		
-		final var camera = new OrthographicCamera(4, 4);
-		final var expected = "{\"type\":\"orthographic\",\"width\":4.0,\"height\":4.0,\"worldToLocal\":[]}";
+		final var camera = new OrthographicCamera(4, 4, 4, 4);
+		final var expected = "{\"type\":\"orthographic\",\"pixelWidth\":4.0,\"pixelHeight\":4.0,\"worldWidth\":4.0,\"worldHeight\":4.0,\"worldToLocal\":[]}";
 		
 		final var result = Settings.getInstance().getGson().toJson(camera);
 		
@@ -71,8 +71,8 @@ public class OrthographicCameraTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "{\"type\":\"orthographic\",\"width\":4.0,\"height\":4.0,\"worldToLocal\":[]}";
-		final var expected = new OrthographicCamera(4, 4);
+		final var json = "{\"type\":\"orthographic\",\"pixelWidth\":4.0,\"pixelHeight\":4.0,\"worldWidth\":4.0,\"worldHeight\":4.0,\"worldToLocal\":[]}";
+		final var expected = new OrthographicCamera(4, 4, 4, 4);
 		
 		final var result = Settings.getInstance().getGson().fromJson(json, Camera.class);
 		
@@ -82,7 +82,9 @@ public class OrthographicCameraTest {
 		
 		final var camera = (OrthographicCamera) result;
 		
-		assertEquals(expected.getWidth(), camera.getWidth(), 0.00001);
-		assertEquals(expected.getHeight(), camera.getHeight(), 0.00001);
+		assertEquals(expected.getPixelWidth(), camera.getPixelWidth(), 0.00001);
+		assertEquals(expected.getPixelHeight(), camera.getPixelHeight(), 0.00001);
+		assertEquals(expected.getWorldWidth(), camera.getWorldWidth(), 0.00001);
+		assertEquals(expected.getWorldHeight(), camera.getWorldHeight(), 0.00001);
 	}
 }

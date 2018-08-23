@@ -82,6 +82,6 @@ public class Scene {
 	 */
 	public Interaction<Primitive> getInteraction(Ray ray) {
 		
-		return accelerationStructure.getInteraction(ray);
+		return getAccelerationStructure().getInteraction(ray);
 	}
 }

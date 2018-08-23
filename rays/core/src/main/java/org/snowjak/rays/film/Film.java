@@ -10,6 +10,7 @@ import org.snowjak.rays.sample.EstimatedSample;
 import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sampler.Sampler;
 import org.snowjak.rays.spectrum.Spectrum;
+import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 /**
  * A film object is responsible for accepting a series of
@@ -38,6 +39,12 @@ public class Film {
 		
 		this.receivedSpectra = new Spectrum[width][height];
 		this.receivedSpectraCounts = new int[width][height];
+		
+		for (int x = 0; x < width; x++)
+			for (int y = 0; y < height; y++) {
+				receivedSpectra[x][y] = new SpectralPowerDistribution();
+				receivedSpectraCounts[x][y] = 0;
+			}
 	}
 	
 	/**
@@ -91,8 +98,8 @@ public class Film {
 		
 		synchronized (this) {
 			
-			for (int x = 0; x < height; x++)
-				for (int y = 0; y < width; y++) {
+			for (int x = 0; x < width; x++)
+				for (int y = 0; y < height; y++) {
 					final var rgb = receivedSpectra[x][y].multiply(1d / (double) receivedSpectraCounts[x][y]).toRGB();
 					image.setRGB(x, y, rgb.toPacked());
 				}

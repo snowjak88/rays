@@ -19,9 +19,9 @@ public class PinholeCameraTest {
 	@Test
 	public void testTrace() {
 		
-		final PinholeCamera camera = new PinholeCamera(4, 4, 3);
+		final PinholeCamera camera = new PinholeCamera(400, 400, 4, 4, 3);
 		
-		final var sample = new FixedSample(new Point2D(1, 2), Point2D.ZERO, 0, Collections.emptyList(),
+		final var sample = new FixedSample(new Point2D(100, 200), Point2D.ZERO, 0, Collections.emptyList(),
 				Collections.emptyList());
 		final var result = camera.trace(sample);
 		
@@ -40,10 +40,10 @@ public class PinholeCameraTest {
 	@Test
 	public void testTrace_transformed() {
 		
-		final PinholeCamera camera = new PinholeCamera(4, 4, 3, new TranslationTransform(3, -2, 0),
+		final PinholeCamera camera = new PinholeCamera(400, 400, 4, 4, 3, new TranslationTransform(3, -2, 0),
 				new RotationTransform(Vector3D.J, -45));
 		
-		final var sample = new FixedSample(new Point2D(1, 2), Point2D.ZERO, 0, Collections.emptyList(),
+		final var sample = new FixedSample(new Point2D(100, 200), Point2D.ZERO, 0, Collections.emptyList(),
 				Collections.emptyList());
 		final var result = camera.trace(sample);
 		
@@ -62,8 +62,8 @@ public class PinholeCameraTest {
 	@Test
 	public void testSerialize() {
 		
-		final var camera = new PinholeCamera(4, 4, 3);
-		final var expected = "{\"type\":\"pinhole\",\"focalLength\":3.0,\"width\":4.0,\"height\":4.0,\"worldToLocal\":[]}";
+		final var camera = new PinholeCamera(4, 4, 4, 4, 3);
+		final var expected = "{\"type\":\"pinhole\",\"focalLength\":3.0,\"pixelWidth\":4.0,\"pixelHeight\":4.0,\"worldWidth\":4.0,\"worldHeight\":4.0,\"worldToLocal\":[]}";
 		
 		final var result = Settings.getInstance().getGson().toJson(camera);
 		
@@ -73,8 +73,8 @@ public class PinholeCameraTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "{\"type\":\"pinhole\",\"width\":4.0,\"height\":4.0,\"focalLength\":3.0,\"worldToLocal\":[]}";
-		final var expected = new PinholeCamera(4, 4, 3);
+		final var json = "{\"type\":\"pinhole\",\"focalLength\":3.0,\"pixelWidth\":4.0,\"pixelHeight\":4.0,\"worldWidth\":4.0,\"worldHeight\":4.0,\"worldToLocal\":[]}";
+		final var expected = new PinholeCamera(4, 4, 4, 4, 3);
 		
 		final var result = Settings.getInstance().getGson().fromJson(json, Camera.class);
 		
@@ -84,8 +84,10 @@ public class PinholeCameraTest {
 		
 		final var camera = (PinholeCamera) result;
 		
-		assertEquals(expected.getWidth(), camera.getWidth(), 0.00001);
-		assertEquals(expected.getHeight(), camera.getHeight(), 0.00001);
+		assertEquals(expected.getPixelWidth(), camera.getPixelWidth(), 0.00001);
+		assertEquals(expected.getPixelHeight(), camera.getPixelHeight(), 0.00001);
+		assertEquals(expected.getWorldWidth(), camera.getWorldWidth(), 0.00001);
+		assertEquals(expected.getWorldHeight(), camera.getWorldHeight(), 0.00001);
 		assertEquals(expected.getFocalLength(), camera.getFocalLength(), 0.00001);
 	}
 	

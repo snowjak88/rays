@@ -73,6 +73,8 @@ public class PathTracingRenderer extends Renderer {
 			totalDirectLightingIrradiance = totalDirectLightingIrradiance.add(lightIrradiance);
 		}
 		
+		energy = energy.add(mat.getDirectLightReflection(interaction, totalDirectLightingIrradiance));
+		
 		//
 		// Add path-traced emission
 		if (mat.isEmissive()) {

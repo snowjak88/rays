@@ -22,19 +22,21 @@ import org.snowjak.rays.transform.Transform;
  */
 public class OrthographicCamera extends Camera {
 	
-	public OrthographicCamera(double width, double height) {
+	public OrthographicCamera(double pixelWidth, double pixelHeight, double worldWidth, double worldHeight,
+			Collection<Transform> worldToLocal) {
 		
-		super(width, height);
+		super(pixelWidth, pixelHeight, worldWidth, worldHeight, worldToLocal);
 	}
 	
-	public OrthographicCamera(double width, double height, Transform... worldToLocal) {
+	public OrthographicCamera(double pixelWidth, double pixelHeight, double worldWidth, double worldHeight,
+			Transform... worldToLocal) {
 		
-		super(width, height, worldToLocal);
+		super(pixelWidth, pixelHeight, worldWidth, worldHeight, worldToLocal);
 	}
 	
-	public OrthographicCamera(double width, double height, Collection<Transform> worldToLocal) {
+	public OrthographicCamera(double pixelWidth, double pixelHeight, double worldWidth, double worldHeight) {
 		
-		super(width, height, worldToLocal);
+		super(pixelWidth, pixelHeight, worldWidth, worldHeight);
 	}
 	
 	@Override
@@ -43,8 +45,8 @@ public class OrthographicCamera extends Camera {
 		// In local-coordinates, an orthographic Ray proceeds orthogonally to the
 		// image-plane -- i.e., in the direction (0,0,1).
 		
-		final var localPoint = new Point3D(sample.getFilmPoint().getX() - getHalfWidth(),
-				sample.getFilmPoint().getY() - getHalfHeight(), 0);
+		final var localPoint = new Point3D(getXConverter().apply(sample.getFilmPoint().getX()),
+				-(getYConverter().apply(sample.getFilmPoint().getY())), 0);
 		final var localRay = new Ray(localPoint, Vector3D.K);
 		
 		//

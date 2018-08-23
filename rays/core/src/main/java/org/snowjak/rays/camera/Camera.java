@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Function;
 
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.sample.Sample;
@@ -21,28 +22,30 @@ import org.snowjak.rays.transform.Transformable;
  */
 public abstract class Camera implements Transformable {
 	
-	private double width, height;
-	private transient double halfWidth, halfHeight;
+	private double pixelWidth, pixelHeight;
+	private double worldWidth, worldHeight;
+	private transient Function<Double, Double> xConversion, yConversion;
 	private LinkedList<Transform> worldToLocal;
 	private transient LinkedList<Transform> localToWorld = null;
 	
-	public Camera(double width, double height) {
+	public Camera(double pixelWidth, double pixelHeight, double worldWidth, double worldHeight) {
 		
-		this(width, height, Collections.emptyList());
+		this(pixelWidth, pixelHeight, worldWidth, worldHeight, Collections.emptyList());
 	}
 	
-	public Camera(double width, double height, Transform... worldToLocal) {
+	public Camera(double pixelWidth, double pixelHeight, double worldWidth, double worldHeight,
+			Transform... worldToLocal) {
 		
-		this(width, height, Arrays.asList(worldToLocal));
+		this(pixelWidth, pixelHeight, worldWidth, worldHeight, Arrays.asList(worldToLocal));
 	}
 	
-	public Camera(double width, double height, Collection<Transform> worldToLocal) {
+	public Camera(double pixelWidth, double pixelHeight, double worldWidth, double worldHeight,
+			Collection<Transform> worldToLocal) {
 		
-		this.width = width;
-		this.height = height;
-		
-		this.halfWidth = width / 2d;
-		this.halfHeight = height / 2d;
+		this.pixelWidth = pixelWidth;
+		this.pixelHeight = pixelHeight;
+		this.worldWidth = worldWidth;
+		this.worldHeight = worldHeight;
 		
 		this.worldToLocal = new LinkedList<>();
 		worldToLocal.stream().forEach(t -> this.appendTransform(t));
@@ -81,23 +84,45 @@ public abstract class Camera implements Transformable {
 		worldToLocal.addLast(transform);
 	}
 	
-	public double getWidth() {
+	public double getPixelWidth() {
 		
-		return width;
+		return pixelWidth;
 	}
 	
-	public double getHeight() {
+	public double getPixelHeight() {
 		
-		return height;
+		return pixelHeight;
 	}
 	
-	public double getHalfWidth() {
+	public double getWorldWidth() {
 		
-		return halfWidth;
+		return worldWidth;
 	}
 	
-	public double getHalfHeight() {
+	public double getWorldHeight() {
 		
-		return halfHeight;
+		return worldHeight;
+	}
+	
+	/**
+	 * @return a {@link Function} mapping pixel- to world-X-coordinates
+	 */
+	public Function<Double, Double> getXConverter() {
+		
+		if (this.xConversion == null)
+			this.xConversion = (pixelX) -> (pixelX - pixelWidth / 2d) * (worldWidth / pixelWidth);
+		
+		return xConversion;
+	}
+	
+	/**
+	 * @return a {@link Function} mapping pixel- to world-Y-coordinates
+	 */
+	public Function<Double, Double> getYConverter() {
+		
+		if (this.yConversion == null)
+			this.yConversion = (pixelY) -> (pixelY - pixelHeight / 2d) * (worldHeight / pixelHeight);
+		
+		return yConversion;
 	}
 }

@@ -20,16 +20,20 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 public class PointLight implements Light {
 	
 	private Point3D position;
-	private RGB color;
-	private transient Spectrum energy = null;
+	private Spectrum energy;
 	
 	public PointLight(Point3D position, RGB color) {
 		
+		this(position, SpectralPowerDistribution.fromRGB(color));
+	}
+	
+	public PointLight(Point3D position, Spectrum energy) {
+		
 		assert (position != null);
-		assert (color != null);
+		assert (energy != null);
 		
 		this.position = position;
-		this.color = color;
+		this.energy = energy;
 	}
 	
 	public Point3D getPosition() {
@@ -37,15 +41,8 @@ public class PointLight implements Light {
 		return position;
 	}
 	
-	public RGB getColor() {
-		
-		return color;
-	}
-	
 	public Spectrum getEnergy() {
 		
-		if (energy == null)
-			energy = SpectralPowerDistribution.fromRGB(color);
 		return energy;
 	}
 	
