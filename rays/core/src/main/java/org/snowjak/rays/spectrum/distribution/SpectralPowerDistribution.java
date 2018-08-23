@@ -3,6 +3,8 @@ package org.snowjak.rays.spectrum.distribution;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -12,9 +14,17 @@ import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.Settings.ComponentSpectrumName;
 import org.snowjak.rays.geometry.util.Point;
+import org.snowjak.rays.serialization.IsLoadable;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
 
 /**
  * A {@link SpectralPowerDistribution} ("SPD") is a distribution of power-levels
@@ -376,4 +386,55 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 		return "SpectralPowerDistribution [ " + rgb.toString() + " ]";
 	}
 	
+	public static class Loader implements IsLoadable<SpectralPowerDistribution> {
+		
+		@Override
+		public SpectralPowerDistribution deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+				throws JsonParseException {
+			
+			if (!json.isJsonObject())
+				throw new JsonParseException(
+						"Cannot parse SpectralPowerDistribution if JSON is not given as an object!");
+			
+			final var obj = json.getAsJsonObject();
+			
+			if (!obj.has("low"))
+				throw new JsonParseException("Cannot parse SpectralPowerDistribution: missing [low]!");
+			if (!obj.has("high"))
+				throw new JsonParseException("Cannot parse SpectralPowerDistribution: missing [high]!");
+			if (!obj.has("data"))
+				throw new JsonParseException("Cannot parse SpectralPowerDistribution: missing [data]!");
+			
+			final var low = obj.get("low").getAsDouble();
+			final var high = obj.get("high").getAsDouble();
+			
+			if (!obj.get("data").isJsonArray())
+				throw new JsonParseException("Cannot parse SpectralPowerDistribution: [data] is not an array!");
+			
+			final var data = obj.get("data").getAsJsonArray();
+			
+			final var values = new ArrayList<Point>();
+			for (int i = 0; i < data.size(); i++)
+				values.add(new Point(data.get(i).getAsDouble()));
+			
+			return new SpectralPowerDistribution(low, high, values.toArray(new Point[0]));
+		}
+		
+		@Override
+		public JsonElement serialize(SpectralPowerDistribution src, Type typeOfSrc, JsonSerializationContext context) {
+			
+			final var obj = new JsonObject();
+			
+			obj.addProperty("low", src.getBounds().get().getFirst());
+			obj.addProperty("high", src.getBounds().get().getSecond());
+			
+			final var array = new JsonArray();
+			Arrays.stream(src.getEntries()).sequential().forEach(p -> array.add(p.get(0)));
+			
+			obj.add("data", array);
+			
+			return obj;
+		}
+		
+	}
 }

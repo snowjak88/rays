@@ -273,4 +273,36 @@ public class SpectralPowerDistributionTest {
 		assertEquals(0.25d, spd.averageOver(2.5, 3.0).get(0), 0.00001);
 	}
 	
+	@Test
+	public void testSerialize() {
+		
+		final var spd = new SpectralPowerDistribution(1.0, 8.0, new Point[] { new Point(1.0), new Point(1.0),
+				new Point(0.0), new Point(4.0), new Point(3.0), new Point(2.0), new Point(4.0), new Point(0.0) });
+		final var expected = "{\"low\":1.0,\"high\":8.0,\"data\":[1.0,1.0,0.0,4.0,3.0,2.0,4.0,0.0]}";
+		
+		final var result = Settings.getInstance().getGson().toJson(spd);
+		
+		assertEquals(expected, result);
+	}
+	
+	@Test
+	public void testDeserialize() {
+		
+		final var json = "{\"low\":1.0,\"high\":8.0,\"data\":[1.0,1.0,0.0,4.0,3.0,2.0,4.0,0.0]}";
+		final var expected = new SpectralPowerDistribution(1.0, 8.0, new Point[] { new Point(1.0), new Point(1.0),
+				new Point(0.0), new Point(4.0), new Point(3.0), new Point(2.0), new Point(4.0), new Point(0.0) });
+		
+		final var result = Settings.getInstance().getGson().fromJson(json, SpectralPowerDistribution.class);
+		
+		assertNotNull(result);
+		assertTrue(result.getBounds().isPresent());
+		assertEquals(expected.getBounds().get().getFirst(), result.getBounds().get().getFirst(), 0.00001);
+		assertEquals(expected.getBounds().get().getSecond(), result.getBounds().get().getSecond(), 0.00001);
+		
+		assertNotNull(result.getEntries());
+		assertEquals(expected.getEntries().length, result.getEntries().length);
+		
+		for (int i = 0; i < expected.getEntries().length; i++)
+			assertEquals(expected.getEntries()[i].get(0), result.getEntries()[i].get(0), 0.00001);
+	}
 }
