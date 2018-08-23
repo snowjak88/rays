@@ -1,12 +1,14 @@
 package org.snowjak.rays;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import org.snowjak.rays.acceleration.AccelerationStructure;
 import org.snowjak.rays.acceleration.HierarchicalBoundingBox;
 import org.snowjak.rays.camera.Camera;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.interact.Interaction;
+import org.snowjak.rays.light.Light;
 
 /**
  * A Scene represents everything to be rendered:
@@ -24,17 +26,30 @@ public class Scene {
 	private Collection<Primitive> primitives = null;
 	private transient AccelerationStructure accelerationStructure = null;
 	private Camera camera;
+	private Collection<Light> lights = null;
 	
 	public Scene(Collection<Primitive> primitives, Camera camera) {
 		
+		this(primitives, camera, null);
+	}
+	
+	public Scene(Collection<Primitive> primitives, Camera camera, Collection<Light> lights) {
+		
 		this.primitives = primitives;
 		this.camera = camera;
+		this.lights = lights;
 	}
 	
 	public Scene(AccelerationStructure accelerationStructure, Camera camera) {
 		
+		this(accelerationStructure, camera, null);
+	}
+	
+	public Scene(AccelerationStructure accelerationStructure, Camera camera, Collection<Light> lights) {
+		
 		this.accelerationStructure = accelerationStructure;
 		this.camera = camera;
+		this.lights = lights;
 	}
 	
 	public AccelerationStructure getAccelerationStructure() {
@@ -48,6 +63,14 @@ public class Scene {
 	public Camera getCamera() {
 		
 		return camera;
+	}
+	
+	public Collection<Light> getLights() {
+		
+		if (lights == null)
+			return Collections.emptyList();
+		
+		return lights;
 	}
 	
 	/**

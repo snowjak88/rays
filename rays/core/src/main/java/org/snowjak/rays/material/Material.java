@@ -16,6 +16,25 @@ import org.snowjak.rays.spectrum.Spectrum;
 public interface Material {
 	
 	/**
+	 * Indicates whether this Material should participate in direct-lighting.
+	 * 
+	 * @return
+	 */
+	public boolean isDirectLightable();
+	
+	/**
+	 * At the given {@link Interaction}, given the total {@code irradiance} received
+	 * from all direct-lighting, compute the energy-distribution actually reflected
+	 * back toward the eye-point.
+	 * 
+	 * @param interaction
+	 * @param irradiance
+	 * @return
+	 */
+	public <T extends Interactable<T>> Spectrum getDirectLightReflection(Interaction<T> interaction,
+			Spectrum irradiance);
+	
+	/**
 	 * Indicates whether this Material should be queried for reflection.
 	 * 
 	 * @return
@@ -30,7 +49,7 @@ public interface Material {
 	 * 
 	 * @param interaction
 	 * @param sample
-	 * @return
+	 * @return <code>null</code> if no reflection is possible
 	 */
 	public <T extends Interactable<T>> Vector3D getReflectionV(Interaction<T> interaction, Sample sample);
 	
@@ -65,7 +84,7 @@ public interface Material {
 	 * 
 	 * @return
 	 */
-	public boolean isTransmittive();
+	public boolean isTransmissive();
 	
 	/**
 	 * For the given {@link Interaction}, select a transmission-direction from this
@@ -75,7 +94,7 @@ public interface Material {
 	 * 
 	 * @param interaction
 	 * @param sample
-	 * @return
+	 * @return <code>null</code> if no transmission is possible
 	 */
 	public <T extends Interactable<T>> Vector3D getTransmissionV(Interaction<T> interaction, Sample sample);
 	
@@ -120,7 +139,7 @@ public interface Material {
 	 * 
 	 * @param interaction
 	 * @param sample
-	 * @return
+	 * @return <code>null</code> if no emission is possible
 	 */
 	public <T extends Interactable<T>> Vector3D getEmissionV(Interaction<T> interaction, Sample sample);
 	
