@@ -14,6 +14,7 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 	
 	private transient TreeNode root = null;
 	private Collection<Primitive> primitives;
+	private Collection<Primitive> unaccelerated;
 	
 	public HierarchicalBoundingBox(Primitive... primitives) {
 		
@@ -25,9 +26,10 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 		assert (primitives != null);
 		assert (!primitives.isEmpty());
 		
-		this.primitives = primitives;
+		final LinkedList<TreeNode> nodes = primitives.stream().filter(p -> p.getShape().getBoundingVolume() != null)
+				.map(p -> new LeafNode(p)).collect(Collectors.toCollection(LinkedList::new));
 		
-		final LinkedList<TreeNode> nodes = primitives.stream().map(p -> new LeafNode(p))
+		unaccelerated = primitives.stream().filter(p -> p.getShape().getBoundingVolume() == null)
 				.collect(Collectors.toCollection(LinkedList::new));
 		
 		while (nodes.size() > 1) {
@@ -67,10 +69,20 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 	@Override
 	public Interaction<Primitive> getInteraction(Ray ray) {
 		
-		if (root == null)
-			return null;
+		if (root != null) {
+			final var acceleratedIntersection = getHeldPrimitiveInteraction(root, ray);
+			if (acceleratedIntersection != null)
+				return acceleratedIntersection;
+		}
 		
-		return getHeldPrimitiveInteraction(root, ray);
+		//@formatter:off
+		return unaccelerated.stream()
+				.filter(p -> p.isIntersectableWith(ray))
+				.map(p -> p.getInteraction(ray))
+				.filter(i -> i != null)
+				.sorted((i1, i2) -> Double.compare(i1.getInteractingRay().getT(), i2.getInteractingRay().getT()))
+				.findFirst().orElse(null);
+		//@formatter:on
 	}
 	
 	private Interaction<Primitive> getHeldPrimitiveInteraction(TreeNode node, Ray ray) {
@@ -107,7 +119,22 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 	@Override
 	public Collection<Primitive> getPrimitives() {
 		
+		if (this.primitives == null)
+			this.primitives = getPrimitives(root);
+		
 		return primitives;
+	}
+	
+	private Collection<Primitive> getPrimitives(TreeNode currentNode) {
+		
+		if (currentNode.isLeaf())
+			return Arrays.asList(((LeafNode) currentNode).getPrimitive());
+		
+		final var result = new LinkedList<Primitive>();
+		result.addAll(getPrimitives(((BranchNode) currentNode).getBranch1()));
+		result.addAll(getPrimitives(((BranchNode) currentNode).getBranch2()));
+		
+		return result;
 	}
 	
 	static abstract class TreeNode {
