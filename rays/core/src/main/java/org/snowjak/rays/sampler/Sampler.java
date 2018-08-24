@@ -11,6 +11,10 @@ import org.snowjak.rays.sample.Sample;
  * {@link #reportSampleResult(FixedSample)} (e.g., to implement supersampling on
  * regions with highly-contrasting samples).
  * </p>
+ * <p>
+ * Note that, unless otherwise stated, Sampler implementations
+ * <strong>must</strong> be considered to be <strong>thread un-safe</strong>.
+ * </p>
  * 
  * @author snowjak88
  *
