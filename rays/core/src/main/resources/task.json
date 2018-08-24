@@ -1,0 +1,120 @@
+{
+	"sampler": {
+		"type": "best-candidate",
+		"xStart": 0,
+		"yStart": 0,
+		"xEnd": 399,
+		"yEnd": 299,
+		"samplesPerPixel": 4,
+		"additional1DSamples": 8,
+		"additional2DSamples": 8
+	},
+	"renderer": {
+		"type": "path-tracing",
+		"maxDepth": 4
+	},
+	"film": {
+		"width": 400,
+		"height": 300,
+		"filter": {
+			"type": "box",
+			"extent": 0
+		}
+	},
+	"scene": {
+		"primitives": [
+			{
+				"shape": {
+					"type": "sphere",
+					"radius": 0.5,
+					"worldToLocal": [
+						{
+							"type": "translate",
+							"dx": -2
+						}
+					]
+				},
+				"material": {
+					"type": "lambertian",
+					"texture": {
+						"type": "constant",
+						"rgb": [ 1, 0, 0 ]
+					}
+				}
+			},
+			{
+				"shape": {
+					"type": "sphere",
+					"radius": 0.5,
+					"worldToLocal": [
+						{
+							"type": "translate",
+							"dx": 0
+						}
+					]
+				},
+				"material": {
+					"type": "perfect-mirror"
+				}
+			},
+			{
+				"shape": {
+					"type": "sphere",
+					"radius": 0.5,
+					"worldToLocal": [
+						{
+							"type": "translate",
+							"dx": +2
+						}
+					]
+				},
+				"material": {
+					"type": "lambertian",
+					"texture": {
+						"type": "constant",
+						"rgb": [ 0, 1, 0 ]
+					}
+				}
+			},
+			{
+				"shape": {
+					"type": "plane",
+					"worldToLocal": [
+						{
+							"type": "translate",
+							"dy": -2
+						}
+					]
+				},
+				"material": {
+					"type": "lambertian",
+					"texture": {
+						"type": "constant",
+						"rgb": [ 0.5, 0.5, 0.5 ]
+					}
+				}
+			}
+		],
+		"lights": [
+			{
+				"type": "point",
+				"rgb": [ 5, 5, 5 ],
+				"position": { "x":0, "y":5, "z":0 }
+			}
+		],
+		"camera": {
+			"type": "pinhole",
+			"pixelWidth": 400,
+			"pixelHeight": 300,
+			"worldWidth": 4,
+			"worldHeight": 3,
+			"focalLength": 6,
+			"worldToLocal": [
+				{
+					"type": "translate",
+					"dz": -8
+				}
+			]
+		}
+	}
+}

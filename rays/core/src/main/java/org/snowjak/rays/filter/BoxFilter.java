@@ -10,8 +10,8 @@ import org.snowjak.rays.sample.Sample;
  */
 public class BoxFilter implements Filter {
 	
-	private final int extent;
-	private final int pixelsInBox;
+	private int extent;
+	private transient int pixelsInBox = -1;
 	
 	/**
 	 * @see BoxFilter
@@ -20,7 +20,6 @@ public class BoxFilter implements Filter {
 	public BoxFilter(int extent) {
 		
 		this.extent = extent;
-		this.pixelsInBox = (extent + 1) * (extent + 1);
 	}
 	
 	@Override
@@ -35,16 +34,24 @@ public class BoxFilter implements Filter {
 		return extent;
 	}
 	
+	public int getPixelsInBox() {
+		
+		if (pixelsInBox < 0)
+			pixelsInBox = (extent + 1) * (extent + 1);
+		
+		return pixelsInBox;
+	}
+	
 	@Override
 	public double getContribution(Sample sample, int pixelX, int pixelY) {
 		
 		if (!isContributing(sample, pixelX, pixelY))
 			return 0d;
 		
-		if (pixelsInBox == 0)
+		if (getPixelsInBox() == 0)
 			return 1d;
 		
-		return 1d / (double) pixelsInBox;
+		return 1d / (double) getPixelsInBox();
 	}
 	
 }

@@ -13,9 +13,9 @@ import org.snowjak.rays.geometry.util.Matrix;
  */
 public class TranslationTransform implements Transform {
 	
-	private double dx;
-	private double dy;
-	private double dz;
+	private double dx = 0;
+	private double dy = 0;
+	private double dz = 0;
 	
 	private transient Matrix worldToLocal = null;
 	private transient Matrix localToWorld = null;

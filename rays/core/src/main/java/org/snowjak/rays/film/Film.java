@@ -33,16 +33,21 @@ import org.snowjak.rays.spectrum.colorspace.RGB;
  */
 public class Film {
 	
-	private final Spectrum[][] receivedSpectra;
-	private final int[][] receivedSpectraCounts;
-	private final int width, height;
-	private final Filter filter;
+	private int width, height;
+	private Filter filter;
+	
+	private transient boolean initialized = false;
+	private transient Spectrum[][] receivedSpectra;
+	private transient int[][] receivedSpectraCounts;
 	
 	public Film(int width, int height, Filter filter) {
 		
 		this.width = width;
 		this.height = height;
 		this.filter = filter;
+	}
+	
+	private void initialize() {
 		
 		this.receivedSpectra = new Spectrum[width][height];
 		this.receivedSpectraCounts = new int[width][height];
@@ -52,6 +57,8 @@ public class Film {
 				receivedSpectra[x][y] = null;
 				receivedSpectraCounts[x][y] = 0;
 			}
+		
+		this.initialized = true;
 	}
 	
 	/**
@@ -66,6 +73,11 @@ public class Film {
 	 * @param estimate
 	 */
 	public void addSample(EstimatedSample estimate) {
+		
+		synchronized (this) {
+			if (!initialized)
+				initialize();
+		}
 		
 		final int filmX = (int) estimate.getSample().getFilmPoint().getX(),
 				filmY = (int) estimate.getSample().getFilmPoint().getY();
@@ -100,6 +112,11 @@ public class Film {
 	 * @return
 	 */
 	public Image getImage() {
+		
+		synchronized (this) {
+			if (!initialized)
+				initialize();
+		}
 		
 		final var image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		

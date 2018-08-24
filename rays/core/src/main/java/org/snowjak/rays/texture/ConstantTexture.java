@@ -12,7 +12,7 @@ import org.snowjak.rays.spectrum.colorspace.RGB;
  */
 public class ConstantTexture extends Texture {
 	
-	private final RGB rgb;
+	private RGB rgb;
 	
 	public ConstantTexture(RGB rgb) {
 		

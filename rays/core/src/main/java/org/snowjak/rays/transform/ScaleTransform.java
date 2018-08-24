@@ -13,9 +13,9 @@ import org.snowjak.rays.geometry.util.Matrix;
  */
 public class ScaleTransform implements Transform {
 	
-	private double sx;
-	private double sy;
-	private double sz;
+	private double sx = 1;
+	private double sy = 1;
+	private double sz = 1;
 	
 	private transient Matrix worldToLocal = null;
 	private transient Matrix worldToLocal_inverseTranspose = null;

@@ -21,7 +21,7 @@ import org.snowjak.rays.texture.Texture;
  */
 public class PerfectMirrorMaterial implements Material {
 	
-	private Texture tint;
+	private Texture tint = null;
 	
 	public PerfectMirrorMaterial() {
 		
@@ -30,12 +30,13 @@ public class PerfectMirrorMaterial implements Material {
 	
 	public PerfectMirrorMaterial(Texture tint) {
 		
-		assert (tint != null);
-		
 		this.tint = tint;
 	}
 	
 	public Texture getTint() {
+		
+		if(tint == null)
+			tint = new ConstantTexture(RGB.WHITE);
 		
 		return tint;
 	}
@@ -106,7 +107,7 @@ public class PerfectMirrorMaterial implements Material {
 	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction, Vector3D direction,
 			Spectrum incident) {
 		
-		return incident.multiply(SpectralPowerDistribution.fromRGB(tint.getRGB(interaction)));
+		return incident.multiply(SpectralPowerDistribution.fromRGB(getTint().getRGB(interaction)));
 	}
 	
 	@Override

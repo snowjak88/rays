@@ -4,7 +4,6 @@ import java.util.concurrent.Callable;
 
 import org.snowjak.rays.film.Film;
 import org.snowjak.rays.film.Film.Image;
-import org.snowjak.rays.filter.Filter;
 import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.sampler.Sampler;
@@ -20,17 +19,7 @@ public class RenderTask implements Callable<Image> {
 	private Sampler sampler = null;
 	private Renderer renderer = null;
 	private Scene scene = null;
-	
-	//
-	//
-	// Notice here -- the Film instance (which is pretty heavyweight) is transient,
-	// and so not eligible for JSON serialization.
-	// Instead, we save those fields with which we can recreate Film from scratch,
-	// if need be.
-	private int width, height;
-	private Filter filter;
-	
-	private transient Film film = null;
+	private Film film = null;
 	
 	public RenderTask(Sampler sampler, Renderer renderer, Film film, Scene scene) {
 		
@@ -38,10 +27,6 @@ public class RenderTask implements Callable<Image> {
 		this.renderer = renderer;
 		this.film = film;
 		this.scene = scene;
-		
-		this.width = film.getWidth();
-		this.height = film.getHeight();
-		this.filter = film.getFilter();
 	}
 	
 	public Sampler getSampler() {
@@ -55,9 +40,6 @@ public class RenderTask implements Callable<Image> {
 	}
 	
 	public Film getFilm() {
-		
-		if (film == null)
-			this.film = new Film(width, height, filter);
 		
 		return film;
 	}
@@ -74,8 +56,8 @@ public class RenderTask implements Callable<Image> {
 	@Override
 	public Image call() {
 		
-		renderer.render(sampler, getFilm(), scene);
-		return getFilm().getImage();
+		renderer.render(sampler, film, scene);
+		return film.getImage();
 	}
 	
 }
