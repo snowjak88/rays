@@ -53,34 +53,36 @@ public class PathTracingRenderer extends Renderer {
 		
 		//
 		// Add direct-illumination
-		Spectrum totalDirectLightingIrradiance = new SpectralPowerDistribution();
-		
-		for (Light light : scene.getLights()) {
+		if (mat.isDirectLightable()) {
+			Spectrum totalDirectLightingIrradiance = new SpectralPowerDistribution();
 			
-			final var lightP = light.sampleSurface(interaction);
-			final var lightV = Vector3D.from(lightP.subtract(interaction.getPoint()));
-			
-			//
-			// If the direction to the light is on the other side of the surface from the
-			// normal, then we won't be able to see it and it doesn't count.
-			final var cos_i = lightV.normalize().dotProduct(Vector3D.from(interaction.getNormal()));
-			if (cos_i < 0d)
-				continue;
+			for (Light light : scene.getLights()) {
 				
-			//
-			// Determine if we can see the light-source at all.
-			if (!light.isVisible(lightP, interaction, scene))
-				continue;
+				final var lightP = light.sampleSurface(interaction);
+				final var lightV = Vector3D.from(lightP.subtract(interaction.getPoint()));
 				
-			//
-			// Calculate the total energy available after falloff.
-			final var falloff = 1d / lightV.getMagnitudeSq();
-			final var lightIrradiance = light.getRadiance(lightP, interaction).multiply(falloff).multiply(cos_i);
+				//
+				// If the direction to the light is on the other side of the surface from the
+				// normal, then we won't be able to see it and it doesn't count.
+				final var cos_i = lightV.normalize().dotProduct(Vector3D.from(interaction.getNormal()));
+				if (cos_i < 0d)
+					continue;
+					
+				//
+				// Determine if we can see the light-source at all.
+				if (!light.isVisible(lightP, interaction, scene))
+					continue;
+					
+				//
+				// Calculate the total energy available after falloff.
+				final var falloff = 1d / lightV.getMagnitudeSq();
+				final var lightIrradiance = light.getRadiance(lightP, interaction).multiply(falloff).multiply(cos_i);
+				
+				totalDirectLightingIrradiance = totalDirectLightingIrradiance.add(lightIrradiance);
+			}
 			
-			totalDirectLightingIrradiance = totalDirectLightingIrradiance.add(lightIrradiance);
+			energy = energy.add(mat.getDirectLightReflection(interaction, totalDirectLightingIrradiance));
 		}
-		
-		energy = energy.add(mat.getDirectLightReflection(interaction, totalDirectLightingIrradiance));
 		
 		//
 		// Add path-traced emission
