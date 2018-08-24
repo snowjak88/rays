@@ -133,7 +133,8 @@ public class RGB extends Colorspace<RGB, Triplet> {
 	}
 	
 	/**
-	 * Given an RGB instance, transform it to a packed ARGB quadruple.
+	 * Given an RGB instance, transform it to a packed ARGB quadruple (with alpha =
+	 * 1.0, fully opaque).
 	 * 
 	 * @param rgb
 	 * @return
@@ -141,12 +142,25 @@ public class RGB extends Colorspace<RGB, Triplet> {
 	 */
 	public static int toPacked(RGB rgb) {
 		
-		final double a = 1d;
+		return toPacked(rgb, 1.0);
+	}
+	
+	/**
+	 * Given an RGB instance, transform it to a packed ARGB quadruple.
+	 * 
+	 * @param rgb
+	 * @param alpha
+	 * @return
+	 */
+	public static int toPacked(RGB rgb, double alpha) {
+		
+		final double a = max(min(alpha, 1d), 0d);
 		final double r = max(min(rgb.getRed(), 1d), 0d);
 		final double g = max(min(rgb.getGreen(), 1d), 0d);
 		final double b = max(min(rgb.getBlue(), 1d), 0d);
 		
 		return ((int) (a * 255d)) << 24 | ((int) (r * 255d)) << 16 | ((int) (g * 255d)) << 8 | ((int) (b * 255d));
+		
 	}
 	
 	/**
@@ -196,9 +210,10 @@ public class RGB extends Colorspace<RGB, Triplet> {
 		
 		registry.register(RGB.class, (rgb) -> rgb);
 		
-		registry.register(XYZ.class, (rgb) -> new XYZ(__CONVERSION_TO_XYZ.multiply(
-				rgb.get().apply(c -> (c <= 0.04045d) ? (c / 12.92d) : (pow((c + 0.055d) / 1.055d, 2.4d))),
-				0d)));
+		registry.register(XYZ.class,
+				(rgb) -> new XYZ(__CONVERSION_TO_XYZ.multiply(
+						rgb.get().apply(c -> (c <= 0.04045d) ? (c / 12.92d) : (pow((c + 0.055d) / 1.055d, 2.4d))),
+						0d)));
 	}
 	
 	@Override
