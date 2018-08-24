@@ -1,6 +1,4 @@
-ext {
-	vaadinVersion = '8.4.1'
-}
+ext { vaadinVersion = '8.4.1' }
 
 dependencies {
 	compile('org.springframework.boot:spring-boot-starter-artemis')
@@ -15,7 +13,17 @@ dependencies {
 }
 
 dependencyManagement {
-	imports {
-		mavenBom "com.vaadin:vaadin-bom:${vaadinVersion}"
-	}
+	imports { mavenBom "com.vaadin:vaadin-bom:${vaadinVersion}" }
 }
+
+docker {
+	name = "${project.group}/${project.name}:${project.version}"
+	dockerfile project.file("Dockerfile")
+	tags "latest"
+	files jar.archivePath
+	buildArgs([ JAR_FILE: jar.archiveName ])
+	pull true
+}
+
+tasks.docker.dependsOn { tasks.bootRepackage }
+tasks.dockerPush.dependsOn { tasks.dockerTag }

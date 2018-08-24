@@ -9,9 +9,11 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.UUID;
 
 import javax.imageio.ImageIO;
 
+import org.snowjak.rays.RenderTask;
 import org.snowjak.rays.filter.Filter;
 import org.snowjak.rays.sample.EstimatedSample;
 import org.snowjak.rays.sample.FixedSample;
@@ -113,6 +115,19 @@ public class Film {
 	 */
 	public Image getImage() {
 		
+		return getImage(null);
+	}
+	
+	/**
+	 * Compile the {@link Image} gathered so far by this Film instance. Tag it with
+	 * the given {@link UUID} (e.g., to associate it with a certain
+	 * {@link RenderTask}).
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public Image getImage(UUID uuid) {
+		
 		synchronized (this) {
 			if (!initialized)
 				initialize();
@@ -137,7 +152,7 @@ public class Film {
 			
 		}
 		
-		return new Image(image);
+		return new Image(image, uuid);
 		
 	}
 	
@@ -165,8 +180,9 @@ public class Film {
 	public static class Image {
 		
 		private String png;
+		private UUID uuid;
 		
-		public Image(RenderedImage img) {
+		public Image(RenderedImage img, UUID uuid) {
 			
 			final var buffer = new ByteArrayOutputStream();
 			
@@ -187,6 +203,16 @@ public class Film {
 				e.printStackTrace();
 			}
 			return null;
+		}
+		
+		public String getPng() {
+			
+			return png;
+		}
+		
+		public UUID getUuid() {
+			
+			return uuid;
 		}
 	}
 	

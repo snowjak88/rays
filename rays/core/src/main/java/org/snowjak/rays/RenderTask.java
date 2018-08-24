@@ -1,5 +1,6 @@
 package org.snowjak.rays;
 
+import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.snowjak.rays.film.Film;
@@ -16,6 +17,7 @@ import org.snowjak.rays.sampler.Sampler;
  */
 public class RenderTask implements Callable<Image> {
 	
+	private UUID uuid = null;
 	private Sampler sampler = null;
 	private Renderer renderer = null;
 	private Scene scene = null;
@@ -23,10 +25,21 @@ public class RenderTask implements Callable<Image> {
 	
 	public RenderTask(Sampler sampler, Renderer renderer, Film film, Scene scene) {
 		
+		this(UUID.randomUUID(), sampler, renderer, film, scene);
+	}
+	
+	public RenderTask(UUID uuid, Sampler sampler, Renderer renderer, Film film, Scene scene) {
+		
+		this.uuid = uuid;
 		this.sampler = sampler;
 		this.renderer = renderer;
 		this.film = film;
 		this.scene = scene;
+	}
+	
+	public UUID getUuid() {
+		
+		return uuid;
 	}
 	
 	public Sampler getSampler() {
@@ -57,7 +70,7 @@ public class RenderTask implements Callable<Image> {
 	public Image call() {
 		
 		renderer.render(sampler, film, scene);
-		return film.getImage();
+		return film.getImage(getUuid());
 	}
 	
 }

@@ -1,0 +1,25 @@
+version: '2.2'
+
+services:
+  nginx-proxy:
+    image: blacklabelops/nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - NGINX_REDIRECT_PORT80=true
+      - SERVER1REVERSE_PROXY_LOCATION1=/
+      - SERVER1REVERSE_PROXY_PASS1=http://scd_portal:8080
+      - SERVER1CERTIFICATE_DNAME=/CN=snowjak88
+      - SERVER1HTTPS_ENABLED=true
+      - SERVER1HTTP_ENABLED=false
+  
+  rays-frontend:
+    image: ${project('frontend').group}/${project('frontend').name}:${project('frontend').version}
+  
+  rabbitmq:
+    image: rabbitmq:alpine
+  
+  rays-worker:
+    image: ${project('worker').group}/${project('worker').name}:${project('worker').version}
+    scale: 4

@@ -1,49 +1,44 @@
 buildscript {
-	ext {
-		springBootVersion = '2.0.2.RELEASE'
-	}
-	repositories {
-		mavenCentral()
-	}
-	dependencies {
-		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-	}
+	ext { springBootVersion = '2.0.2.RELEASE' }
+	repositories { mavenCentral() }
+	dependencies { classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}") }
 }
+
+plugins {
+	id 'com.palantir.docker' version '0.20.1' apply false
+	id 'com.palantir.docker-compose' version '0.20.1'
+}
+
+group = 'org.snowjak'
+version = '0.1.0'
+wrapper { gradleVersion = 4.8 }
 
 allprojects {
 	apply plugin: 'eclipse'
+	apply plugin: 'java'
+	apply plugin: 'io.spring.dependency-management'
 	
-	wrapper {
-		gradleVersion = 4.6
-	}
+	sourceCompatibility = 10
 }
 
 subprojects { p ->
-		
-	apply plugin: 'java'
 	
 	if( p.name != "core" ) {
-		apply plugin: 'org.springframework.boot'
 		
-		dependencies {
-			compile project(":core")
+		if(p.name != "spectrum-generator") {
+			apply plugin: 'org.springframework.boot'
+			apply plugin: 'com.palantir.docker'
 		}
+		
+		dependencies { compile project(":core") }
 		
 		clean.dependsOn( project(":core").clean )
 		test.dependsOn( project(":core").test )
 	}
 	
+	repositories { mavenCentral() }
+	
 	test.ignoreFailures = true
-	
-	apply plugin: 'io.spring.dependency-management'
-	
-	group = 'org.snowjak'
-	version = '0.0.1'
-	sourceCompatibility = 10
-	
-	repositories {
-		mavenCentral()
-	}
 }
 
 task allTests(type: TestReport) {
@@ -54,3 +49,20 @@ task allTests(type: TestReport) {
 	dependsOn subprojects.collect( { it.tasks.withType(Test) } ).flatten()
 	reportOn subprojects.collect( { it.tasks.withType(Test) } ).flatten()
 }
+
+clean.delete << file('build/docker-compose.yml.template.expanded')
+
+task expandDockerComposeTemplate(type: Copy, dependsOn: 'processResources') {
+	from project.file( "docker-compose.yml.template" )
+	expand( project.properties )
+	into project.file( "./build" )
+	rename { "docker-compose.yml.template.expanded" }
+	
+	mustRunAfter "processResources"
+}
+
+dockerCompose {
+	template project.file( "build/docker-compose.yml.template.expanded" )
+}
+
+generateDockerCompose { dependsOn "expandDockerComposeTemplate" }
