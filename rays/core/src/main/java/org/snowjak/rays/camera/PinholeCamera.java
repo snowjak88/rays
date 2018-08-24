@@ -62,7 +62,7 @@ public class PinholeCamera extends Camera {
 			focalPoint = new Vector3D(0, 0, -focalLength);
 		
 		final var imagePlanePoint = new Point3D(getXConverter().apply(sample.getFilmPoint().getX()),
-				getXConverter().apply(sample.getFilmPoint().getY()), 0);
+				getYConverter().apply(sample.getFilmPoint().getY()), 0);
 		final var direction = Vector3D.from(imagePlanePoint).subtract(focalPoint).normalize();
 		
 		return new TracedSample(sample, localToWorld(new Ray(imagePlanePoint, direction)));
