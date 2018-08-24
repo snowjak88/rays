@@ -47,16 +47,19 @@ import org.snowjak.rays.sample.Sample;
  */
 public class BestCandidateSampler extends Sampler {
 	
-	private final int blockSize;
-	private final Point2D[][][] block;
+	private transient boolean initialized = false;
 	
-	private final Point2D[] lensSamples;
+	private transient int blockSize;
 	
-	private final Double[] tSamples;
+	private transient Point2D[][][] block;
 	
-	private int currentBlockX, currentBlockY;
+	private transient Point2D[] lensSamples;
 	
-	private int currentPixelX, currentPixelY, currentPixelSample;
+	private transient Double[] tSamples;
+	
+	private transient int currentBlockX, currentBlockY;
+	
+	private transient int currentPixelX, currentPixelY, currentPixelSample;
 	
 	/**
 	 * Construct a new {@link BestCandidateSampler} across the given interval
@@ -91,12 +94,22 @@ public class BestCandidateSampler extends Sampler {
 		
 		super(xStart, yStart, xEnd, yEnd, samplesPerPixel, additional1dSamples, additional2dSamples);
 		
-		final int minDimensionSize = min(xEnd - xStart + 1, yEnd - yStart + 1);
+		initialize();
+	}
+	
+	/**
+	 * Because this can be deserialized -- with only its startup parameters actually
+	 * saved and restored -- we might need to initialize this outside of the
+	 * constructor!
+	 */
+	private void initialize() {
+		
+		final int minDimensionSize = min(getXEnd() - getXStart() + 1, getYEnd() - getYStart() + 1);
 		this.blockSize = (minDimensionSize >= Settings.getInstance().getSamplerBestCandidateBlockSize())
 				? Settings.getInstance().getSamplerBestCandidateBlockSize()
 				: (int) pow(2d, (int) log(2d, minDimensionSize));
 		
-		this.block = new Point2D[blockSize][blockSize][samplesPerPixel];
+		this.block = new Point2D[blockSize][blockSize][getSamplesPerPixel()];
 		generateNewBlock();
 		
 		this.lensSamples = generateSamples(getAdditional2DSamples(),
@@ -104,26 +117,34 @@ public class BestCandidateSampler extends Sampler {
 				(p1, p2) -> pow(p1.getX() - p2.getX(), 2) + pow(p1.getY() - p2.getY(), 2), (p) -> true, (p) -> {
 				}).toArray(new Point2D[0]);
 		
-		this.tSamples = generateSamples(blockSize * blockSize * samplesPerPixel, () -> Settings.RND.nextDouble(),
+		this.tSamples = generateSamples(blockSize * blockSize * getSamplesPerPixel(), () -> Settings.RND.nextDouble(),
 				(p1, p2) -> sqrt(pow(p1 - p2, 2)), (p) -> true, (p) -> {
 				}).toArray(new Double[0]);
 		
 		this.currentBlockX = 0;
 		this.currentBlockY = 0;
 		
-		this.currentPixelX = xStart;
-		this.currentPixelY = yStart;
+		this.currentPixelX = getXStart();
+		this.currentPixelY = getYStart();
 		this.currentPixelSample = 0;
+		
+		this.initialized = true;
 	}
 	
 	@Override
 	public boolean hasNextSample() {
+		
+		if (!initialized)
+			initialize();
 		
 		return currentPixelY <= getYEnd();
 	}
 	
 	@Override
 	public Sample getNextSample() {
+		
+		if (!initialized)
+			initialize();
 		
 		final var filmPoint = block[currentBlockX][currentBlockY][currentPixelSample]
 				.add(new Pair(currentPixelX, currentPixelY));

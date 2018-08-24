@@ -21,11 +21,11 @@ import org.snowjak.rays.sample.Sample;
  */
 public abstract class Sampler {
 	
-	private final int xStart, yStart;
-	private final int xEnd, yEnd;
-	private final int samplesPerPixel;
-	private final int additional1DSamples;
-	private final int additional2DSamples;
+	private int xStart, yStart;
+	private int xEnd, yEnd;
+	private int samplesPerPixel;
+	private int additional1DSamples;
+	private int additional2DSamples;
 	
 	public Sampler(int xStart, int yStart, int xEnd, int yEnd, int samplesPerPixel, int additional1DSamples,
 			int additional2DSamples) {

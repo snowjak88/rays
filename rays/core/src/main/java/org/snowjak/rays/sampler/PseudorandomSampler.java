@@ -24,8 +24,9 @@ import org.snowjak.rays.sample.Sample;
  */
 public class PseudorandomSampler extends Sampler {
 	
-	private int currentPixelX, currentPixelY;
-	private int currentPixelSampleNumber;
+	private transient boolean initialized = false;
+	private transient int currentPixelX, currentPixelY;
+	private transient int currentPixelSampleNumber;
 	
 	/**
 	 * Construct a new {@link PseudorandomSampler} across the given interval
@@ -60,19 +61,36 @@ public class PseudorandomSampler extends Sampler {
 		
 		super(xStart, yStart, xEnd, yEnd, samplesPerPixel, additional1dSamples, additional2dSamples);
 		
-		currentPixelX = xStart;
-		currentPixelY = yStart;
+		initialize();
+	}
+	
+	/**
+	 * Because this can be deserialized -- with only its startup parameters actually
+	 * saved and restored -- we might need to initialize this outside of the
+	 * constructor!
+	 */
+	private void initialize() {
+		
+		currentPixelX = getXStart();
+		currentPixelY = getYStart();
 		currentPixelSampleNumber = 0;
+		initialized = true;
 	}
 	
 	@Override
 	public boolean hasNextSample() {
+		
+		if (!initialized)
+			initialize();
 		
 		return currentPixelY <= getYEnd();
 	}
 	
 	@Override
 	public Sample getNextSample() {
+		
+		if (!initialized)
+			initialize();
 		
 		if (!hasNextSample())
 			return null;
