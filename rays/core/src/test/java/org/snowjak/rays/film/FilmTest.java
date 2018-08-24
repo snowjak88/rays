@@ -40,7 +40,7 @@ public class FilmTest {
 			
 		}
 		
-		final BufferedImage img = film.getImage();
+		final BufferedImage img = film.getImage().getRenderedImage();
 		for (int x = 0; x < img.getWidth(); x++)
 			for (int y = 0; y < img.getHeight(); y++) {
 				

@@ -4,6 +4,13 @@ import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.RenderedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Base64;
+
+import javax.imageio.ImageIO;
 
 import org.snowjak.rays.filter.Filter;
 import org.snowjak.rays.sample.EstimatedSample;
@@ -88,11 +95,11 @@ public class Film {
 	}
 	
 	/**
-	 * Compile the image gathered so far by this Film instance.
+	 * Compile the {@link Image} gathered so far by this Film instance.
 	 * 
 	 * @return
 	 */
-	public BufferedImage getImage() {
+	public Image getImage() {
 		
 		final var image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		
@@ -113,7 +120,7 @@ public class Film {
 			
 		}
 		
-		return image;
+		return new Image(image);
 		
 	}
 	
@@ -130,6 +137,40 @@ public class Film {
 	public Filter getFilter() {
 		
 		return filter;
+	}
+	
+	/**
+	 * Packages a {@link RenderedImage} in a de/serializable format.
+	 * 
+	 * @author snowjak88
+	 *
+	 */
+	public static class Image {
+		
+		private String png;
+		
+		public Image(RenderedImage img) {
+			
+			final var buffer = new ByteArrayOutputStream();
+			
+			try {
+				ImageIO.write(img, "png", ImageIO.createImageOutputStream(buffer));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			this.png = Base64.getEncoder().encodeToString(buffer.toByteArray());
+		}
+		
+		public BufferedImage getRenderedImage() {
+			
+			try {
+				return ImageIO.read(new ByteArrayInputStream(Base64.getDecoder().decode(png)));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
 	}
 	
 }

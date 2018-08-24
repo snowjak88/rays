@@ -1,9 +1,9 @@
 package org.snowjak.rays;
 
-import java.awt.image.RenderedImage;
 import java.util.concurrent.Callable;
 
 import org.snowjak.rays.film.Film;
+import org.snowjak.rays.film.Film.Image;
 import org.snowjak.rays.filter.Filter;
 import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sample.Sample;
@@ -15,7 +15,7 @@ import org.snowjak.rays.sampler.Sampler;
  * @author snowjak88
  *
  */
-public class RenderTask implements Callable<RenderedImage> {
+public class RenderTask implements Callable<Image> {
 	
 	private Sampler sampler = null;
 	private Renderer renderer = null;
@@ -72,7 +72,7 @@ public class RenderTask implements Callable<RenderedImage> {
 	 * configured {@link Sampler} has no more {@link Sample}s to provide.
 	 */
 	@Override
-	public RenderedImage call() {
+	public Image call() {
 		
 		renderer.render(sampler, getFilm(), scene);
 		return getFilm().getImage();
