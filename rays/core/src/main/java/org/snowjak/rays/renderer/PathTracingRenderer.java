@@ -68,6 +68,11 @@ public class PathTracingRenderer extends Renderer {
 				continue;
 				
 			//
+			// Determine if we can see the light-source at all.
+			if (!light.isVisible(lightP, interaction, scene))
+				continue;
+				
+			//
 			// Calculate the total energy available after falloff.
 			final var falloff = 1d / lightV.getMagnitudeSq();
 			final var lightIrradiance = light.getRadiance(lightP, interaction).multiply(falloff).multiply(cos_i);
