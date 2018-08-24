@@ -32,7 +32,7 @@ public class PinholeCameraTest {
 		assertEquals(0, result.getRay().getOrigin().getY(), 0.00001);
 		assertEquals(0, result.getRay().getOrigin().getZ(), 0.00001);
 		
-		assertEquals(0.316228, result.getRay().getDirection().getX(), 0.00001);
+		assertEquals(-0.316228, result.getRay().getDirection().getX(), 0.00001);
 		assertEquals(0.0, result.getRay().getDirection().getY(), 0.00001);
 		assertEquals(0.948683, result.getRay().getDirection().getZ(), 0.00001);
 	}
@@ -54,9 +54,9 @@ public class PinholeCameraTest {
 		assertEquals(-2, result.getRay().getOrigin().getY(), 0.001);
 		assertEquals(-0.707, result.getRay().getOrigin().getZ(), 0.001);
 		
-		assertEquals(-0.447213, result.getRay().getDirection().getX(), 0.001);
+		assertEquals(-0.894427, result.getRay().getDirection().getX(), 0.001);
 		assertEquals(0.0, result.getRay().getDirection().getY(), 0.001);
-		assertEquals(0.894427, result.getRay().getDirection().getZ(), 0.001);
+		assertEquals(0.447213, result.getRay().getDirection().getZ(), 0.001);
 	}
 	
 	@Test
