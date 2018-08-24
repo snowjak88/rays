@@ -162,7 +162,7 @@ public class Film {
 			this.png = Base64.getEncoder().encodeToString(buffer.toByteArray());
 		}
 		
-		public BufferedImage getRenderedImage() {
+		public BufferedImage getBufferedImage() {
 			
 			try {
 				return ImageIO.read(new ByteArrayInputStream(Base64.getDecoder().decode(png)));
