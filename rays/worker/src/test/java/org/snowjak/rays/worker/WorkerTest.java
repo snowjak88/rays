@@ -1,4 +1,4 @@
-package worker;
+package org.snowjak.rays.worker;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
