@@ -1,6 +1,7 @@
 .gradle/
 /build/
 !gradle/wrapper/gradle-wrapper.jar
+frontend/src/querydsl/
 
 ### STS ###
 .apt_generated
