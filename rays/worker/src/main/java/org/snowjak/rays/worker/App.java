@@ -17,13 +17,13 @@ import com.google.common.util.concurrent.MoreExecutors;
 @SpringBootApplication(scanBasePackages = "org.snowjak.rays.worker")
 public class App extends SpringApplication {
 	
-	@Value("rabbitmq.taskq")
+	@Value("${rabbitmq.taskq}")
 	private String renderTaskQueueName;
 	
-	@Value("rabbitmq.resultq")
+	@Value("${rabbitmq.resultq}")
 	private String renderResultQueueName;
 	
-	@Value("rays.worker.threads")
+	@Value("${rays.worker.threads}")
 	private int parallelism = 1;
 	
 	public static void main(String[] args) {

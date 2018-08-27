@@ -84,7 +84,7 @@ public class FrontEndUI extends UI {
 		
 		grid.setSortOrder(Arrays.asList(new GridSortOrder<Render>(gridCreatedColumn, SortDirection.DESCENDING)));
 		
-		setContent(new VerticalLayout(menuBar, new Label("Some content!")));
+		setContent(new VerticalLayout(menuBar, new Label("Some content!"), grid));
 		addWindow(loginWindow);
 		addWindow(resultWindow);
 		

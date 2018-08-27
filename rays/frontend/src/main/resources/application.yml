@@ -6,6 +6,18 @@ org:
         password-parameter: password
 server:
   port: 8080
+spring:
+  rabbitmq:
+    host: localhost
+  datasource:
+    initialization-mode: always
+  jpa:
+    hibernate:
+      ddl-auto: update
+rabbitmq:
+  taskq: rays.render-task
+  progressq: rays.render-progress
+  resultq: rays.render-result
 logging:
   level:
     org.springframework.security: INFO
