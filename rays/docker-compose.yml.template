@@ -19,6 +19,7 @@ services:
     environment:
       - SPRING_RABBITMQ_HOST=rabbitmq
       - RABBITMQ_TASKQ=rays.render-task
+      - RABBITMQ_PROGRESSQ=rays.render-progress
       - RABBITMQ_RESULTQ=rays.render-result
       - SERVER_PORT=8080
   
@@ -30,6 +31,7 @@ services:
     environment:
       - SPRING_RABBITMQ_HOST=rabbitmq
       - RABBITMQ_TASKQ=rays.render-task
+      - RABBITMQ_PROGRESSQ=rays.render-progress
       - RABBITMQ_RESULTQ=rays.render-result
       - RAYS_WORKER_THREADS=1
     scale: 2

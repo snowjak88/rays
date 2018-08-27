@@ -27,6 +27,8 @@ public abstract class Sampler {
 	private int additional1DSamples;
 	private int additional2DSamples;
 	
+	private transient long totalSamples;
+	
 	public Sampler(int xStart, int yStart, int xEnd, int yEnd, int samplesPerPixel, int additional1DSamples,
 			int additional2DSamples) {
 		
@@ -106,4 +108,20 @@ public abstract class Sampler {
 		return additional2DSamples;
 	}
 	
+	/**
+	 * @return the total number of samples in this Sampler's domain
+	 */
+	public long getTotalSamples() {
+		
+		if(totalSamples < 0)
+			totalSamples = ((long) (getXEnd() - getXStart()) * (long) (getYEnd() - getYStart()) * (long) getSamplesPerPixel());
+		
+		return totalSamples;
+	}
+	
+	/**
+	 * @return how many {@link Sample}s have already been generated, as a percentage
+	 *         of {@link #getTotalSamples()}
+	 */
+	public abstract double getPercentComplete();
 }

@@ -59,7 +59,7 @@ public class Test {
 		@Override
 		public void run() {
 			
-			renderer.render(sampler, film, scene);
+			renderer.render(sampler, film, scene, null);
 		}
 		
 	}

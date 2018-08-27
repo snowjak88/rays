@@ -19,8 +19,11 @@ public class RenderTaskReceiver {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RenderTaskReceiver.class);
 	
-	@Value("rabbitmq.resultq")
-	private String renderResultQueueName;
+	@Value("${rabbitmq.resultq}")
+	private String renderResultQueueName = null;
+	
+	@Value("${rabbitmq.progressq}")
+	private String renderProgressQueueName = null;
 	
 	@Autowired
 	private ListeningExecutorService executor;
@@ -34,6 +37,11 @@ public class RenderTaskReceiver {
 			LOG.info("Received new render-task.");
 			LOG.debug("Parsing from JSON ...");
 			final var task = Settings.getInstance().getGson().fromJson(taskJson, RenderTask.class);
+			
+			if (renderProgressQueueName != null && !renderProgressQueueName.trim().isEmpty())
+				task.setProgressConsumer((progress) -> {
+					rabbit.convertAndSend(renderProgressQueueName, progress);
+				});
 			
 			LOG.debug("UUID={}: Parsed successfully", task.getUuid());
 			

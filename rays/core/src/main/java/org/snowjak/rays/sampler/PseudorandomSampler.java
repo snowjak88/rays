@@ -28,6 +28,8 @@ public class PseudorandomSampler extends Sampler {
 	private transient int currentPixelX, currentPixelY;
 	private transient int currentPixelSampleNumber;
 	
+	private transient long samplesGenerated = 0;
+	
 	/**
 	 * Construct a new {@link PseudorandomSampler} across the given interval
 	 * [<code>(xStart,yStart)</code>, <code>(xEnd,yEnd)</code>], with no additional
@@ -118,7 +120,15 @@ public class PseudorandomSampler extends Sampler {
 			}
 		}
 		
+		samplesGenerated++;
+		
 		return result;
+	}
+	
+	@Override
+	public double getPercentComplete() {
+		
+		return ((double) samplesGenerated) / ((double) getTotalSamples());
 	}
 	
 }

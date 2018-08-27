@@ -61,6 +61,8 @@ public class BestCandidateSampler extends Sampler {
 	
 	private transient int currentPixelX, currentPixelY, currentPixelSample;
 	
+	private transient long samplesGenerated = 0;
+	
 	/**
 	 * Construct a new {@link BestCandidateSampler} across the given interval
 	 * [<code>(xStart,yStart)</code>, <code>(xEnd,yEnd)</code>], with no additional
@@ -193,6 +195,8 @@ public class BestCandidateSampler extends Sampler {
 			}
 		}
 		
+		samplesGenerated++;
+		
 		return result;
 	}
 	
@@ -281,6 +285,12 @@ public class BestCandidateSampler extends Sampler {
 	private double distanceSqBetween(Point2D p1, Point2D p2) {
 		
 		return pow(p1.getX() - p2.getX(), 2) + pow(p1.getY() - p2.getY(), 2);
+	}
+	
+	@Override
+	public double getPercentComplete() {
+		
+		return ((double) samplesGenerated) / ((double) getTotalSamples());
 	}
 	
 }

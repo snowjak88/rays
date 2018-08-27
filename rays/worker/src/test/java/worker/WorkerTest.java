@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
 import java.io.BufferedReader;
@@ -19,6 +19,7 @@ import org.snowjak.rays.film.Film.Image;
 import org.snowjak.rays.worker.RenderTaskReceiver;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
@@ -30,7 +31,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
 @SpringBootTest
-@TestPropertySource(properties = "rabbitmq.resultq=test-result")
+@TestPropertySource(properties = { "rabbitmq.resultq=test-result", "rabbitmq.progressq=" })
 @RunWith(SpringRunner.class)
 public class WorkerTest {
 	
@@ -56,6 +57,9 @@ public class WorkerTest {
 	@MockBean
 	private RabbitTemplate rabbit;
 	
+	@Value("${rabbitmq.resultq}")
+	private String resultQ;
+	
 	@Test
 	public void testRenderTask() {
 		
@@ -80,7 +84,7 @@ public class WorkerTest {
 		assertNull(returned);
 		
 		final var resultImageCaptor = ArgumentCaptor.forClass(String.class);
-		verify(rabbit).convertAndSend(anyString(), resultImageCaptor.capture());
+		verify(rabbit).convertAndSend(eq("test-result"), resultImageCaptor.capture());
 		
 		assertNotNull(resultImageCaptor.getValue());
 		
