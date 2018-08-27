@@ -193,6 +193,7 @@ public class Film {
 			}
 			
 			this.png = Base64.getEncoder().encodeToString(buffer.toByteArray());
+			this.uuid = uuid;
 		}
 		
 		public BufferedImage getBufferedImage() {
