@@ -1,19 +1,29 @@
+plugins { id 'com.ewerk.gradle.plugins.querydsl' version '1.0.9' }
+
 ext { vaadinVersion = '8.4.1' }
 
 dependencies {
-	compile('org.springframework.boot:spring-boot-starter-artemis')
-	compile('org.springframework.boot:spring-boot-starter-integration')
+	compile('org.springframework.boot:spring-boot-starter-amqp')
+	compile('org.springframework.boot:spring-boot-starter-data-jpa')
 	compile('org.springframework.boot:spring-boot-starter-security')
 	compile('com.vaadin:vaadin-spring-boot-starter')
 	
-	runtime('com.h2database:h2')
+	compile('com.querydsl:querydsl-jpa:4.1.4')
+	
+	compile('javax.xml.bind:jaxb-api:2.3.0')
 	
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 	testCompile('org.springframework.security:spring-security-test')
+	
+	runtime('org.hsqldb:hsqldb:2.4+')
 }
 
-dependencyManagement {
-	imports { mavenBom "com.vaadin:vaadin-bom:${vaadinVersion}" }
+dependencyManagement { imports { mavenBom "com.vaadin:vaadin-bom:${vaadinVersion}"
+	} }
+
+querydsl {
+	querydslDefault = true
+	jpa = true
 }
 
 docker {

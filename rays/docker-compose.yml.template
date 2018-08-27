@@ -22,6 +22,15 @@ services:
       - RABBITMQ_PROGRESSQ=rays.render-progress
       - RABBITMQ_RESULTQ=rays.render-result
       - SERVER_PORT=8080
+      - SPRING_DATASOURCE_URL=jdbc:mysql://frontend-db/
+      - SPRING_DATASOURCE_USER=root
+      - SPRING_DATASOURCE_PASSWORD=
+  
+  frontend-db:
+    image: mysql/mysql-server:latest
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=true
+      - MYSQL_ROOT_HOST=rays-frontend
   
   rabbitmq:
     image: rabbitmq:alpine

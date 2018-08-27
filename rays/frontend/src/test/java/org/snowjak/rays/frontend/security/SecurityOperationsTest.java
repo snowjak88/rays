@@ -24,11 +24,13 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @WithAnonymousUser
+@TestPropertySource(properties = { "rabbitmq.resultq=test-result", "rabbitmq.progressq=test-progress" })
 public class SecurityOperationsTest {
 	
 	@Autowired
