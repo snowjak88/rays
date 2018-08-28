@@ -122,6 +122,9 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 		if (this.primitives == null)
 			this.primitives = getPrimitives(root);
 		
+		if (this.unaccelerated != null)
+			this.primitives.addAll(unaccelerated);
+		
 		return primitives;
 	}
 	

@@ -113,8 +113,9 @@ public abstract class Sampler {
 	 */
 	public long getTotalSamples() {
 		
-		if(totalSamples < 0)
-			totalSamples = ((long) (getXEnd() - getXStart()) * (long) (getYEnd() - getYStart()) * (long) getSamplesPerPixel());
+		if (totalSamples < 0)
+			totalSamples = ((long) (getXEnd() - getXStart()) * (long) (getYEnd() - getYStart())
+					* (long) getSamplesPerPixel());
 		
 		return totalSamples;
 	}
@@ -124,4 +125,16 @@ public abstract class Sampler {
 	 *         of {@link #getTotalSamples()}
 	 */
 	public abstract double getPercentComplete();
+	
+	/**
+	 * Construct a new Sampler covering a given portion of this Sampler's
+	 * sampling-space.
+	 * 
+	 * @param xStart
+	 * @param yStart
+	 * @param xEnd
+	 * @param yEnd
+	 * @return
+	 */
+	public abstract Sampler partition(int xStart, int yStart, int xEnd, int yEnd);
 }

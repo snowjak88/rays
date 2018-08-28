@@ -131,4 +131,10 @@ public class PseudorandomSampler extends Sampler {
 		return ((double) samplesGenerated) / ((double) getTotalSamples());
 	}
 	
+	@Override
+	public Sampler partition(int xStart, int yStart, int xEnd, int yEnd) {
+		
+		return new PseudorandomSampler(xStart, yStart, xEnd, yEnd, getSamplesPerPixel(), getAdditional1DSamples(), getAdditional2DSamples());
+	}
+	
 }

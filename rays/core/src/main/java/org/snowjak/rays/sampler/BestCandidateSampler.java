@@ -293,4 +293,11 @@ public class BestCandidateSampler extends Sampler {
 		return ((double) samplesGenerated) / ((double) getTotalSamples());
 	}
 	
+	@Override
+	public Sampler partition(int xStart, int yStart, int xEnd, int yEnd) {
+		
+		return new BestCandidateSampler(xStart, yStart, xEnd, yEnd, getSamplesPerPixel(), getAdditional1DSamples(),
+				getAdditional2DSamples());
+	}
+	
 }

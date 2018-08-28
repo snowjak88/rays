@@ -1,15 +1,18 @@
 package org.snowjak.rays.frontend.model.entity;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.UUID;
 
 import javax.persistence.Basic;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToOne;
-import javax.persistence.Transient;
+import javax.persistence.OneToMany;
 import javax.persistence.Version;
 
 import org.springframework.data.annotation.CreatedDate;
@@ -29,6 +32,12 @@ public class Render {
 	@Basic
 	private Instant completed;
 	
+	@ManyToOne(fetch = FetchType.EAGER, optional = true)
+	private Render parent = null;
+	
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "parent")
+	private Collection<Render> children = new LinkedList<>();
+	
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	private Scene scene;
 	
@@ -41,11 +50,13 @@ public class Render {
 	@Basic(optional = false)
 	private String filmJson = "";
 	
-	@Transient
+	@Basic
 	private int percentComplete = 0;
 	
-	@OneToOne(optional = true, orphanRemoval = true, fetch = FetchType.LAZY)
-	private Result result = null;
+	@Lob
+	@Basic(optional = true, fetch = FetchType.LAZY)
+	@Column(length = 4194304)
+	private String pngBase64 = null;
 	
 	public String getUuid() {
 		
@@ -85,6 +96,36 @@ public class Render {
 	public void setCompleted(Instant completed) {
 		
 		this.completed = completed;
+	}
+	
+	public boolean isChild() {
+		
+		return (getParent() != null);
+	}
+	
+	public Render getParent() {
+		
+		return parent;
+	}
+	
+	public boolean isParent() {
+		
+		return (getChildren() != null && !getChildren().isEmpty());
+	}
+	
+	public Collection<Render> getChildren() {
+		
+		return children;
+	}
+	
+	public void setChildren(Collection<Render> children) {
+		
+		this.children = children;
+	}
+	
+	public void setParent(Render parent) {
+		
+		this.parent = parent;
 	}
 	
 	public Scene getScene() {
@@ -137,14 +178,14 @@ public class Render {
 		this.percentComplete = percentComplete;
 	}
 	
-	public Result getResult() {
+	public String getPngBase64() {
 		
-		return result;
+		return pngBase64;
 	}
 	
-	public void setResult(Result result) {
+	public void setPngBase64(String pngBase64) {
 		
-		this.result = result;
+		this.pngBase64 = pngBase64;
 	}
 	
 }

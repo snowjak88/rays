@@ -1,6 +1,5 @@
 package org.snowjak.rays.frontend.ui;
 
-import org.snowjak.rays.frontend.model.repository.ResultRepository;
 import org.snowjak.rays.frontend.ui.components.MainMenuBar;
 import org.snowjak.rays.frontend.ui.components.ModalLoginWindow;
 import org.snowjak.rays.frontend.ui.components.ModalRenderCreateWindow;
@@ -29,9 +28,6 @@ public class FrontEndUI extends UI {
 	
 	@Autowired
 	private MainMenuBar menuBar;
-	
-	@Autowired
-	private ResultRepository resultRepository;
 	
 	@Override
 	protected void init(VaadinRequest request) {
