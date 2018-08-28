@@ -1,5 +1,9 @@
 package org.snowjak.rays.frontend.security;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +68,9 @@ public class SecurityOperations {
 		LOG.debug("Storing the authenticated token in the SecurityContext ...");
 		SecurityContextHolder.getContext().setAuthentication(authenticatedToken);
 		
+		LOG.trace("Signalling the completed log-in.");
+		publisher.publishEvent(new AfterSuccessfulLoginEvent(authenticatedToken));
+		
 		LOG.info("Completed log-in request.");
 		return authenticatedToken;
 	}
@@ -84,6 +91,28 @@ public class SecurityOperations {
 		publisher.publishEvent(new AuthenticationLogoutEvent(oldAuthentication));
 		
 		LOG.info("Completed log-out.");
+	}
+	
+	public Collection<String> getAuthorities() {
+		
+		LOG.debug("Get active authorities ...");
+		
+		if (!isAuthenticated()) {
+			LOG.debug("Current session is not authenticated -- therefore, no authorities to return.");
+			return Collections.emptyList();
+		}
+		
+		final var result = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+				.map(ga -> ga.getAuthority()).collect(Collectors.toList());
+		LOG.trace("Principal as authorities: {}", result);
+		return result;
+	}
+	
+	public boolean hasAuthority(String authority) {
+		
+		final var result = getAuthorities().contains(authority);
+		LOG.trace("Principal has authority \"{}\"? ==> {}", authority, result);
+		return result;
 	}
 	
 }

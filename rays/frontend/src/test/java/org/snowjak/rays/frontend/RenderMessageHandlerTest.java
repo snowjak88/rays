@@ -13,6 +13,7 @@ import org.snowjak.rays.frontend.model.entity.Render;
 import org.snowjak.rays.frontend.model.entity.Result;
 import org.snowjak.rays.frontend.model.repository.RenderRepository;
 import org.snowjak.rays.frontend.model.repository.ResultRepository;
+import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -32,6 +33,9 @@ public class RenderMessageHandlerTest {
 	
 	@Autowired
 	private RenderMessageHandler messageHandler;
+	
+	@MockBean
+	private AmqpAdmin amqpAdmin;
 	
 	@Test
 	public void testReceiveProgress_update() {

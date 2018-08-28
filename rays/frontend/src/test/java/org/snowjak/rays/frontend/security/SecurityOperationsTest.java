@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -41,6 +42,9 @@ public class SecurityOperationsTest {
 	
 	@MockBean
 	private UserDetailsService userDetailsService;
+	
+	@MockBean
+	private AmqpAdmin amqpAdmin;
 	
 	@Before
 	public void setUpUserDetailsService() {

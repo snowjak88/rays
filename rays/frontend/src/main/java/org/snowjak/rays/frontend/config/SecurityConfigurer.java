@@ -41,7 +41,7 @@ public class SecurityConfigurer extends WebSecurityConfigurerAdapter {
 	public UserDetailsService userDetailsService() {
 		
 		return new InMemoryUserDetailsManager(User.builder().username("user").password("password")
-				.authorities("ROLE_USER", "VIEW_ALL_RENDERS").build());
+				.authorities("ROLE_USER", "ROLE_VIEW_ALL_RENDERS", "ROLE_CREATE_RENDER").build());
 	}
 	
 	@Bean

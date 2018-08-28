@@ -1,6 +1,7 @@
 package org.snowjak.rays;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -153,7 +154,7 @@ public class Settings {
 		//
 		// Try to load the core-settings properties file.
 		
-		try (var settingsStream = this.getClass().getClassLoader().getResourceAsStream("core-settings.properties")) {
+		try (var settingsStream = new FileInputStream("data" + File.separator + "core-settings.properties")) {
 			
 			coreSettings = new Properties();
 			coreSettings.load(settingsStream);
@@ -395,9 +396,8 @@ public class Settings {
 		if (colorMappingFunctions == null)
 			if (coreSettings.containsKey("org.snowjak.rays.cie-csv-xyz-color-mapping-path"))
 				try {
-					colorMappingFunctions = TabulatedColorMappingFunctions
-							.loadFromCSV(this.getClass().getClassLoader().getResourceAsStream(
-									coreSettings.getProperty("org.snowjak.rays.cie-csv-xyz-color-mapping-path")));
+					colorMappingFunctions = TabulatedColorMappingFunctions.loadFromCSV(new FileInputStream(
+							coreSettings.getProperty("org.snowjak.rays.cie-csv-xyz-color-mapping-path")));
 				} catch (IOException e) {
 					//
 					//
@@ -419,7 +419,7 @@ public class Settings {
 			try {
 				
 				illuminatorSpectralPowerDistribution = SpectralPowerDistribution
-						.loadFromCSV(this.getClass().getClassLoader().getResourceAsStream(
+						.loadFromCSV(new FileInputStream(
 								coreSettings.getProperty("org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path")))
 						.normalize();
 				
@@ -443,7 +443,7 @@ public class Settings {
 						+ File.separator + name.getName() + ".csv";
 				try {
 					
-					final InputStream stream = this.getClass().getClassLoader().getResourceAsStream(filePath);
+					final InputStream stream = new FileInputStream(filePath);
 					componentSpectra.put(name, SpectralPowerDistribution.loadFromCSV(stream));
 					
 				} catch (IOException e) {

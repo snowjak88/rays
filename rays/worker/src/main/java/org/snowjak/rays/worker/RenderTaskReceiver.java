@@ -35,12 +35,16 @@ public class RenderTaskReceiver {
 		
 		try {
 			LOG.info("Received new render-task.");
+			
+			LOG.trace("JSON: {}", taskJson);
+			
 			LOG.debug("Parsing from JSON ...");
 			final var task = Settings.getInstance().getGson().fromJson(taskJson, RenderTask.class);
 			
 			if (renderProgressQueueName != null && !renderProgressQueueName.trim().isEmpty())
 				task.setProgressConsumer((progress) -> {
-					rabbit.convertAndSend(renderProgressQueueName, progress);
+					final var json = Settings.getInstance().getGson().toJson(progress);
+					rabbit.convertAndSend(renderProgressQueueName, json);
 				});
 			
 			LOG.debug("UUID={}: Parsed successfully", task.getUuid());
@@ -70,7 +74,7 @@ public class RenderTaskReceiver {
 			return e.getMessage();
 		}
 		
-		return null;
+		return "";
 		
 	}
 	

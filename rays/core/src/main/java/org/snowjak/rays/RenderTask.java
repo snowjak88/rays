@@ -1,5 +1,7 @@
 package org.snowjak.rays;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -24,6 +26,8 @@ import org.snowjak.rays.sampler.Sampler;
  *
  */
 public class RenderTask implements Callable<Image> {
+	
+	private static final Logger LOG = System.getLogger(RenderTask.class.getName());
 	
 	private UUID uuid = null;
 	private Sampler sampler = null;
@@ -92,7 +96,21 @@ public class RenderTask implements Callable<Image> {
 		final Consumer<Integer> consumer = (getProgressConsumer() == null) ? null
 				: (progress) -> getProgressConsumer().accept(new ProgressInfo(getUuid(), progress));
 		
+		LOG.log(Level.INFO, "Executing RenderTask:");
+		LOG.log(Level.INFO, "UUID = {0}", getUuid().toString());
+		LOG.log(Level.INFO, "Sampler {0} ({1}x{2} @ {3}spp)", getSampler().getClass().getSimpleName(),
+				getSampler().getXEnd() - getSampler().getXStart() + 1d,
+				getSampler().getYEnd() - getSampler().getYStart() + 1d, getSampler().getSamplesPerPixel());
+		LOG.log(Level.INFO, "Renderer = {0}", getRenderer().getClass().getSimpleName());
+		LOG.log(Level.INFO, "Film = {0}", getFilm().getClass().getSimpleName());
+		LOG.log(Level.INFO, "Scene: {0} primitives, {1} lights",
+				getScene().getAccelerationStructure().getPrimitives().size(), getScene().getLights().size());
+		LOG.log(Level.INFO, "Camera: {0}", getScene().getCamera().getClass().getSimpleName());
+		LOG.log(Level.INFO, "Reporting progress? == {0}", (consumer != null));
+		
 		renderer.render(sampler, film, scene, consumer);
+		
+		LOG.log(Level.INFO, "RenderTask complete! UUID={0}", getUuid());
 		return film.getImage(getUuid());
 	}
 	

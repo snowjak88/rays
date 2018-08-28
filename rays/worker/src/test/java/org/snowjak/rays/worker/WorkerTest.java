@@ -81,7 +81,7 @@ public class WorkerTest {
 		
 		final var returned = receiver.receive(json);
 		
-		assertNull(returned);
+		assertEquals("", returned);
 		
 		final var resultImageCaptor = ArgumentCaptor.forClass(String.class);
 		verify(rabbit).convertAndSend(eq("test-result"), resultImageCaptor.capture());

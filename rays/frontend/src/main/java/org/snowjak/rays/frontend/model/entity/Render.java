@@ -12,14 +12,7 @@ import javax.persistence.OneToOne;
 import javax.persistence.Transient;
 import javax.persistence.Version;
 
-import org.snowjak.rays.RenderTask;
-import org.snowjak.rays.Settings;
-import org.snowjak.rays.film.Film;
-import org.snowjak.rays.renderer.Renderer;
-import org.snowjak.rays.sampler.Sampler;
 import org.springframework.data.annotation.CreatedDate;
-
-import com.google.gson.JsonParseException;
 
 @Entity
 public class Render {
@@ -104,16 +97,6 @@ public class Render {
 		this.scene = scene;
 	}
 	
-	public Sampler getSampler() throws JsonParseException {
-		
-		return Settings.getInstance().getGson().fromJson(getSamplerJson(), Sampler.class);
-	}
-	
-	public void setSampler(Sampler sampler) {
-		
-		setSamplerJson(Settings.getInstance().getGson().toJson(sampler));
-	}
-	
 	public String getSamplerJson() {
 		
 		return samplerJson;
@@ -124,16 +107,6 @@ public class Render {
 		this.samplerJson = samplerJson;
 	}
 	
-	public Renderer getRenderer() throws JsonParseException {
-		
-		return Settings.getInstance().getGson().fromJson(getRendererJson(), Renderer.class);
-	}
-	
-	public void setRenderer(Renderer renderer) {
-		
-		setRendererJson(Settings.getInstance().getGson().toJson(renderer));
-	}
-	
 	public String getRendererJson() {
 		
 		return rendererJson;
@@ -142,16 +115,6 @@ public class Render {
 	public void setRendererJson(String rendererJson) {
 		
 		this.rendererJson = rendererJson;
-	}
-	
-	public Film getFilm() throws JsonParseException {
-		
-		return Settings.getInstance().getGson().fromJson(getFilmJson(), Film.class);
-	}
-	
-	public void setFilm(Film film) {
-		
-		setFilmJson(Settings.getInstance().getGson().toJson(film));
 	}
 	
 	public String getFilmJson() {
@@ -182,12 +145,6 @@ public class Render {
 	public void setResult(Result result) {
 		
 		this.result = result;
-	}
-	
-	public RenderTask getRenderTask() throws JsonParseException {
-		
-		return new RenderTask(UUID.fromString(getUuid()), getSampler(), getRenderer(), getFilm(),
-				getScene().getScene());
 	}
 	
 }

@@ -1,11 +1,5 @@
 package org.snowjak.rays.frontend.model.entity;
 
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.util.Base64;
-
-import javax.imageio.ImageIO;
 import javax.persistence.Basic;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -23,7 +17,7 @@ public class Result {
 	@Version
 	private long version;
 	
-	@OneToOne(fetch = FetchType.LAZY, mappedBy = "result", optional = false)
+	@OneToOne(fetch = FetchType.EAGER, mappedBy = "result", optional = false)
 	private Render render;
 	
 	@Lob
@@ -68,10 +62,5 @@ public class Result {
 	public void setPngBase64(String pngBase64) {
 		
 		this.pngBase64 = pngBase64;
-	}
-	
-	public BufferedImage getImage() throws IOException {
-		
-		return ImageIO.read(new ByteArrayInputStream(Base64.getDecoder().decode(getPngBase64())));
 	}
 }

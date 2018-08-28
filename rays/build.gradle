@@ -30,6 +30,15 @@ subprojects { p ->
 			apply plugin: 'com.palantir.docker'
 		}
 		
+		clean.delete << file('data/')
+		
+		task copyCoreData(type: Copy) {
+			from project(":core").file( "data/")
+			into p.file("data/")
+			duplicatesStrategy = 'include'
+		}
+		processResources.dependsOn( copyCoreData )
+		
 		dependencies { compile project(":core") }
 		
 		clean.dependsOn( project(":core").clean )
