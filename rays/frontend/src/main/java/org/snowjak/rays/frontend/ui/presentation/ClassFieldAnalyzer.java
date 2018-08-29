@@ -15,6 +15,34 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Given a Class instance, this analyzer will:
+ * 
+ * <ol>
+ * <li>analyze all its declared fields
+ * <li>identify all those non-transient, non-static fields' getters and (if
+ * available) setters</li>
+ * <li>identify the constructor with the fewest parameters which will cover all
+ * fields lacking setters</li>
+ * </ol>
+ * 
+ * <p>
+ * A couple of <strong>important caveats</strong>:
+ * <ul>
+ * <li>This analyzer will only list fields that are not transient and not
+ * static</li>
+ * <li>This analyzer expects every field to have a getter with a standard name
+ * -- e.g., for {@code field}, it looks for a 0-parameter method with the name
+ * {@code getField()}</li>
+ * <li>This analyzer expects to have parameter-name information available.
+ * Therefore, you <strong>must</strong> compile this code with the {@code javac}
+ * option {@code -parameters}!</li>
+ * </ul>
+ * </p>
+ * 
+ * @author snowjak88
+ *
+ */
 public class ClassFieldAnalyzer {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(ClassFieldAnalyzer.class);
