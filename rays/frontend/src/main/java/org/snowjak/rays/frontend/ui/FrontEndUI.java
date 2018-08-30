@@ -1,5 +1,6 @@
 package org.snowjak.rays.frontend.ui;
 
+import org.snowjak.rays.Primitive;
 import org.snowjak.rays.frontend.events.AddTabRequest;
 import org.snowjak.rays.frontend.events.AddWindowRequest;
 import org.snowjak.rays.frontend.events.Bus;
@@ -8,7 +9,6 @@ import org.snowjak.rays.frontend.events.RemoveWindowRequest;
 import org.snowjak.rays.frontend.ui.components.InitialScreen;
 import org.snowjak.rays.frontend.ui.components.MainMenuBar;
 import org.snowjak.rays.frontend.ui.components.ObjectCreator;
-import org.snowjak.rays.light.PointLight;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.google.common.eventbus.Subscribe;
@@ -55,7 +55,7 @@ public class FrontEndUI extends UI {
 		
 		rootLayout = new VerticalLayout(menuBar, tabs, creator);
 		
-		creator.setClass(PointLight.class);
+		creator.setClass(Primitive.class);
 		
 		setContent(rootLayout);
 		

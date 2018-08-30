@@ -24,5 +24,10 @@ import java.lang.annotation.Target;
 @Documented
 public @interface UIType {
 	
+	/**
+	 * If the JSON deserializer requires a "type" value, supply it here.
+	 */
+	public String type() default "";
+	
 	public UIField[] fields();
 }

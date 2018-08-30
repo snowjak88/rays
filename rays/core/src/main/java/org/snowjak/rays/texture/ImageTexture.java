@@ -25,7 +25,8 @@ import org.snowjak.rays.texture.mapping.TextureMapping;
  * @author snowjak88
  *
  */
-@UIType(fields = { @UIField(name = "url", type = URL.class), @UIField(name = "mapping", type = TextureMapping.class) })
+@UIType(type = "image", fields = { @UIField(name = "url", type = String.class),
+		@UIField(name = "mapping", type = TextureMapping.class) })
 public class ImageTexture extends Texture {
 	
 	private String png;

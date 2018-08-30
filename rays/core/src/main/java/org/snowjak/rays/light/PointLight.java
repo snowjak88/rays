@@ -19,7 +19,8 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  * @author snowjak88
  *
  */
-@UIType(fields = { @UIField(name = "position", type = Point3D.class), @UIField(name = "rgb", type = RGB.class) })
+@UIType(type = "point", fields = { @UIField(name = "position", type = Point3D.class),
+		@UIField(name = "rgb", type = RGB.class) })
 public class PointLight implements Light {
 	
 	private Point3D position;

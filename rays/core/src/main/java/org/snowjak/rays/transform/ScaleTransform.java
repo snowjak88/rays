@@ -13,7 +13,7 @@ import org.snowjak.rays.geometry.util.Matrix;
  * 
  * @author snowjak88
  */
-@UIType(fields = { @UIField(name = "sx", defaultValue = "0", type = Double.class),
+@UIType(type = "scale", fields = { @UIField(name = "sx", defaultValue = "0", type = Double.class),
 		@UIField(name = "sy", defaultValue = "0", type = Double.class),
 		@UIField(name = "sz", defaultValue = "0", type = Double.class) })
 public class ScaleTransform implements Transform {

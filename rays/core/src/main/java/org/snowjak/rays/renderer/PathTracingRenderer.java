@@ -19,7 +19,7 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  * @author snowjak88
  *
  */
-@UIType(fields = { @UIField(name = "maxDepth", type = Integer.class, defaultValue = "4") })
+@UIType(type="path-tracing", fields = { @UIField(name = "maxDepth", type = Integer.class, defaultValue = "4") })
 public class PathTracingRenderer extends Renderer {
 	
 	private int maxDepth;

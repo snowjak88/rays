@@ -26,7 +26,7 @@ import org.snowjak.rays.transform.Transform;
  * 
  * @author snowjak88
  */
-@UIType(fields = { @UIField(name = "worldToLocal", type = Collection.class, collectedType = Transform.class) })
+@UIType(type="plane", fields = { @UIField(name = "worldToLocal", type = Collection.class, collectedType = Transform.class) })
 public class PlaneShape extends Shape {
 	
 	private static final Normal3D LOCAL_NORMAL = Normal3D.from(Vector3D.J);

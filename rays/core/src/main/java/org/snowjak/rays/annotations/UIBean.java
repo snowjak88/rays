@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -27,9 +28,12 @@ public class UIBean<T> {
 	
 	private final Class<T> type;
 	
+	private final String jsonType;
 	private final Map<String, Class<?>> fieldTypes;
 	private final Map<String, Class<?>> fieldCollectedTypes;
 	private final Map<String, Object> fieldValues;
+	private final Map<String, Supplier<Object>> fieldDefaultValues;
+	private final Map<String, Supplier<Object>> fieldDefaultCollectedValues;
 	private final Map<String, Collection<Class<?>>> fieldAvailableTypes;
 	
 	private static final Map<Class<? extends Number>, Function<String, ? extends Number>> NUMBER_CONVERTER = new HashMap<>();
@@ -48,6 +52,8 @@ public class UIBean<T> {
 		fieldTypes = new HashMap<>();
 		fieldCollectedTypes = new HashMap<>();
 		fieldValues = new HashMap<>();
+		fieldDefaultValues = new HashMap<>();
+		fieldDefaultCollectedValues = new HashMap<>();
 		fieldAvailableTypes = new HashMap<>();
 		
 		//
@@ -57,7 +63,8 @@ public class UIBean<T> {
 		if (typeDef == null)
 			throw new UIAnnotationMissing(
 					"Cannot construct UIBean for [" + type.getName() + "] -- missing UIType annotation!");
-			
+		
+		jsonType = typeDef.type();
 		//
 		//
 		// Start reading that annotation.
@@ -67,28 +74,41 @@ public class UIBean<T> {
 			
 			if (Collection.class.isAssignableFrom(field.type()))
 				fieldCollectedTypes.put(field.name(), field.collectedType());
-			
-			if (String.class.isAssignableFrom(field.type())) {
-				fieldValues.put(field.name(), field.defaultValue());
+				
+			//
+			// Does this field have a default-value we can use?
+			final var newValue = getNewDefaultValueForField(field.type(), field.defaultValue());
+			if (newValue != null) {
+				
+				fieldValues.put(field.name(), newValue);
+				fieldDefaultValues.put(field.name(), () -> newValue);
 				fieldAvailableTypes.put(field.name(), Arrays.asList(field.type()));
-			}
-			
-			if (Boolean.class.isAssignableFrom(field.type())) {
-				fieldValues.put(field.name(), Boolean.parseBoolean(field.defaultValue()));
-				fieldAvailableTypes.put(field.name(), Arrays.asList(field.type()));
-			}
-			
-			if (Number.class.isAssignableFrom(field.type())) {
-				fieldValues.put(field.name(), NUMBER_CONVERTER.get(field.type()).apply(field.defaultValue()));
-				fieldAvailableTypes.put(field.name(), Arrays.asList(field.type()));
-			}
-			
-			else if (Collection.class.isAssignableFrom(field.type())) {
-				fieldValues.put(field.name(), new LinkedList<>());
-				fieldAvailableTypes.put(field.name(), getAnnotatedTypes(field.collectedType()));
-			}
-			
-			else {
+				
+				if (Collection.class.isAssignableFrom(field.type())) {
+					fieldAvailableTypes.put(field.name(), getAnnotatedTypes(field.collectedType()));
+					
+					final var defaultCollectedValue = getNewDefaultValueForField(field.collectedType(),
+							field.defaultValue());
+					if (defaultCollectedValue != null)
+						fieldDefaultCollectedValues.put(field.name(), () -> defaultCollectedValue);
+					else {
+						
+						final var possibleValueCollectedTypes = getAnnotatedTypes(field.collectedType());
+						
+						if (possibleValueCollectedTypes.size() == 0)
+							throw new UIAnnotationMissing("Class [" + type + "] defines UI-field \"" + field.name()
+									+ "\", expecting collected-type [" + field.collectedType()
+									+ "] -- but that type isn't annotated with UIType!");
+							
+						//
+						// Possibly more than one allowable type in this field.
+						// Pick the first one.
+						final var firstPossibleType = possibleValueCollectedTypes.iterator().next();
+						fieldDefaultCollectedValues.put(field.name(), () -> new UIBean<>(firstPossibleType));
+					}
+				}
+				
+			} else {
 				
 				final var possibleValueTypes = getAnnotatedTypes(field.type());
 				
@@ -96,24 +116,36 @@ public class UIBean<T> {
 					throw new UIAnnotationMissing(
 							"Class [" + type + "] defines UI-field \"" + field.name() + "\", expecting type ["
 									+ field.type() + "] -- but that type isn't annotated with UIType!");
-				
-				if (possibleValueTypes.size() == 1) {
-					fieldValues.put(field.name(), new UIBean<>(field.type()));
-					fieldAvailableTypes.put(field.name(), possibleValueTypes);
 					
-				} else {
-					//
-					// More than one possible type in this field.
-					// Pick the first one.
-					final var firstPossibleType = possibleValueTypes.iterator().next();
-					fieldTypes.put(field.name(), firstPossibleType);
-					fieldValues.put(field.name(), new UIBean<>(firstPossibleType));
-					fieldAvailableTypes.put(field.name(), possibleValueTypes);
-				}
+				//
+				// Possibly more than one allowable type in this field.
+				// Pick the first one.
+				final var firstPossibleType = possibleValueTypes.iterator().next();
+				fieldTypes.put(field.name(), firstPossibleType);
+				fieldValues.put(field.name(), new UIBean<>(firstPossibleType));
+				fieldDefaultValues.put(field.name(), () -> new UIBean<>(firstPossibleType));
+				fieldAvailableTypes.put(field.name(), possibleValueTypes);
 				
 			}
 			
 		}
+	}
+	
+	private Object getNewDefaultValueForField(Class<?> fieldType, String defaultValue) {
+		
+		if (String.class.isAssignableFrom(fieldType))
+			return defaultValue;
+		
+		if (Boolean.class.isAssignableFrom(fieldType))
+			return Boolean.parseBoolean(defaultValue);
+		
+		if (Number.class.isAssignableFrom(fieldType))
+			return NUMBER_CONVERTER.get(fieldType).apply(defaultValue);
+		
+		if (Collection.class.isAssignableFrom(fieldType))
+			return new LinkedList<>();
+		
+		return null;
 	}
 	
 	private Collection<Class<?>> getAnnotatedTypes(Class<?> supertype) {
@@ -235,14 +267,32 @@ public class UIBean<T> {
 	public void setFieldValue(String fieldName, Object value) throws InvalidTypeReferenceException {
 		
 		final var isDirectlyAssignable = getFieldType(fieldName).isAssignableFrom(value.getClass());
-		final var isUiBeanOfCorrectType = value instanceof UIBean
-				&& getFieldType(fieldName).isAssignableFrom(((UIBean<?>) value).getType());
+		final var isUiBean = value instanceof UIBean;
 		
-		if (!isDirectlyAssignable && !isUiBeanOfCorrectType)
+		if (!isDirectlyAssignable && !isUiBean)
 			throw new InvalidTypeReferenceException("Cannot assigned a [" + value.getClass().getName() + "] to a ["
 					+ getFieldType(fieldName).getName() + "]");
 		
 		fieldValues.put(fieldName, value);
+	}
+	
+	/**
+	 * Given a field-name which denotes a Collection-type field, add a new object of
+	 * an acceptable type to that field's value.
+	 * 
+	 * @param fieldName
+	 * @return the new value, also just added to the Collection
+	 */
+	@SuppressWarnings("unchecked")
+	public Object addToCollection(String fieldName) {
+		
+		if (getFieldCollectedType(fieldName) == null)
+			return null;
+		
+		final Object newItem = fieldDefaultCollectedValues.get(fieldName).get();
+		
+		((Collection<Object>) getFieldValue(fieldName)).add(newItem);
+		return newItem;
 	}
 	
 	public static class Serializer implements JsonSerializer<UIBean<?>> {
@@ -251,6 +301,9 @@ public class UIBean<T> {
 		public JsonElement serialize(UIBean<?> src, Type typeOfSrc, JsonSerializationContext context) {
 			
 			final var obj = new JsonObject();
+			
+			if (src.jsonType != null && !src.jsonType.trim().isEmpty())
+				obj.addProperty("type", src.jsonType);
 			
 			for (String fieldName : src.getFieldNames()) {
 				

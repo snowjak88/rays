@@ -13,7 +13,7 @@ import org.snowjak.rays.interact.SurfaceDescriptor;
  * @author snowjak88
  *
  */
-@UIType(fields = {})
+@UIType(type="identity", fields = {})
 public class IdentityTextureMapping implements TextureMapping {
 	
 	@Override

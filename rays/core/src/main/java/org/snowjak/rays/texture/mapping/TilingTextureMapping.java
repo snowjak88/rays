@@ -15,7 +15,7 @@ import org.snowjak.rays.interact.SurfaceDescriptor;
  * @author snowjak88
  *
  */
-@UIType(fields = {})
+@UIType(type = "tiling", fields = {})
 public class TilingTextureMapping implements TextureMapping {
 	
 	@Override

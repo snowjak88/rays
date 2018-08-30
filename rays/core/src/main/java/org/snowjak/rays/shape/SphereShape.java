@@ -26,7 +26,7 @@ import org.snowjak.rays.interact.SurfaceDescriptor;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.transform.Transform;
 
-@UIType(fields = { @UIField(name = "radius", type = Double.class, defaultValue = "1"),
+@UIType(type = "sphere", fields = { @UIField(name = "radius", type = Double.class, defaultValue = "1"),
 		@UIField(name = "worldToLocal", type = Collection.class, collectedType = Transform.class) })
 public class SphereShape extends Shape {
 	

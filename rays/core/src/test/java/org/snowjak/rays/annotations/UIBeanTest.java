@@ -8,11 +8,13 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Vector3D;
+import org.snowjak.rays.shape.SphereShape;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.texture.ConstantTexture;
 import org.snowjak.rays.texture.mapping.IdentityTextureMapping;
 import org.snowjak.rays.texture.mapping.TilingTextureMapping;
 import org.snowjak.rays.transform.RotationTransform;
+import org.snowjak.rays.transform.Transform;
 
 public class UIBeanTest {
 	
@@ -66,7 +68,7 @@ public class UIBeanTest {
 		assertEquals(Double.class, bean.getFieldValue("degrees").getClass());
 		
 		final var json = Settings.getInstance().getGson().toJson(bean);
-		final var expectedJson = "{\"axis\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"degrees\":0.0}";
+		final var expectedJson = "{\"type\":\"rotate\",\"axis\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"degrees\":0.0}";
 		assertEquals(expectedJson, json);
 		
 	}
@@ -90,8 +92,22 @@ public class UIBeanTest {
 		assertEquals(IdentityTextureMapping.class, ((UIBean<?>) (bean.getFieldValue("mapping"))).getType());
 		
 		final var json = Settings.getInstance().getGson().toJson(bean);
-		final var expectedJson = "{\"mapping\":{},\"rgb\":{\"red\":1.0,\"green\":1.0,\"blue\":1.0}}";
+		final var expectedJson = "{\"type\":\"constant\",\"mapping\":{\"type\":\"identity\"},\"rgb\":{\"red\":1.0,\"green\":1.0,\"blue\":1.0}}";
 		assertEquals(expectedJson, json);
+	}
+	
+	@Test
+	public void testShape() {
+		
+		final var bean = new UIBean<>(SphereShape.class);
+		
+		assertEquals(2, bean.getFieldNames().size());
+		assertTrue(bean.getFieldNames().contains("radius"));
+		assertTrue(bean.getFieldNames().contains("worldToLocal"));
+		
+		final var newTransformBean = bean.addToCollection("worldToLocal");
+		assertEquals(UIBean.class, newTransformBean.getClass());
+		assertTrue(Transform.class.isAssignableFrom(((UIBean<?>)newTransformBean).getType()));
 	}
 	
 }

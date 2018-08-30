@@ -19,7 +19,7 @@ import org.snowjak.rays.texture.Texture;
  * @author snowjak88
  *
  */
-@UIType(fields = { @UIField(name = "texture", type = Texture.class) })
+@UIType(type = "lambertian", fields = { @UIField(name = "texture", type = Texture.class) })
 public class LambertianMaterial implements Material {
 	
 	private Texture texture;

@@ -2,6 +2,9 @@
 /build/
 !gradle/wrapper/gradle-wrapper.jar
 frontend/src/querydsl/
+frontend/data/
+spectrum-generator/data/
+worker/data/
 
 ### STS ###
 .apt_generated

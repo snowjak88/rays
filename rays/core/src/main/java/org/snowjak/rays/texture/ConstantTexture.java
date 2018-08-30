@@ -13,7 +13,8 @@ import org.snowjak.rays.texture.mapping.TextureMapping;
  * @author snowjak88
  *
  */
-@UIType(fields = { @UIField(name = "rgb", type = RGB.class), @UIField(name = "mapping", type = TextureMapping.class) })
+@UIType(type = "constant", fields = { @UIField(name = "rgb", type = RGB.class),
+		@UIField(name = "mapping", type = TextureMapping.class) })
 public class ConstantTexture extends Texture {
 	
 	private RGB rgb;

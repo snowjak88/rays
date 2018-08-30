@@ -10,7 +10,7 @@ import org.snowjak.rays.sample.Sample;
  * @author snowjak88
  *
  */
-@UIType(fields = { @UIField(name = "extent", type = Integer.class, defaultValue = "0") })
+@UIType(type = "box", fields = { @UIField(name = "extent", type = Integer.class, defaultValue = "0") })
 public class BoxFilter implements Filter {
 	
 	private int extent;

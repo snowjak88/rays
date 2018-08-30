@@ -73,8 +73,22 @@ public class ObjectCreator extends FormLayout {
 		
 		removeAllComponents();
 		
+		addComponent(wrapBean(bean));
+		
+		jsonOutput = new TextArea();
+		jsonOutput.setCaption("JSON");
+		jsonOutput.setReadOnly(true);
+		jsonOutput.setValue(Settings.getInstance().getGson().toJson(bean));
+		addComponent(jsonOutput);
+	}
+	
+	private Component wrapBean(UIBean<?> bean) {
+		
+		LOG.trace("Wrapping UIBean<{}> ...", bean.getType().getSimpleName());
+		final var layout = new FormLayout();
+		
 		for (String fieldName : bean.getFieldNames()) {
-			LOG.trace("Wrapping root bean field {} ...", fieldName);
+			LOG.trace("Wrapping UIBean<{}>.{} ...", bean.getType().getSimpleName(), fieldName);
 			
 			final var wrappedValue = wrapValue(bean, fieldName, bean.getFieldValue(fieldName));
 			wrappedValue.addListener((e) -> {
@@ -82,13 +96,12 @@ public class ObjectCreator extends FormLayout {
 					fireEvent(new ValueChangedEvent(wrappedValue));
 				}
 			});
-			addComponent(wrappedValue);
+			layout.addComponent(wrappedValue);
 		}
 		
-		jsonOutput = new TextArea();
-		jsonOutput.setCaption("JSON");
-		jsonOutput.setReadOnly(true);
-		addComponent(jsonOutput);
+		LOG.trace("Done wrapping UIBean<{}>.", bean.getType().getSimpleName());
+		
+		return layout;
 	}
 	
 	private Component wrapValue(UIBean<?> parentBean, String fieldName, Object value) {
@@ -99,39 +112,49 @@ public class ObjectCreator extends FormLayout {
 			
 			LOG.trace("Value is a Collection<{}> ...", parentBean.getFieldCollectedType(fieldName).getName());
 			
-			final var component = new VerticalLayout();
-			component.setCaption(fieldName);
+			final var layout = new VerticalLayout();
+			layout.setCaption(fieldName);
 			
 			int i = 1;
 			for (var item : (Collection<?>) value) {
 				
-				LOG.trace("Value {}[{}] ...", fieldName, i);
+				LOG.trace("Value {}[{}] ({}) ...", fieldName, i, item.getClass().getName());
 				
 				final var itemLayout = new HorizontalLayout();
 				itemLayout.addComponent(new Button(VaadinIcons.MINUS_CIRCLE, (ce) -> {
 					((Collection<?>) value).remove(item);
-					component.removeComponent(itemLayout);
+					layout.removeComponent(itemLayout);
 				}));
 				
-				final var wrappedValue = wrapValue(parentBean, fieldName + "[" + i + "]", value);
-				wrappedValue.addListener((e) -> {
-					if (e instanceof ValueChangedEvent) {
-						fireEvent(new ValueChangedEvent(component));
-					}
-				});
+				final var wrappedValue = wrapValue(parentBean, fieldName, item);
 				itemLayout.addComponent(wrappedValue);
 				
-				component.addComponent(itemLayout);
+				layout.addComponent(itemLayout);
 				i++;
 			}
 			
+			final Button addButton = new Button(VaadinIcons.PLUS_CIRCLE);
+			addButton.addClickListener((ce) -> {
+				final var itemLayout = new HorizontalLayout();
+				
+				final var wrappedValue = wrapValue(parentBean, fieldName, parentBean.addToCollection(fieldName));
+				
+				itemLayout.addComponent(wrappedValue);
+				layout.addComponent(itemLayout);
+				
+				layout.removeComponent(addButton);
+				layout.addComponent(addButton);
+			});
+			layout.addComponent(addButton);
+			
 			LOG.trace("Done wrapping {}.{} ...", parentBean.getType().getName(), fieldName);
 			
-			return component;
+			return layout;
 			
 		} else if (UIBean.class.isAssignableFrom(value.getClass())) {
 			
-			LOG.trace("Value is a child UIBean<{}> ...", ((UIBean<?>) value).getType().getName());
+			final var childBean = (UIBean<?>) value;
+			LOG.trace("Value is a child UIBean<{}> ...", childBean.getType().getName());
 			
 			final var layout = new HorizontalLayout();
 			layout.setCaption(fieldName);
@@ -145,27 +168,19 @@ public class ObjectCreator extends FormLayout {
 			typeDropdown.addSelectionListener((se) -> {
 				if (se.getSelectedItem().get() != se.getOldValue()) {
 					parentBean.setFieldValue(fieldName, new UIBean<>(se.getSelectedItem().get()));
+					
+					layout.removeAllComponents();
+					layout.addComponent(typeDropdown);
+					final var wrappedBean = wrapBean((UIBean<?>) parentBean.getFieldValue(fieldName));
+					layout.addComponent(wrappedBean);
+					
 					fireEvent(new ValueChangedEvent(typeDropdown));
 				}
 			});
 			
 			layout.addComponent(typeDropdown);
 			
-			final var childBeanLayout = new FormLayout();
-			
-			for (String childFieldName : ((UIBean<?>) value).getFieldNames()) {
-				LOG.trace("Wrapping UIBean<{}>.{} ...", ((UIBean<?>) value).getType().getName(), childFieldName);
-				
-				final var wrappedField = wrapValue((UIBean<?>) value, childFieldName,
-						((UIBean<?>) value).getFieldValue(childFieldName));
-				wrappedField.addListener((e) -> {
-					if (e instanceof ValueChangedEvent)
-						fireEvent(new ValueChangedEvent(wrappedField));
-				});
-				childBeanLayout.addComponent(wrappedField);
-			}
-			
-			layout.addComponent(childBeanLayout);
+			layout.addComponent(wrapBean(childBean));
 			
 			LOG.trace("Done wrapping {}.{} ...", parentBean.getType().getName(), fieldName);
 			

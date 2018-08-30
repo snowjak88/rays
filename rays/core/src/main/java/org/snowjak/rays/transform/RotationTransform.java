@@ -15,7 +15,7 @@ import org.snowjak.rays.geometry.util.Matrix;
  * 
  * @author snowjak88
  */
-@UIType(fields = { @UIField(name = "axis", type = Vector3D.class),
+@UIType(type = "rotate", fields = { @UIField(name = "axis", type = Vector3D.class),
 		@UIField(name = "degrees", defaultValue = "0", type = Double.class) })
 public class RotationTransform implements Transform {
 	

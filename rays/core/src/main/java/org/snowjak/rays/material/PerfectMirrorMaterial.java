@@ -21,7 +21,7 @@ import org.snowjak.rays.texture.Texture;
  * @author snowjak88
  *
  */
-@UIType(fields = { @UIField(name = "tint", type = Texture.class) })
+@UIType(type = "perfect-mirror", fields = { @UIField(name = "tint", type = Texture.class) })
 public class PerfectMirrorMaterial implements Material {
 	
 	private Texture tint = null;
