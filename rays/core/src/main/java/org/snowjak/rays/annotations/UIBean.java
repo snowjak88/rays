@@ -234,7 +234,11 @@ public class UIBean<T> {
 	 */
 	public void setFieldValue(String fieldName, Object value) throws InvalidTypeReferenceException {
 		
-		if (!getFieldType(fieldName).isAssignableFrom(value.getClass()))
+		final var isDirectlyAssignable = getFieldType(fieldName).isAssignableFrom(value.getClass());
+		final var isUiBeanOfCorrectType = value instanceof UIBean
+				&& getFieldType(fieldName).isAssignableFrom(((UIBean<?>) value).getType());
+		
+		if (!isDirectlyAssignable && !isUiBeanOfCorrectType)
 			throw new InvalidTypeReferenceException("Cannot assigned a [" + value.getClass().getName() + "] to a ["
 					+ getFieldType(fieldName).getName() + "]");
 		

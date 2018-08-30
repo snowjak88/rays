@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.annotations.UIBean;
-import org.snowjak.rays.geometry.Vector3D;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.ConversionService;
 
@@ -65,7 +64,7 @@ public class ObjectCreator extends FormLayout {
 	
 	public void setClass(Class<?> clazz) {
 		
-		bean = new UIBean<>(Vector3D.class);
+		bean = new UIBean<>(clazz);
 		
 		refreshForm();
 	}
@@ -140,6 +139,7 @@ public class ObjectCreator extends FormLayout {
 			LOG.trace("Adding dropdown for all available types: {}", parentBean.getFieldAvailableTypes(fieldName));
 			
 			final var typeDropdown = new NativeSelect<>("type", parentBean.getFieldAvailableTypes(fieldName));
+			typeDropdown.setSelectedItem(parentBean.getFieldType(fieldName));
 			typeDropdown.setItemCaptionGenerator((c) -> c.getSimpleName());
 			typeDropdown.setEmptySelectionAllowed(false);
 			typeDropdown.addSelectionListener((se) -> {
