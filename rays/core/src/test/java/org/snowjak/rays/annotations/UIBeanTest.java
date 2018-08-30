@@ -21,6 +21,10 @@ public class UIBeanTest {
 		
 		final var bean = new UIBean<>(Vector3D.class);
 		
+		bean.setFieldValue("x", 1.0);
+		bean.setFieldValue("y", 2.0);
+		bean.setFieldValue("z", 3.0);
+		
 		assertNotNull(bean.getFieldNames());
 		assertEquals(3, bean.getFieldNames().size());
 		assertTrue(bean.getFieldNames().contains("x"));
@@ -31,9 +35,9 @@ public class UIBeanTest {
 		assertTrue(Double.class.isAssignableFrom(bean.getFieldValue("y").getClass()));
 		assertTrue(Double.class.isAssignableFrom(bean.getFieldValue("z").getClass()));
 		
-		assertEquals(0.0, (Double) bean.getFieldValue("x"), 0.00001);
-		assertEquals(0.0, (Double) bean.getFieldValue("y"), 0.00001);
-		assertEquals(0.0, (Double) bean.getFieldValue("z"), 0.00001);
+		assertEquals(1.0, (Double) bean.getFieldValue("x"), 0.00001);
+		assertEquals(2.0, (Double) bean.getFieldValue("y"), 0.00001);
+		assertEquals(3.0, (Double) bean.getFieldValue("z"), 0.00001);
 		
 		assertEquals(Double.class, bean.getFieldType("x"));
 		assertEquals(1, bean.getFieldAvailableTypes("x").size());
@@ -42,7 +46,7 @@ public class UIBeanTest {
 		assertNull(bean.getFieldCollectedType("x"));
 		
 		final var json = Settings.getInstance().getGson().toJson(bean);
-		final var expectedJson = "{\"x\":0.0,\"y\":0.0,\"z\":0.0}";
+		final var expectedJson = "{\"x\":1.0,\"y\":2.0,\"z\":3.0}";
 		assertEquals(expectedJson, json);
 		
 	}
