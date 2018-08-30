@@ -7,6 +7,8 @@ import static org.apache.commons.math3.util.FastMath.pow;
 
 import java.lang.reflect.Type;
 
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.util.Matrix;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.serialization.IsLoadable;
@@ -24,6 +26,9 @@ import com.google.gson.JsonSerializationContext;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "red", type = Double.class, defaultValue = "1"),
+		@UIField(name = "green", type = Double.class, defaultValue = "1"),
+		@UIField(name = "blue", type = Double.class, defaultValue = "1") })
 public class RGB extends Colorspace<RGB, Triplet> {
 	
 	/**

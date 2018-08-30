@@ -1,6 +1,8 @@
 package org.snowjak.rays.material;
 
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
@@ -19,6 +21,7 @@ import org.snowjak.rays.texture.Texture;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "tint", type = Texture.class) })
 public class PerfectMirrorMaterial implements Material {
 	
 	private Texture tint = null;
@@ -35,7 +38,7 @@ public class PerfectMirrorMaterial implements Material {
 	
 	public Texture getTint() {
 		
-		if(tint == null)
+		if (tint == null)
 			tint = new ConstantTexture(RGB.WHITE);
 		
 		return tint;

@@ -1,6 +1,8 @@
 package org.snowjak.rays.renderer;
 
 import org.snowjak.rays.Scene;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.light.Light;
@@ -17,6 +19,7 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "maxDepth", type = Integer.class, defaultValue = "4") })
 public class PathTracingRenderer extends Renderer {
 	
 	private int maxDepth;

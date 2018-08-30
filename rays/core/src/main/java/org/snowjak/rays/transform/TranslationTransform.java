@@ -1,5 +1,7 @@
 package org.snowjak.rays.transform;
 
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
@@ -11,6 +13,9 @@ import org.snowjak.rays.geometry.util.Matrix;
  * 
  * @author snowjak88
  */
+@UIType(fields = { @UIField(name = "dx", defaultValue = "0", type = Double.class),
+		@UIField(name = "dy", defaultValue = "0", type = Double.class),
+		@UIField(name = "dz", defaultValue = "0", type = Double.class) })
 public class TranslationTransform implements Transform {
 	
 	private double dx = 0;

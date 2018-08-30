@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.lang.reflect.Type;
 
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.serialization.IsLoadable;
 
@@ -19,6 +21,9 @@ import com.google.gson.JsonSerializationContext;
  * 
  * @author snowjak88
  */
+@UIType(fields = { @UIField(name = "x", type = Double.class, defaultValue = "0"),
+		@UIField(name = "y", type = Double.class, defaultValue = "1"),
+		@UIField(name = "z", type = Double.class, defaultValue = "0") })
 public class Normal3D extends Triplet implements Serializable {
 	
 	private static final long serialVersionUID = -8278436657012042876L;

@@ -1,6 +1,8 @@
 package org.snowjak.rays.light;
 
 import org.snowjak.rays.Scene;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
@@ -17,6 +19,7 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "position", type = Point3D.class), @UIField(name = "rgb", type = RGB.class) })
 public class PointLight implements Light {
 	
 	private Point3D position;

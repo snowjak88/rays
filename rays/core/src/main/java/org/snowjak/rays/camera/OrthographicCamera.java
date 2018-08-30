@@ -2,6 +2,8 @@ package org.snowjak.rays.camera;
 
 import java.util.Collection;
 
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
@@ -20,6 +22,11 @@ import org.snowjak.rays.transform.Transform;
  * @author snowjak88
  * @see Camera
  */
+@UIType(fields = { @UIField(name = "pixelWidth", defaultValue = "400", type = Integer.class),
+		@UIField(name = "pixelHeight", defaultValue = "300", type = Integer.class),
+		@UIField(name = "worldWidth", defaultValue = "4", type = Double.class),
+		@UIField(name = "worldHeight", defaultValue = "3", type = Double.class),
+		@UIField(name = "worldToLocal", type = Collection.class, collectedType = Transform.class) })
 public class OrthographicCamera extends Camera {
 	
 	public OrthographicCamera(double pixelWidth, double pixelHeight, double worldWidth, double worldHeight,

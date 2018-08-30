@@ -3,6 +3,8 @@ package org.snowjak.rays.geometry;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.util.Pair;
 import org.snowjak.rays.serialization.IsLoadable;
 
@@ -17,6 +19,8 @@ import com.google.gson.JsonSerializationContext;
  * 
  * @author snowjak88
  */
+@UIType(fields = { @UIField(name = "x", type = Double.class, defaultValue = "0"),
+		@UIField(name = "y", type = Double.class, defaultValue = "0") })
 public class Point2D extends Pair implements Serializable {
 	
 	private static final long serialVersionUID = -7421036355210501663L;

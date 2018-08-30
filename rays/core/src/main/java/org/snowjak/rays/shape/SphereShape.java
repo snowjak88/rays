@@ -9,10 +9,13 @@ import static org.apache.commons.math3.util.FastMath.sin;
 import static org.apache.commons.math3.util.FastMath.sqrt;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
@@ -23,6 +26,8 @@ import org.snowjak.rays.interact.SurfaceDescriptor;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.transform.Transform;
 
+@UIType(fields = { @UIField(name = "radius", type = Double.class, defaultValue = "1"),
+		@UIField(name = "worldToLocal", type = Collection.class, collectedType = Transform.class) })
 public class SphereShape extends Shape {
 	
 	private double radius;

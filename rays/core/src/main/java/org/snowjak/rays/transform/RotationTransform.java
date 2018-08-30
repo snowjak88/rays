@@ -1,6 +1,8 @@
 package org.snowjak.rays.transform;
 
 import org.apache.commons.math3.util.FastMath;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
@@ -13,6 +15,8 @@ import org.snowjak.rays.geometry.util.Matrix;
  * 
  * @author snowjak88
  */
+@UIType(fields = { @UIField(name = "axis", type = Vector3D.class),
+		@UIField(name = "degrees", defaultValue = "0", type = Double.class) })
 public class RotationTransform implements Transform {
 	
 	private Vector3D axis;

@@ -1,6 +1,9 @@
 package org.snowjak.rays.material;
 
 import static org.apache.commons.math3.util.FastMath.*;
+
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
@@ -16,6 +19,7 @@ import org.snowjak.rays.texture.Texture;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "texture", type = Texture.class) })
 public class LambertianMaterial implements Material {
 	
 	private Texture texture;

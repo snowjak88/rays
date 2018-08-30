@@ -2,6 +2,8 @@ package org.snowjak.rays;
 
 import java.util.List;
 
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
@@ -14,6 +16,7 @@ import org.snowjak.rays.shape.Shape;
 import org.snowjak.rays.transform.Transform;
 import org.snowjak.rays.transform.Transformable;
 
+@UIType(fields = { @UIField(name = "shape", type = Shape.class), @UIField(name = "material", type = Material.class) })
 public class Primitive implements Interactable<Primitive>, Transformable {
 	
 	private final Shape shape;

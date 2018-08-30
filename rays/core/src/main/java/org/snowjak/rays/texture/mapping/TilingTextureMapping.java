@@ -2,6 +2,7 @@ package org.snowjak.rays.texture.mapping;
 
 import static org.apache.commons.math3.util.FastMath.floor;
 
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.interact.DescribesSurface;
 import org.snowjak.rays.interact.SurfaceDescriptor;
@@ -14,6 +15,7 @@ import org.snowjak.rays.interact.SurfaceDescriptor;
  * @author snowjak88
  *
  */
+@UIType(fields = {})
 public class TilingTextureMapping implements TextureMapping {
 	
 	@Override

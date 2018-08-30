@@ -5,6 +5,8 @@ import java.util.Collections;
 
 import org.snowjak.rays.acceleration.AccelerationStructure;
 import org.snowjak.rays.acceleration.HierarchicalBoundingBox;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.camera.Camera;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.interact.Interaction;
@@ -21,6 +23,9 @@ import org.snowjak.rays.light.Light;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "primitives", type = Collection.class, collectedType = Primitive.class),
+		@UIField(name = "camera", type = Camera.class),
+		@UIField(name = "lights", type = Collection.class, collectedType = Light.class) })
 public class Scene {
 	
 	private Collection<Primitive> primitives = null;

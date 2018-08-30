@@ -7,6 +7,8 @@ import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.Random;
 
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.serialization.IsLoadable;
 
@@ -21,6 +23,9 @@ import com.google.gson.JsonSerializationContext;
  * 
  * @author snowjak88
  */
+@UIType(fields = { @UIField(name = "x", type = Double.class, defaultValue = "0"),
+		@UIField(name = "y", type = Double.class, defaultValue = "0"),
+		@UIField(name = "z", type = Double.class, defaultValue = "0") })
 public class Vector3D extends Triplet implements Serializable {
 	
 	private static final long serialVersionUID = -997240497037355891L;
@@ -42,7 +47,7 @@ public class Vector3D extends Triplet implements Serializable {
 	 */
 	public static final Vector3D K = new Vector3D(0, 0, 1);
 	
-	private double magnitude = -1d, magnitudeSq = -1d;
+	private transient double magnitude = -1d, magnitudeSq = -1d;
 	
 	/**
 	 * Convert the given {@link Triplet} into a Vector3D.

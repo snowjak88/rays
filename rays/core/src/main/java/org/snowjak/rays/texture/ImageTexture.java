@@ -9,6 +9,8 @@ import java.util.Base64;
 
 import javax.imageio.ImageIO;
 
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.interact.DescribesSurface;
 import org.snowjak.rays.interact.SurfaceDescriptor;
@@ -23,6 +25,7 @@ import org.snowjak.rays.texture.mapping.TextureMapping;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "url", type = URL.class), @UIField(name = "mapping", type = TextureMapping.class) })
 public class ImageTexture extends Texture {
 	
 	private String png;

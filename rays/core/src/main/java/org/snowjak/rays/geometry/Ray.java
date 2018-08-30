@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.lang.reflect.Type;
 
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.serialization.IsLoadable;
 
 import com.google.gson.JsonDeserializationContext;
@@ -34,15 +36,17 @@ import com.google.gson.JsonSerializationContext;
  * 
  * @author snowjak88
  */
+@UIType(fields = { @UIField(name = "origin", type = Point3D.class),
+		@UIField(name = "direction", type = Vector3D.class) })
 public class Ray implements Serializable {
 	
 	private static final long serialVersionUID = 8542616504681890448L;
 	
 	private Point3D origin;
 	private Vector3D direction;
-	private double t;
+	private double t = 0;
 	
-	private int depth;
+	private int depth = 0;
 	
 	private double windowMinT = Double.NEGATIVE_INFINITY;
 	private double windowMaxT = Double.POSITIVE_INFINITY;

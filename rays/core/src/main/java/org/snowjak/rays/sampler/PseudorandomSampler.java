@@ -4,6 +4,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sample.Sample;
@@ -22,6 +24,13 @@ import org.snowjak.rays.sample.Sample;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "xStart", type = Double.class, defaultValue = "0"),
+		@UIField(name = "yStart", type = Double.class, defaultValue = "0"),
+		@UIField(name = "xEnd", type = Double.class, defaultValue = "399"),
+		@UIField(name = "yEnd", type = Double.class, defaultValue = "299"),
+		@UIField(name = "samplesPerPixel", type = Integer.class, defaultValue = "4"),
+		@UIField(name = "additional1DSamples", type = Integer.class, defaultValue = "4"),
+		@UIField(name = "additional2DSamples", type = Integer.class, defaultValue = "4") })
 public class PseudorandomSampler extends Sampler {
 	
 	private transient boolean initialized = false;
@@ -134,7 +143,8 @@ public class PseudorandomSampler extends Sampler {
 	@Override
 	public Sampler partition(int xStart, int yStart, int xEnd, int yEnd) {
 		
-		return new PseudorandomSampler(xStart, yStart, xEnd, yEnd, getSamplesPerPixel(), getAdditional1DSamples(), getAdditional2DSamples());
+		return new PseudorandomSampler(xStart, yStart, xEnd, yEnd, getSamplesPerPixel(), getAdditional1DSamples(),
+				getAdditional2DSamples());
 	}
 	
 }

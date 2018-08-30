@@ -14,6 +14,8 @@ import java.util.UUID;
 import javax.imageio.ImageIO;
 
 import org.snowjak.rays.RenderTask;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.filter.Filter;
 import org.snowjak.rays.sample.EstimatedSample;
 import org.snowjak.rays.sample.FixedSample;
@@ -33,6 +35,9 @@ import org.snowjak.rays.spectrum.colorspace.RGB;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "width", type = Integer.class, defaultValue = "400"),
+		@UIField(name = "height", type = Integer.class, defaultValue = "300"),
+		@UIField(name = "filter", type = Filter.class) })
 public class Film {
 	
 	private int width, height;

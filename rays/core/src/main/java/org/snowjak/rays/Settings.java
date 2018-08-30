@@ -11,6 +11,7 @@ import java.util.Properties;
 import java.util.Random;
 
 import org.apache.commons.math3.util.Pair;
+import org.snowjak.rays.annotations.UIBean;
 import org.snowjak.rays.camera.Camera;
 import org.snowjak.rays.camera.OrthographicCamera;
 import org.snowjak.rays.camera.PinholeCamera;
@@ -306,6 +307,8 @@ public class Settings {
 						.registerSubtype(IdentityTextureMapping.class, "identity")
 						.registerSubtype(TilingTextureMapping.class, "tiling"));
 			//@formatter:on
+			
+			gb.registerTypeAdapter(UIBean.class, new UIBean.Serializer());
 			
 			this.gson = gb.create();
 			

@@ -15,7 +15,13 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Version;
 
+import org.snowjak.rays.Settings;
+import org.snowjak.rays.film.Film;
+import org.snowjak.rays.renderer.Renderer;
+import org.snowjak.rays.sampler.Sampler;
 import org.springframework.data.annotation.CreatedDate;
+
+import com.google.gson.JsonParseException;
 
 @Entity
 public class Render {
@@ -31,6 +37,15 @@ public class Render {
 	
 	@Basic
 	private Instant completed;
+	
+	@Basic
+	private int width;
+	
+	@Basic
+	private int height;
+	
+	@Basic
+	private int spp;
 	
 	@ManyToOne(fetch = FetchType.EAGER, optional = true)
 	private Render parent = null;
@@ -96,6 +111,36 @@ public class Render {
 	public void setCompleted(Instant completed) {
 		
 		this.completed = completed;
+	}
+	
+	public int getWidth() {
+		
+		return width;
+	}
+	
+	public void setWidth(int width) {
+		
+		this.width = width;
+	}
+	
+	public int getHeight() {
+		
+		return height;
+	}
+	
+	public void setHeight(int height) {
+		
+		this.height = height;
+	}
+	
+	public int getSpp() {
+		
+		return spp;
+	}
+	
+	public void setSpp(int spp) {
+		
+		this.spp = spp;
 	}
 	
 	public boolean isChild() {
@@ -186,6 +231,21 @@ public class Render {
 	public void setPngBase64(String pngBase64) {
 		
 		this.pngBase64 = pngBase64;
+	}
+	
+	public Sampler inflateSampler() throws JsonParseException {
+		
+		return Settings.getInstance().getGson().fromJson(getSamplerJson(), Sampler.class);
+	}
+	
+	public Renderer inflateRenderer() throws JsonParseException {
+		
+		return Settings.getInstance().getGson().fromJson(getRendererJson(), Renderer.class);
+	}
+	
+	public Film inflateFilm() throws JsonParseException {
+		
+		return Settings.getInstance().getGson().fromJson(getFilmJson(), Film.class);
 	}
 	
 }

@@ -1,5 +1,7 @@
 package org.snowjak.rays.filter;
 
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.sample.Sample;
 
 /**
@@ -8,6 +10,7 @@ import org.snowjak.rays.sample.Sample;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "extent", type = Integer.class, defaultValue = "0") })
 public class BoxFilter implements Filter {
 	
 	private int extent;

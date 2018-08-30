@@ -3,9 +3,12 @@ package org.snowjak.rays.shape;
 import static org.apache.commons.math3.util.FastMath.PI;
 import static org.apache.commons.math3.util.FastMath.signum;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
@@ -23,6 +26,7 @@ import org.snowjak.rays.transform.Transform;
  * 
  * @author snowjak88
  */
+@UIType(fields = { @UIField(name = "worldToLocal", type = Collection.class, collectedType = Transform.class) })
 public class PlaneShape extends Shape {
 	
 	private static final Normal3D LOCAL_NORMAL = Normal3D.from(Vector3D.J);
