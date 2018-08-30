@@ -1,4 +1,4 @@
-package org.snowjak.rays.frontend;
+package org.snowjak.rays.frontend.service;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -21,13 +21,13 @@ import org.springframework.test.context.junit4.SpringRunner;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @TestPropertySource(properties = { "rabbitmq.resultq=test-result", "rabbitmq.progressq=test-progress" })
-public class RenderMessageHandlerTest {
+public class IncomingMessageHandlerTest {
 	
 	@MockBean
 	private RenderRepository renderRepository;
 	
 	@Autowired
-	private RenderMessageHandler messageHandler;
+	private IncomingMessageHandler messageHandler;
 	
 	@MockBean
 	private AmqpAdmin amqpAdmin;

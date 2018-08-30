@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.frontend.ui.presentation.ClassFieldAnalyzer.ObjectField;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.stereotype.Component;
 
 import com.vaadin.data.TreeData;
@@ -68,12 +70,20 @@ public class ClassPresentation {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(ClassPresentation.class);
 	
+	@Autowired
+	private ConversionService conversion;
+	
 	private ClassFieldAnalyzer analyzer = null;
 	private Map<String, Object> values = new HashMap<>();
 	
 	public void setClass(Class<?> clazz) {
 		
 		setClass(clazz, true);
+	}
+	
+	public Class<?> getPresentedClass() {
+		
+		return analyzer.getAnalyzedClass();
 	}
 	
 	public void setClass(Class<?> clazz, boolean doRecursive) {
@@ -114,12 +124,33 @@ public class ClassPresentation {
 	
 	public Object getValue(String fieldName) {
 		
-		return values.getOrDefault(fieldName, "");
+		if (!values.containsKey(fieldName))
+			return null;
+		
+		if (values.get(fieldName) instanceof ClassPresentation)
+			return values.get(fieldName);
+		
+		final var targetType = getField(fieldName).map(ObjectField::getType).orElse(null);
+		if (targetType == null) {
+			LOG.warn("ObjectField for \"{}\" has no configured type!", fieldName);
+			return null;
+		}
+		
+		if (!conversion.canConvert(values.get(fieldName).getClass(), targetType)) {
+			LOG.warn("Cannot find suitable converter from {} to {}", values.get(fieldName).getClass().getName(),
+					targetType.getName());
+			return values.get(fieldName);
+		}
+		
+		return conversion.convert(values.get(fieldName), targetType);
 	}
 	
 	public void setValue(String fieldName, Object value) {
 		
-		values.put(fieldName, value);
+		if (value instanceof ClassPresentation)
+			values.put(fieldName, value);
+		else
+			values.put(fieldName, conversion.convert(value, String.class));
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -151,19 +182,7 @@ public class ClassPresentation {
 								if (getValue(of.getName()) instanceof ClassPresentation)
 									return ((ClassPresentation) getValue(of.getName())).instantiate(of.getType());
 								
-								if (of.getType().isPrimitive() && (Byte.TYPE.isAssignableFrom(of.getType())
-										|| Short.TYPE.isAssignableFrom(of.getType())
-										|| Integer.TYPE.isAssignableFrom(of.getType())
-										|| Long.TYPE.isAssignableFrom(of.getType())
-										|| Float.TYPE.isAssignableFrom(of.getType())
-										|| Double.TYPE.isAssignableFrom(of.getType())))
-									return Number.class.cast(getValue(of.getName()));
-								
-								if (Boolean.class.isAssignableFrom(of.getType())
-										|| Boolean.TYPE.isAssignableFrom(of.getType()))
-									return Boolean.class.cast(getValue(of.getName()));
-								
-								return of.getType().cast(getValue(of.getName()));
+								return getValue(of.getName());
 								
 							}).findFirst().orElse(null);
 					

@@ -78,14 +78,17 @@ public class ClassFieldAnalyzer {
 			
 			LOG.trace("Looking for getter method: {}", getterName);
 			
-			clazz.getDeclaredMethods();
-			
 			final Method getterMethod;
 			try {
 				getterMethod = clazz.getDeclaredMethod(getterName);
 			} catch (SecurityException | NoSuchMethodException e) {
 				LOG.warn("{} while accessing getter-method {} for {}.{} -- skipping this field.",
 						e.getClass().getSimpleName(), getterName, clazz.getName(), fieldName);
+				continue;
+			}
+			
+			if (!Modifier.isPublic(getterMethod.getModifiers())) {
+				LOG.info("{}.{} is not public -- skipping this field.", clazz.getName(), getterName);
 				continue;
 			}
 			
@@ -98,6 +101,12 @@ public class ClassFieldAnalyzer {
 			Method setterMethod;
 			try {
 				setterMethod = clazz.getDeclaredMethod(setterName, field.getType());
+				
+				if (!Modifier.isPublic(setterMethod.getModifiers())) {
+					LOG.info("{}.{} is not public -- skipping this field.", clazz.getName(), setterName);
+					setterMethod = null;
+				}
+				
 			} catch (SecurityException | NoSuchMethodException e) {
 				
 				LOG.warn("{} while accessing setter-method {} for {}.{} -- skipping this method.",

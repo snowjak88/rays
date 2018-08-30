@@ -6,8 +6,10 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snowjak.rays.frontend.events.Bus;
+import org.snowjak.rays.frontend.events.SuccessfulLogin;
+import org.snowjak.rays.frontend.events.SuccessfulLogout;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -31,9 +33,6 @@ public class SecurityOperations {
 	
 	@Autowired
 	private AuthenticationManager authenticationManager;
-	
-	@Autowired
-	private ApplicationEventPublisher publisher;
 	
 	/**
 	 * Returns <code>true</code> if an {@link Authentication} exists in the current
@@ -69,7 +68,7 @@ public class SecurityOperations {
 		SecurityContextHolder.getContext().setAuthentication(authenticatedToken);
 		
 		LOG.trace("Signalling the completed log-in.");
-		publisher.publishEvent(new AfterSuccessfulLoginEvent(authenticatedToken));
+		Bus.get().post(new SuccessfulLogin(authenticatedToken));
 		
 		LOG.info("Completed log-in request.");
 		return authenticatedToken;
@@ -88,7 +87,7 @@ public class SecurityOperations {
 		SecurityContextHolder.clearContext();
 		
 		LOG.debug("Publishing logout event ...");
-		publisher.publishEvent(new AuthenticationLogoutEvent(oldAuthentication));
+		Bus.get().post(new SuccessfulLogout(oldAuthentication));
 		
 		LOG.info("Completed log-out.");
 	}

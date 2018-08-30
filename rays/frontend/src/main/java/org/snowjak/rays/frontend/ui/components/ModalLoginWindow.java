@@ -1,23 +1,24 @@
 package org.snowjak.rays.frontend.ui.components;
 
-import org.snowjak.rays.frontend.security.AuthenticationLogoutEvent;
+import org.snowjak.rays.frontend.events.AddWindowRequest;
+import org.snowjak.rays.frontend.events.Bus;
+import org.snowjak.rays.frontend.events.SuccessfulLogin;
+import org.snowjak.rays.frontend.events.SuccessfulLogout;
 import org.snowjak.rays.frontend.security.SecurityOperationException;
 import org.snowjak.rays.frontend.security.SecurityOperations;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationListener;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.security.authentication.event.AbstractAuthenticationEvent;
-import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
 import org.springframework.stereotype.Component;
 
+import com.google.common.eventbus.Subscribe;
 import com.vaadin.server.UserError;
 import com.vaadin.ui.LoginForm;
 import com.vaadin.ui.LoginForm.LoginEvent;
 import com.vaadin.ui.Window;
 
 @Component
-public class ModalLoginWindow extends Window implements ApplicationListener<AbstractAuthenticationEvent> {
+public class ModalLoginWindow extends Window {
 	
 	private static final long serialVersionUID = -4500861536749715325L;
 	
@@ -34,15 +35,10 @@ public class ModalLoginWindow extends Window implements ApplicationListener<Abst
 		
 		center();
 		setModal(true);
-		setVisible(!security.isAuthenticated());
+		setVisible(true);
 		setContent(createNewLoginForm());
-	}
-	
-	@Override
-	public void close() {
 		
-		if (security.isAuthenticated())
-			super.close();
+		Bus.get().register(this);
 	}
 	
 	private LoginForm createNewLoginForm() {
@@ -73,17 +69,18 @@ public class ModalLoginWindow extends Window implements ApplicationListener<Abst
 		
 	}
 	
-	@Override
-	public void onApplicationEvent(AbstractAuthenticationEvent event) {
+	@Subscribe
+	public void onSuccessfulLogin(SuccessfulLogin event) {
 		
-		if (event instanceof AuthenticationSuccessEvent) {
-			setVisible(false);
-		}
+		close();
+	}
+	
+	@Subscribe
+	public void onSuccessfulLogout(SuccessfulLogout event) {
 		
-		else if (event instanceof AuthenticationLogoutEvent) {
-			setContent(createNewLoginForm());
-			setVisible(true);
-		}
+		setContent(createNewLoginForm());
+		setVisible(true);
+		Bus.get().post(new AddWindowRequest(this));
 	}
 	
 }

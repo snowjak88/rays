@@ -34,7 +34,13 @@ public class RenderCreationHandler {
 	
 	public boolean createRender(String samplerJson, String rendererJson, String filmJson, String sceneJson) {
 		
+		final var sampler = Settings.getInstance().getGson().fromJson(samplerJson, Sampler.class);
+		final var film = Settings.getInstance().getGson().fromJson(filmJson, Film.class);
+		
 		final var entity = new Render();
+		entity.setWidth(film.getWidth());
+		entity.setHeight(film.getHeight());
+		entity.setSpp(sampler.getSamplesPerPixel());
 		entity.setSamplerJson(samplerJson);
 		entity.setRendererJson(rendererJson);
 		entity.setFilmJson(filmJson);

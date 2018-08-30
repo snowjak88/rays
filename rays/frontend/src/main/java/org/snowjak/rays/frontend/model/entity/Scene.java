@@ -8,6 +8,10 @@ import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.Version;
 
+import org.snowjak.rays.Settings;
+
+import com.google.gson.JsonParseException;
+
 @Entity
 public class Scene {
 	
@@ -19,7 +23,7 @@ public class Scene {
 	
 	@Lob
 	@Basic(fetch = FetchType.EAGER, optional = false)
-	@Column(length = 65536)
+	@Column(length = 1048576)
 	private String json = "";
 	
 	public long getId() {
@@ -50,6 +54,11 @@ public class Scene {
 	public void setJson(String json) {
 		
 		this.json = json;
+	}
+	
+	public org.snowjak.rays.Scene inflate() throws JsonParseException {
+		
+		return Settings.getInstance().getGson().fromJson(getJson(), org.snowjak.rays.Scene.class);
 	}
 	
 }
