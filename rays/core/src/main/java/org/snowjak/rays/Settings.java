@@ -12,6 +12,7 @@ import java.util.Random;
 
 import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.annotations.UIBean;
+import org.snowjak.rays.annotations.bean.Node;
 import org.snowjak.rays.camera.Camera;
 import org.snowjak.rays.camera.OrthographicCamera;
 import org.snowjak.rays.camera.PinholeCamera;
@@ -309,6 +310,7 @@ public class Settings {
 			//@formatter:on
 			
 			gb.registerTypeAdapter(UIBean.class, new UIBean.Serializer());
+			gb.registerTypeHierarchyAdapter(Node.class, new Node.Serializer());
 			
 			this.gson = gb.create();
 			

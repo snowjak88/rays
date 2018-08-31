@@ -6,6 +6,8 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 
+import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.film.Film;
 import org.snowjak.rays.film.Film.Image;
 import org.snowjak.rays.renderer.Renderer;
@@ -25,6 +27,8 @@ import org.snowjak.rays.sampler.Sampler;
  * @author snowjak88
  *
  */
+@UIType(fields = { @UIField(name = "sampler", type = Sampler.class), @UIField(name = "renderer", type = Renderer.class),
+		@UIField(name = "film", type = Film.class), @UIField(name = "scene", type = Scene.class) })
 public class RenderTask implements Callable<Image> {
 	
 	private static final Logger LOG = System.getLogger(RenderTask.class.getName());

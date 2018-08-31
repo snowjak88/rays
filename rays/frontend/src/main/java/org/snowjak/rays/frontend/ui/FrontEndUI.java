@@ -1,6 +1,7 @@
 package org.snowjak.rays.frontend.ui;
 
 import org.snowjak.rays.Primitive;
+import org.snowjak.rays.RenderTask;
 import org.snowjak.rays.frontend.events.AddTabRequest;
 import org.snowjak.rays.frontend.events.AddWindowRequest;
 import org.snowjak.rays.frontend.events.Bus;
@@ -55,7 +56,7 @@ public class FrontEndUI extends UI {
 		
 		rootLayout = new VerticalLayout(menuBar, tabs, creator);
 		
-		creator.setClass(Primitive.class);
+		creator.setClass(RenderTask.class);
 		
 		setContent(rootLayout);
 		

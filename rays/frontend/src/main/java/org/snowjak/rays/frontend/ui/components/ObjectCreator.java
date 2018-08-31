@@ -121,10 +121,12 @@ public class ObjectCreator extends FormLayout {
 				LOG.trace("Value {}[{}] ({}) ...", fieldName, i, item.getClass().getName());
 				
 				final var itemLayout = new HorizontalLayout();
-				itemLayout.addComponent(new Button(VaadinIcons.MINUS_CIRCLE, (ce) -> {
+				final var removeButton = new Button(fieldName, VaadinIcons.MINUS_CIRCLE);
+				itemLayout.addComponent(removeButton);
+				removeButton.addClickListener((ce) -> {
 					((Collection<?>) value).remove(item);
 					layout.removeComponent(itemLayout);
-				}));
+				});
 				
 				final var wrappedValue = wrapValue(parentBean, fieldName, item);
 				itemLayout.addComponent(wrappedValue);
@@ -133,11 +135,20 @@ public class ObjectCreator extends FormLayout {
 				i++;
 			}
 			
-			final Button addButton = new Button(VaadinIcons.PLUS_CIRCLE);
+			final Button addButton = new Button(fieldName, VaadinIcons.PLUS_CIRCLE);
 			addButton.addClickListener((ce) -> {
 				final var itemLayout = new HorizontalLayout();
 				
-				final var wrappedValue = wrapValue(parentBean, fieldName, parentBean.addToCollection(fieldName));
+				final var newItem = parentBean.addToCollection(fieldName);
+				
+				final var removeButton = new Button(fieldName, VaadinIcons.MINUS_CIRCLE);
+				itemLayout.addComponent(removeButton);
+				removeButton.addClickListener((rce) -> {
+					((Collection<?>) value).remove(newItem);
+					layout.removeComponent(itemLayout);
+				});
+				
+				final var wrappedValue = wrapValue(parentBean, fieldName, newItem);
 				
 				itemLayout.addComponent(wrappedValue);
 				layout.addComponent(itemLayout);
@@ -157,7 +168,6 @@ public class ObjectCreator extends FormLayout {
 			LOG.trace("Value is a child UIBean<{}> ...", childBean.getType().getName());
 			
 			final var layout = new HorizontalLayout();
-			layout.setCaption(fieldName);
 			
 			LOG.trace("Adding dropdown for all available types: {}", parentBean.getFieldAvailableTypes(fieldName));
 			
