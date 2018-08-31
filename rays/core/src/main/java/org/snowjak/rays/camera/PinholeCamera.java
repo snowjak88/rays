@@ -37,6 +37,7 @@ import org.snowjak.rays.transform.Transform;
 		@UIField(name = "pixelHeight", defaultValue = "300", type = Integer.class),
 		@UIField(name = "worldWidth", defaultValue = "4", type = Double.class),
 		@UIField(name = "worldHeight", defaultValue = "3", type = Double.class),
+		@UIField(name = "focalLength", defaultValue = "4", type = Double.class),
 		@UIField(name = "worldToLocal", type = Collection.class, collectedType = Transform.class) })
 public class PinholeCamera extends Camera {
 	

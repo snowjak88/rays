@@ -13,16 +13,43 @@ import com.google.gson.JsonSerializationContext;
 
 public class BeanNode implements Node {
 	
-	private final String jsonType;
-	private final Class<?> type;
-	private final Map<String, Node> fields;
+	private final Map<String, Node> fields = new HashMap<>();
 	
+	private String jsonType;
+	private Class<?> type;
+	private Class<?> declaredType;
+	
+	/**
+	 * Construct a new BeanNode of the given type, or (if the given type is not
+	 * itself annotated with {@link UIType}) of a randomly-selected annotated
+	 * subtype.
+	 * 
+	 * @param type
+	 */
 	public BeanNode(Class<?> type) {
 		
-		this.type = type;
-		this.fields = new HashMap<>();
+		setType(type);
+	}
+	
+	@Override
+	public Class<?> getType() {
 		
-		final var typeDef = type.getAnnotation(UIType.class);
+		return type;
+	}
+	
+	@Override
+	public void setType(Class<?> type) throws UnsupportedClassException {
+		
+		final var availableTypes = Nodes.getAcceptableTypes(type);
+		if (availableTypes.contains(type))
+			this.type = type;
+		else
+			this.type = availableTypes.iterator().next();
+		
+		this.declaredType = type;
+		this.fields.clear();
+		
+		final var typeDef = this.type.getAnnotation(UIType.class);
 		jsonType = typeDef.type();
 		
 		for (UIField fieldDef : typeDef.fields()) {
@@ -49,9 +76,9 @@ public class BeanNode implements Node {
 	}
 	
 	@Override
-	public Class<?> getType() {
+	public Class<?> getDeclaredType() {
 		
-		return type;
+		return declaredType;
 	}
 	
 	@Override

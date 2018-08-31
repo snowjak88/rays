@@ -9,14 +9,14 @@ import com.google.gson.JsonSerializationContext;
 
 public class CollectionNode implements Node {
 	
-	private final Class<?> collectedType;
+	private Class<?> collectedType;
 	private final Collection<Node> values = new LinkedList<>();
 	private final String stringDefaultValue;
 	
 	public CollectionNode(Class<?> collectedType, String defaultValue) {
 		
-		this.collectedType = collectedType;
 		this.stringDefaultValue = defaultValue;
+		setType(collectedType);
 	}
 	
 	@Override
@@ -25,14 +25,31 @@ public class CollectionNode implements Node {
 		return collectedType;
 	}
 	
+	/**
+	 * Reassign this CollectionNode's collected-type. Clears out all stored values
+	 * in the process.
+	 */
+	@Override
+	public void setType(Class<?> type) throws UnsupportedClassException {
+		
+		this.collectedType = type;
+		values.clear();
+	}
+	
+	@Override
+	public Class<?> getDeclaredType() {
+		
+		return collectedType;
+	}
+	
 	@Override
 	public Node getDefaultValue() {
 		
 		if (Nodes.isLiteralType(collectedType))
-			return new LiteralNode(LiteralNode.getAcceptableTypes(collectedType).iterator().next(), stringDefaultValue);
+			return new LiteralNode(collectedType, stringDefaultValue);
 		
 		if (Nodes.isBeanType(collectedType))
-			return new BeanNode(Nodes.getAnnotatedTypes(collectedType).iterator().next());
+			return new BeanNode(collectedType);
 		
 		throw new UnsupportedClassException(
 				"Cannot get default-value for collected-type [" + collectedType.getSimpleName() + "].");

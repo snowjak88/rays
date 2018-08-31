@@ -30,7 +30,7 @@ public class LiteralNode implements Node {
 		SERIALIZERS.put(Boolean.class, (v) -> new JsonPrimitive((Boolean) v));
 	}
 	
-	private final Class<?> type;
+	private Class<?> type;
 	private final String stringDefaultValue;
 	
 	private Object value;
@@ -42,17 +42,28 @@ public class LiteralNode implements Node {
 	
 	public LiteralNode(Class<?> type, String stringDefaultValue) {
 		
-		if (CONVERTERS.keySet().stream().allMatch(c -> !c.isAssignableFrom(type)))
-			throw new UnsupportedClassException("Cannot create LiteralNode of type [" + type.getName() + "].");
-		
-		this.type = type;
 		this.stringDefaultValue = stringDefaultValue;
-		
-		this.value = getDefaultValue();
+		setType(type);
 	}
 	
 	@Override
 	public Class<?> getType() {
+		
+		return type;
+	}
+	
+	@Override
+	public void setType(Class<?> type) throws UnsupportedClassException {
+		
+		if (CONVERTERS.keySet().stream().allMatch(c -> !c.isAssignableFrom(type)))
+			throw new UnsupportedClassException("Cannot create LiteralNode of type [" + type.getName() + "].");
+		
+		this.type = type;
+		this.value = getDefaultValue();
+	}
+	
+	@Override
+	public Class<?> getDeclaredType() {
 		
 		return type;
 	}
@@ -81,7 +92,7 @@ public class LiteralNode implements Node {
 		this.value = value;
 	}
 	
-	protected String getStringDefaultValue() {
+	public String getStringDefaultValue() {
 		
 		return stringDefaultValue;
 	}

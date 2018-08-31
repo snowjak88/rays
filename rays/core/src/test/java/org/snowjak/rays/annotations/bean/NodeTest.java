@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
+import org.snowjak.rays.RenderTask;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Normal3D;
 
@@ -80,6 +81,23 @@ public class NodeTest {
 		assertEquals(0.0, (Double) ((LiteralNode) bean.getField("z")).getValue(), 0.00001);
 		
 		assertEquals("{\"x\":0.0,\"y\":1.0,\"z\":0.0}", Settings.getInstance().getGson().toJson(bean));
+	}
+	
+	@Test
+	public void test_renderTask() {
+		
+		final var bean = new BeanNode(RenderTask.class);
+		
+		assertEquals(4, bean.getFieldNames().size());
+		
+		assertNotNull(bean.getField("sampler"));
+		assertNotNull(bean.getField("renderer"));
+		assertNotNull(bean.getField("film"));
+		assertNotNull(bean.getField("scene"));
+		
+		assertTrue(bean.getField("sampler") instanceof BeanNode);
+		assertTrue(bean.getField("renderer") instanceof BeanNode);
+		assertTrue(bean.getField("film") instanceof BeanNode);
 	}
 	
 }

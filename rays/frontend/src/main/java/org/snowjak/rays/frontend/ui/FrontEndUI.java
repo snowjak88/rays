@@ -1,6 +1,5 @@
 package org.snowjak.rays.frontend.ui;
 
-import org.snowjak.rays.Primitive;
 import org.snowjak.rays.RenderTask;
 import org.snowjak.rays.frontend.events.AddTabRequest;
 import org.snowjak.rays.frontend.events.AddWindowRequest;

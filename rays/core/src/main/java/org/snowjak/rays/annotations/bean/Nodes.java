@@ -1,15 +1,23 @@
 package org.snowjak.rays.annotations.bean;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.bean.Node.UnsupportedClassException;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+
 import io.github.classgraph.ClassGraph;
 
 public class Nodes {
+	
+	private static Cache<Class<?>, Collection<Class<?>>> ANNOTATED_TYPES = CacheBuilder.newBuilder().maximumSize(1024)
+			.build();
 	
 	/**
 	 * Determines if a type should be represented by a {@link LiteralNode}.
@@ -41,7 +49,7 @@ public class Nodes {
 	 */
 	public static boolean isBeanType(Class<?> type) {
 		
-		return getAnnotatedTypes(type).contains(type);
+		return getAnnotatedTypes(type).size() > 0;
 	}
 	
 	/**
@@ -71,27 +79,37 @@ public class Nodes {
 	 */
 	public static Collection<Class<?>> getAnnotatedTypes(Class<?> supertype) {
 		
-		try (var scan = new ClassGraph().enableAllInfo()
-				.whitelistPackages("org.snowjak.rays", supertype.getPackageName()).scan()) {
+		try {
 			
-			final List<Class<?>> list;
+			return ANNOTATED_TYPES.get(supertype, () -> {
+				try (var scan = new ClassGraph().enableAllInfo()
+						.whitelistPackages("org.snowjak.rays", supertype.getPackageName()).scan()) {
+					
+					final List<Class<?>> list;
+					
+					if (supertype.isInterface())
+						list = scan.getClassesImplementing(supertype.getName())
+								.filter((ci) -> ci.hasAnnotation(UIType.class.getName())).loadClasses();
+					else
+						list = scan.getSubclasses(supertype.getName())
+								.filter((ci) -> ci.hasAnnotation(UIType.class.getName())).loadClasses();
+					
+					if (supertype.getAnnotation(UIType.class) != null) {
+						final var listWithSupertype = new LinkedList<Class<?>>();
+						listWithSupertype.add(supertype);
+						listWithSupertype.addAll(list);
+						return listWithSupertype;
+					}
+					
+					return list;
+				}
+			});
 			
-			if (supertype.isInterface())
-				list = scan.getClassesImplementing(supertype.getName())
-						.filter((ci) -> ci.hasAnnotation(UIType.class.getName())).loadClasses();
-			else
-				list = scan.getSubclasses(supertype.getName()).filter((ci) -> ci.hasAnnotation(UIType.class.getName()))
-						.loadClasses();
-			
-			if (supertype.getAnnotation(UIType.class) != null) {
-				final var listWithSupertype = new LinkedList<Class<?>>();
-				listWithSupertype.add(supertype);
-				listWithSupertype.addAll(list);
-				return listWithSupertype;
-			}
-			
-			return list;
+		} catch (ExecutionException e) {
+			e.printStackTrace();
 		}
+		
+		return Collections.emptyList();
 	}
 	
 }
