@@ -7,17 +7,16 @@ import static org.apache.commons.math3.util.FastMath.pow;
 
 import java.lang.reflect.Type;
 
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.util.Matrix;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.serialization.IsLoadable;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 
 /**
@@ -233,27 +232,29 @@ public class RGB extends Colorspace<RGB, Triplet> {
 		public RGB deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
 				throws JsonParseException {
 			
-			if (!json.isJsonArray())
-				throw new JsonParseException("Cannot deserialize a RGB from JSON that is not given as an array!");
+			if (!json.isJsonObject())
+				throw new JsonParseException("Cannot deserialize a RGB from JSON that is not given as an object!");
 			
-			final var array = json.getAsJsonArray();
+			final var obj = json.getAsJsonObject();
 			
-			final var values = new double[array.size()];
-			for (int i = 0; i < values.length; i++)
-				values[i] = array.get(i).getAsDouble();
+			final var red = obj.get("red");
+			final var green = obj.get("green");
+			final var blue = obj.get("blue");
 			
-			return new RGB(new Triplet(values));
+			return new RGB(new Triplet((red == null) ? 0 : red.getAsDouble(), (green == null) ? 0 : green.getAsDouble(),
+					(blue == null) ? 0 : blue.getAsDouble()));
 		}
 		
 		@Override
 		public JsonElement serialize(RGB src, Type typeOfSrc, JsonSerializationContext context) {
 			
-			final var array = new JsonArray(3);
-			array.add(new JsonPrimitive(src.getRed()));
-			array.add(new JsonPrimitive(src.getGreen()));
-			array.add(new JsonPrimitive(src.getBlue()));
+			final var obj = new JsonObject();
 			
-			return array;
+			obj.addProperty("red", src.getRed());
+			obj.addProperty("green", src.getGreen());
+			obj.addProperty("blue", src.getBlue());
+			
+			return obj;
 		}
 		
 	}

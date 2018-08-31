@@ -1,7 +1,6 @@
 package org.snowjak.rays.frontend.ui.components;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -12,15 +11,19 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.annotations.UIBean;
 import org.snowjak.rays.annotations.bean.BeanNode;
 import org.snowjak.rays.annotations.bean.CollectionNode;
 import org.snowjak.rays.annotations.bean.LiteralNode;
 import org.snowjak.rays.annotations.bean.Node;
 import org.snowjak.rays.annotations.bean.Nodes;
+import org.snowjak.rays.frontend.events.Bus;
+import org.snowjak.rays.frontend.messages.RenderCreated;
+import org.snowjak.rays.frontend.messages.RequestRenderTaskSubmission;
+import org.snowjak.rays.frontend.service.RenderUpdateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.ConversionService;
 
+import com.google.common.eventbus.Subscribe;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.ui.Button;
@@ -50,25 +53,18 @@ public class ObjectCreator extends FormLayout {
 	@Autowired
 	private ConversionService conversion;
 	
+	@Autowired
+	private RenderUpdateService renderUpdateService;
+	
 	private BeanNode bean;
 	
+	private String json = "";
 	private TextArea jsonOutput;
 	
 	public ObjectCreator() {
 		
 		super();
-		
-		addListener((e) -> {
-			if (e instanceof ValueChangedEvent) {
-				
-				LOG.info("Received ValueChangedEvent in root handler. Refreshing JSON.");
-				
-				final var json = Settings.getInstance().getGson().toJson(bean);
-				
-				jsonOutput.setValue(json);
-				
-			}
-		});
+		Bus.get().register(this);
 	}
 	
 	public void setClass(Class<?> clazz) {
@@ -82,15 +78,40 @@ public class ObjectCreator extends FormLayout {
 		
 		removeAllComponents();
 		
-		addComponent(wrap(bean));
+		final var rootComponent = wrap(bean);
+		
+		addListener((e) -> {
+			if (e instanceof ValueChangedEvent) {
+				
+				LOG.info("Received ValueChangedEvent in root handler. Refreshing JSON.");
+				
+				json = Settings.getInstance().getGson().toJson(bean);
+				jsonOutput.setValue(json);
+				
+			}
+		});
+		addComponent(rootComponent);
+		
+		json = Settings.getInstance().getGson().toJson(bean);
 		
 		jsonOutput = new TextArea();
 		jsonOutput.setWidth(100, Unit.PERCENTAGE);
 		jsonOutput.setHeightUndefined();
 		jsonOutput.setCaption("JSON");
 		jsonOutput.setReadOnly(true);
-		jsonOutput.setValue(Settings.getInstance().getGson().toJson(bean));
+		jsonOutput.setValue(json);
 		addComponent(jsonOutput);
+		
+		final var submitButton = new Button("Submit");
+		submitButton.addClickListener(
+				(ce) -> renderUpdateService.saveNewRender(Settings.getInstance().getGson().toJson(bean)));
+		addComponent(submitButton);
+	}
+	
+	@Subscribe
+	public void submitNewRender(RenderCreated renderCreated) {
+		
+		Bus.get().post(new RequestRenderTaskSubmission(renderCreated.getUuid()));
 	}
 	
 	private Component wrap(Node node) {
@@ -170,6 +191,7 @@ public class ObjectCreator extends FormLayout {
 			layout.removeComponent(addButton);
 			nodeLayoutMaker.accept(newNode);
 			layout.addComponent(addButton);
+			fireEvent(new ValueChangedEvent(layout));
 		});
 		
 		layout.addComponent(addButton);
@@ -214,138 +236,6 @@ public class ObjectCreator extends FormLayout {
 		
 		LOG.trace("Done wrapping BeanNode <{}>.", node.getType().getSimpleName());
 		return layout;
-	}
-	
-	private Component wrapBean(UIBean<?> bean) {
-		
-		LOG.trace("Wrapping UIBean<{}> ...", bean.getType().getSimpleName());
-		final var layout = new FormLayout();
-		
-		for (String fieldName : bean.getFieldNames()) {
-			LOG.trace("Wrapping UIBean<{}>.{} ...", bean.getType().getSimpleName(), fieldName);
-			
-			final var wrappedValue = wrapValue(bean, fieldName, bean.getFieldValue(fieldName));
-			wrappedValue.addListener((e) -> {
-				if (e instanceof ValueChangedEvent) {
-					fireEvent(new ValueChangedEvent(wrappedValue));
-				}
-			});
-			layout.addComponent(wrappedValue);
-		}
-		
-		LOG.trace("Done wrapping UIBean<{}>.", bean.getType().getSimpleName());
-		
-		return layout;
-	}
-	
-	private Component wrapValue(UIBean<?> parentBean, String fieldName, Object value) {
-		
-		LOG.trace("Wrapping value: {}.{} ...", parentBean.getType().getName(), fieldName);
-		
-		if (Collection.class.isAssignableFrom(value.getClass())) {
-			
-			LOG.trace("Value is a Collection<{}> ...", parentBean.getFieldCollectedType(fieldName).getName());
-			
-			final var layout = new VerticalLayout();
-			layout.setCaption(fieldName);
-			
-			int i = 1;
-			for (var item : (Collection<?>) value) {
-				
-				LOG.trace("Value {}[{}] ({}) ...", fieldName, i, item.getClass().getName());
-				
-				final var itemLayout = new HorizontalLayout();
-				final var removeButton = new Button(fieldName, VaadinIcons.MINUS_CIRCLE);
-				itemLayout.addComponent(removeButton);
-				removeButton.addClickListener((ce) -> {
-					((Collection<?>) value).remove(item);
-					layout.removeComponent(itemLayout);
-				});
-				
-				final var wrappedValue = wrapValue(parentBean, fieldName, item);
-				itemLayout.addComponent(wrappedValue);
-				
-				layout.addComponent(itemLayout);
-				i++;
-			}
-			
-			final Button addButton = new Button(fieldName, VaadinIcons.PLUS_CIRCLE);
-			addButton.addClickListener((ce) -> {
-				final var itemLayout = new HorizontalLayout();
-				
-				final var newItem = parentBean.addToCollection(fieldName);
-				
-				final var removeButton = new Button(fieldName, VaadinIcons.MINUS_CIRCLE);
-				itemLayout.addComponent(removeButton);
-				removeButton.addClickListener((rce) -> {
-					((Collection<?>) value).remove(newItem);
-					layout.removeComponent(itemLayout);
-				});
-				
-				final var wrappedValue = wrapValue(parentBean, fieldName, newItem);
-				
-				itemLayout.addComponent(wrappedValue);
-				layout.addComponent(itemLayout);
-				
-				layout.removeComponent(addButton);
-				layout.addComponent(addButton);
-			});
-			layout.addComponent(addButton);
-			
-			LOG.trace("Done wrapping {}.{} ...", parentBean.getType().getName(), fieldName);
-			
-			return layout;
-			
-		} else if (UIBean.class.isAssignableFrom(value.getClass())) {
-			
-			final var childBean = (UIBean<?>) value;
-			LOG.trace("Value is a child UIBean<{}> ...", childBean.getType().getName());
-			
-			final var layout = new HorizontalLayout();
-			
-			LOG.trace("Adding dropdown for all available types: {}", parentBean.getFieldAvailableTypes(fieldName));
-			
-			final var typeDropdown = new NativeSelect<>("type", parentBean.getFieldAvailableTypes(fieldName));
-			typeDropdown.setSelectedItem(parentBean.getFieldType(fieldName));
-			typeDropdown.setItemCaptionGenerator((c) -> c.getSimpleName());
-			typeDropdown.setEmptySelectionAllowed(false);
-			typeDropdown.addSelectionListener((se) -> {
-				if (se.getSelectedItem().get() != se.getOldValue()) {
-					parentBean.setFieldValue(fieldName, new UIBean<>(se.getSelectedItem().get()));
-					
-					layout.removeAllComponents();
-					layout.addComponent(typeDropdown);
-					final var wrappedBean = wrapBean((UIBean<?>) parentBean.getFieldValue(fieldName));
-					layout.addComponent(wrappedBean);
-					
-					fireEvent(new ValueChangedEvent(typeDropdown));
-				}
-			});
-			
-			layout.addComponent(typeDropdown);
-			
-			layout.addComponent(wrapBean(childBean));
-			
-			LOG.trace("Done wrapping {}.{} ...", parentBean.getType().getName(), fieldName);
-			
-			return layout;
-			
-		} else {
-			LOG.trace("Value is wrappable by a TextField ...");
-			
-			final var component = new TextField(fieldName);
-			component.setValue(conversion.convert(value, String.class));
-			component.addValueChangeListener((e) -> {
-				parentBean.setFieldValue(fieldName,
-						conversion.convert(e.getValue(), parentBean.getFieldType(fieldName)));
-				fireEvent(new ValueChangedEvent(component));
-			});
-			
-			LOG.trace("Done wrapping {}.{} ...", parentBean.getType().getName(), fieldName);
-			
-			return component;
-		}
-		
 	}
 	
 	public static class ValueChangedEvent extends Event {

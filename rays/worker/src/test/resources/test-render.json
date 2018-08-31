@@ -39,11 +39,9 @@
 					"type": "lambertian",
 					"texture": {
 						"type": "constant",
-						"rgb": [
-							1,
-							0,
-							0
-						]
+						"rgb": {
+							"red":1
+						}
 					}
 				}
 			},
@@ -77,11 +75,9 @@
 					"type": "lambertian",
 					"texture": {
 						"type": "constant",
-						"rgb": [
-							0,
-							1,
-							0
-						]
+						"rgb": {
+							"green":1
+						}
 					}
 				}
 			},
@@ -99,11 +95,11 @@
 					"type": "lambertian",
 					"texture": {
 						"type": "constant",
-						"rgb": [
-							0.5,
-							0.5,
-							0.5
-						]
+						"rgb": {
+							"red":0.5,
+							"green":0.5,
+							"blue":0.5
+						}
 					}
 				}
 			}
@@ -111,11 +107,11 @@
 		"lights": [
 			{
 				"type": "point",
-				"rgb": [
-					5,
-					5,
-					5
-				],
+				"rgb": {
+					"red":5,
+					"green":5,
+					"blue":5
+				},
 				"position": {
 					"x": 0,
 					"y": 5,

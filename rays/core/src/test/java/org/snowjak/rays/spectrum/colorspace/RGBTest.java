@@ -111,7 +111,7 @@ public class RGBTest {
 	public void testSerialize() {
 		
 		final var rgb = RGB.GREEN;
-		final var expected = "[0.0,1.0,0.0]";
+		final var expected = "{\"red\":0.0,\"green\":1.0,\"blue\":0.0}";
 		
 		final var result = Settings.getInstance().getGson().toJson(rgb);
 		
@@ -121,7 +121,7 @@ public class RGBTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "[0.0,1.0,0.0]";
+		final var json = "{\"red\":0.0,\"green\":1.0,\"blue\":0.0}";
 		final var expected = RGB.GREEN;
 		
 		final var result = Settings.getInstance().getGson().fromJson(json, RGB.class);
