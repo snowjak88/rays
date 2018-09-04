@@ -102,7 +102,7 @@ public class RenderTask implements Callable<Image> {
 		
 		LOG.log(Level.INFO, "Executing RenderTask:");
 		LOG.log(Level.INFO, "UUID = {0}", getUuid().toString());
-		LOG.log(Level.INFO, "Sampler {0} ({1}x{2} @ {3}spp)", getSampler().getClass().getSimpleName(),
+		LOG.log(Level.INFO, "Sampler = {0} ({1}x{2} @ {3}spp)", getSampler().getClass().getSimpleName(),
 				getSampler().getXEnd() - getSampler().getXStart() + 1d,
 				getSampler().getYEnd() - getSampler().getYStart() + 1d, getSampler().getSamplesPerPixel());
 		LOG.log(Level.INFO, "Renderer = {0}", getRenderer().getClass().getSimpleName());
@@ -121,12 +121,12 @@ public class RenderTask implements Callable<Image> {
 	public static class ProgressInfo {
 		
 		private UUID uuid;
-		private int percent;
+		private String percent;
 		
 		public ProgressInfo(UUID uuid, int percent) {
 			
 			this.uuid = uuid;
-			this.percent = percent;
+			this.percent = Integer.toString(percent);
 		}
 		
 		public UUID getUuid() {
@@ -136,7 +136,7 @@ public class RenderTask implements Callable<Image> {
 		
 		public int getPercent() {
 			
-			return percent;
+			return Integer.parseInt(percent);
 		}
 		
 	}

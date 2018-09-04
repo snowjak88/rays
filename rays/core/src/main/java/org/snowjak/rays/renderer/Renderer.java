@@ -109,7 +109,7 @@ public abstract class Renderer {
 			// Do we report progress?
 			if (progressConsumer != null) {
 				
-				final int currentPercentage = (int) sampler.getPercentComplete();
+				final int currentPercentage = (int) (sampler.getPercentComplete() * 100d);
 				
 				if (currentPercentage != lastPercentage) {
 					lastPercentage = currentPercentage;

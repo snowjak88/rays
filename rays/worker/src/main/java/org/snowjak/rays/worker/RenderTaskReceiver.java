@@ -6,8 +6,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.RenderTask;
 import org.snowjak.rays.Settings;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -25,12 +27,21 @@ public class RenderTaskReceiver {
 	@Value("${rabbitmq.progressq}")
 	private String renderProgressQueueName = null;
 	
+	@Value("${rabbitmq.taskq}")
+	private String renderTaskQueueName;
+	
 	@Autowired
-	private ListeningExecutorService executor;
+	@Qualifier("renderTaskExecutor")
+	private ListeningExecutorService taskExecutor;
+	
+	@Autowired
+	@Qualifier("renderResultExecutor")
+	private ListeningExecutorService resultExecutor;
 	
 	@Autowired
 	private RabbitTemplate rabbit;
 	
+	@RabbitListener(queues = "${rabbitmq.taskq}")
 	public String receive(String taskJson) {
 		
 		try {
@@ -50,7 +61,7 @@ public class RenderTaskReceiver {
 			LOG.debug("UUID={}: Parsed successfully", task.getUuid());
 			
 			LOG.debug("UUID={}: Submitting to executor ...", task.getUuid());
-			final var future = executor.submit(task);
+			final var future = taskExecutor.submit(task);
 			
 			future.addListener(() -> {
 				try {
@@ -67,14 +78,15 @@ public class RenderTaskReceiver {
 				} catch (InterruptedException | ExecutionException e) {
 					LOG.error("Error retrieving render-result!", e);
 				}
-			}, executor);
+			}, resultExecutor);
 			
 		} catch (JsonParseException e) {
 			LOG.error("JSON -> RenderTask parse error!", e);
 			return e.getMessage();
 		}
 		
-		return "";
+		LOG.debug("Replying to render-requestor with \"(successful)\" code.");
+		return "(successful)";
 		
 	}
 	

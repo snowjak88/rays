@@ -34,8 +34,6 @@ import org.snowjak.rays.frontend.model.repository.SceneRepository;
 import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sampler.Sampler;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.event.ContextStartedEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +41,7 @@ import com.google.common.eventbus.Subscribe;
 import com.google.gson.JsonParseException;
 
 @Service
-public class RenderUpdateService implements ApplicationListener<ContextStartedEvent> {
+public class RenderUpdateService {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RenderUpdateService.class);
 	
@@ -52,6 +50,11 @@ public class RenderUpdateService implements ApplicationListener<ContextStartedEv
 	
 	@Autowired
 	private SceneRepository sceneRepository;
+	
+	public RenderUpdateService() {
+		
+		Bus.get().register(this);
+	}
 	
 	@Transactional
 	public UUID saveNewRender(String renderJson) throws JsonParseException {
@@ -116,21 +119,24 @@ public class RenderUpdateService implements ApplicationListener<ContextStartedEv
 		LOG.trace("Inflating Sampler from database ...");
 		final var sampler = Settings.getInstance().getGson().fromJson(parentRender.getSamplerJson(), Sampler.class);
 		
-		for (int x = sampler.getXStart(); x <= sampler.getXEnd(); x += regionSize)
-			for (int y = sampler.getYStart(); y <= sampler.getYEnd(); y += regionSize) {
+		for (int x1 = sampler.getXStart(); x1 <= sampler.getXEnd(); x1 += regionSize)
+			for (int y1 = sampler.getYStart(); y1 <= sampler.getYEnd(); y1 += regionSize) {
 				
-				LOG.trace("Decomposing (UUID={}) -- child render at [{},{}]-[{},{}]", uuid.toString(), x, y,
-						x + regionSize - 1, y + regionSize - 1);
+				final var x2 = min(x1 + regionSize - 1, sampler.getXEnd());
+				final var y2 = min(y1 + regionSize - 1, sampler.getYEnd());
 				
-				final var xEnd = min(x + regionSize - 1, sampler.getXEnd());
-				final var yEnd = min(y + regionSize - 1, sampler.getYEnd());
+				LOG.trace("Decomposing (UUID={}) -- child render at [{},{}]-[{},{}]", uuid.toString(), x1, y1, x2, y2);
 				
-				final var childSampler = sampler.partition(x, y, xEnd, yEnd);
+				final var childSampler = sampler.partition(x1, y1, x2, y2);
 				final var childSamplerJson = Settings.getInstance().getGson().toJson(childSampler);
 				
 				final var childRenderId = saveNewRender(childSamplerJson, parentRender.getRendererJson(),
 						parentRender.getFilmJson(), parentRender.getScene().getId());
 				LOG.debug("Created child render (UUID={})", childRenderId.toString());
+				
+				final var childRender = renderRepository.findById(childRenderId.toString()).get();
+				parentRender.getChildren().add(childRender);
+				childRender.setParent(parentRender);
 				
 				childIdList.add(childRenderId);
 			}
@@ -241,7 +247,7 @@ public class RenderUpdateService implements ApplicationListener<ContextStartedEv
 		}
 		
 		if (renderProgressUpdate.getInfo().getPercent() > render.getPercentComplete()) {
-			LOG.debug("UUID={}: Updating progress to {}%", renderProgressUpdate.getInfo().getUuid(),
+			LOG.trace("UUID={}: Updating progress to {}%", renderProgressUpdate.getInfo().getUuid(),
 					renderProgressUpdate.getInfo().getPercent());
 			render.setPercentComplete(renderProgressUpdate.getInfo().getPercent());
 		} else {
@@ -268,10 +274,7 @@ public class RenderUpdateService implements ApplicationListener<ContextStartedEv
 		}
 		
 		try {
-			saveImageToDatabase(newRenderResult.getImage(), render);
-			
-			if (render.getParent() == null)
-				ImageIO.write(newRenderResult.getImage().getBufferedImage(), "png", new File("result.png"));
+			saveImageToDatabase(newRenderResult.getImage(), render.getUuid());
 		} catch (IOException e) {
 			LOG.error("Could not save image to database!", e);
 		}
@@ -280,7 +283,9 @@ public class RenderUpdateService implements ApplicationListener<ContextStartedEv
 	}
 	
 	@Transactional
-	private void saveImageToDatabase(Image result, Render render) throws IOException {
+	private void saveImageToDatabase(Image result, String renderID) throws IOException {
+		
+		final var render = renderRepository.findById(renderID).get();
 		
 		LOG.debug("UUID={}: Checking if current render has a partial image to add to ...", render.getUuid());
 		if (render.getPngBase64() != null) {
@@ -307,24 +312,24 @@ public class RenderUpdateService implements ApplicationListener<ContextStartedEv
 			final var sumImageBuffer = new ByteArrayOutputStream();
 			ImageIO.write(sumImage, "png", sumImageBuffer);
 			
+			ImageIO.write(sumImage, "png", new File("result.png"));
+			
 			render.setPngBase64(Base64.getEncoder().encodeToString(sumImageBuffer.toByteArray()));
+			renderRepository.save(render);
 			
 		} else {
 			
 			LOG.info("UUID={}: Saving received image to database.", render.getUuid());
 			
 			render.setPngBase64(result.getPng());
+			renderRepository.save(render);
+			
 		}
 		
 		if (render.isChild()) {
 			LOG.info("Also adding image to parent Render ...");
-			saveImageToDatabase(result, render.getParent());
+			saveImageToDatabase(result, render.getParent().getUuid());
 		}
 	}
 	
-	@Override
-	public void onApplicationEvent(ContextStartedEvent event) {
-		
-		Bus.get().register(this);
-	}
 }

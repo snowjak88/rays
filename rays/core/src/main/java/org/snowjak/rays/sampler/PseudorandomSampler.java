@@ -24,7 +24,7 @@ import org.snowjak.rays.sample.Sample;
  * @author snowjak88
  *
  */
-@UIType(type="pseudorandom", fields = { @UIField(name = "xStart", type = Double.class, defaultValue = "0"),
+@UIType(type = "pseudorandom", fields = { @UIField(name = "xStart", type = Double.class, defaultValue = "0"),
 		@UIField(name = "yStart", type = Double.class, defaultValue = "0"),
 		@UIField(name = "xEnd", type = Double.class, defaultValue = "399"),
 		@UIField(name = "yEnd", type = Double.class, defaultValue = "299"),
@@ -85,6 +85,10 @@ public class PseudorandomSampler extends Sampler {
 		currentPixelX = getXStart();
 		currentPixelY = getYStart();
 		currentPixelSampleNumber = 0;
+		
+		samplesGenerated = 0;
+		setTotalSamples(-1);
+		
 		initialized = true;
 	}
 	

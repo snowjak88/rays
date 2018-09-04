@@ -114,10 +114,15 @@ public abstract class Sampler {
 	public long getTotalSamples() {
 		
 		if (totalSamples < 0)
-			totalSamples = ((long) (getXEnd() - getXStart()) * (long) (getYEnd() - getYStart())
+			totalSamples = ((long) (getXEnd() - getXStart() + 1) * (long) (getYEnd() - getYStart() + 1)
 					* (long) getSamplesPerPixel());
 		
 		return totalSamples;
+	}
+	
+	protected void setTotalSamples(long totalSamples) {
+		
+		this.totalSamples = totalSamples;
 	}
 	
 	/**

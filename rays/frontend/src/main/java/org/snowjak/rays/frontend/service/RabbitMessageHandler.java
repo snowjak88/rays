@@ -13,16 +13,13 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.event.ContextStartedEvent;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 
 import com.google.common.eventbus.Subscribe;
 import com.google.gson.JsonParseException;
 
 @Component
-public class RabbitMessageHandler implements ApplicationListener<ContextStartedEvent> {
+public class RabbitMessageHandler {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RabbitMessageHandler.class);
 	
@@ -34,6 +31,11 @@ public class RabbitMessageHandler implements ApplicationListener<ContextStartedE
 	
 	@Autowired
 	private RenderUpdateService renderUpdateService;
+	
+	public RabbitMessageHandler() {
+		
+		Bus.get().register(this);
+	}
 	
 	@Subscribe
 	public void sendRenderTask(RequestRenderTaskSubmission renderTaskSubmission) {
@@ -49,25 +51,29 @@ public class RabbitMessageHandler implements ApplicationListener<ContextStartedE
 		LOG.trace("UUID={}: JSON: {}", task.getUuid(), json);
 		
 		LOG.debug("UUID={}: Sending to RabbitMQ ...", task.getUuid());
-		final var reply = rabbit.convertSendAndReceiveAsType(newRenderTaskQueue, json,
-				new ParameterizedTypeReference<String>() {
-				});
+		final var reply = rabbit.convertSendAndReceive(newRenderTaskQueue, json);
 		
-		if (reply == null || !reply.trim().isEmpty()) {
+		if (reply instanceof Throwable) {
 			LOG.error("UUID={}: Render-submission not successful -- worker returned error-code: {}", task.getUuid(),
-					reply);
-			return;
+					(Throwable) reply);
 		}
 		
-		LOG.info("UUID={}: Confirmed render-submission is successful.", task.getUuid());
+		else if (reply instanceof String && ((String) reply).trim().equals("(successful)")) {
+			LOG.info("UUID={}: Confirmed render-submission is successful.", task.getUuid());
+		}
+		
+		else {
+			LOG.info("UUID={}: Received unknown reply: {}", reply.toString());
+		}
 	}
 	
 	@RabbitListener(queues = "${rabbitmq.progressq}")
 	public void receiveProgress(String json) throws JsonParseException {
 		
+		LOG.trace("Received progress-notification: {}", json);
 		final var progress = Settings.getInstance().getGson().fromJson(json, ProgressInfo.class);
 		
-		LOG.debug("UUID={}: Received progress update ({}%)", progress.getUuid(), progress.getPercent());
+		LOG.trace("UUID={}: Received progress update ({}%)", progress.getUuid(), progress.getPercent());
 		
 		Bus.get().post(new RenderProgressUpdate(progress));
 	}
@@ -80,9 +86,4 @@ public class RabbitMessageHandler implements ApplicationListener<ContextStartedE
 		Bus.get().post(new ReceivedNewRenderResult(result));
 	}
 	
-	@Override
-	public void onApplicationEvent(ContextStartedEvent event) {
-		
-		Bus.get().register(this);
-	}
 }

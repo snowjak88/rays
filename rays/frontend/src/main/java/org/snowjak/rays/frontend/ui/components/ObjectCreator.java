@@ -1,10 +1,12 @@
 package org.snowjak.rays.frontend.ui.components;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -17,13 +19,11 @@ import org.snowjak.rays.annotations.bean.LiteralNode;
 import org.snowjak.rays.annotations.bean.Node;
 import org.snowjak.rays.annotations.bean.Nodes;
 import org.snowjak.rays.frontend.events.Bus;
-import org.snowjak.rays.frontend.messages.RenderCreated;
 import org.snowjak.rays.frontend.messages.RequestRenderTaskSubmission;
 import org.snowjak.rays.frontend.service.RenderUpdateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.ConversionService;
 
-import com.google.common.eventbus.Subscribe;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.ui.Button;
@@ -64,7 +64,6 @@ public class ObjectCreator extends FormLayout {
 	public ObjectCreator() {
 		
 		super();
-		Bus.get().register(this);
 	}
 	
 	public void setClass(Class<?> clazz) {
@@ -84,9 +83,7 @@ public class ObjectCreator extends FormLayout {
 			if (e instanceof ValueChangedEvent) {
 				
 				LOG.info("Received ValueChangedEvent in root handler. Refreshing JSON.");
-				
-				json = Settings.getInstance().getGson().toJson(bean);
-				jsonOutput.setValue(json);
+				refreshJson();
 				
 			}
 		});
@@ -98,20 +95,33 @@ public class ObjectCreator extends FormLayout {
 		jsonOutput.setWidth(100, Unit.PERCENTAGE);
 		jsonOutput.setHeightUndefined();
 		jsonOutput.setCaption("JSON");
-		jsonOutput.setReadOnly(true);
 		jsonOutput.setValue(json);
 		addComponent(jsonOutput);
 		
 		final var submitButton = new Button("Submit");
-		submitButton.addClickListener(
-				(ce) -> renderUpdateService.saveNewRender(Settings.getInstance().getGson().toJson(bean)));
+		submitButton.addClickListener((ce) -> {
+			LOG.info("Saving JSON as new Render/Scene ...");
+			UUID renderID = renderUpdateService.saveNewRender(jsonOutput.getValue());
+			
+			LOG.info("Decomposing UUID={} ...", renderID.toString());
+			final Collection<UUID> childIDs = renderUpdateService.decomposeRender(renderID, 128);
+			
+			LOG.info("Requesting render for {} child-renders ...", childIDs.size());
+			
+			for (UUID childID : childIDs) {
+				LOG.info("Requesting render for UUID={} ...", childID.toString());
+				Bus.get().post(new RequestRenderTaskSubmission(childID));
+			}
+			
+			LOG.info("Requested render for all child-renders.");
+		});
 		addComponent(submitButton);
 	}
 	
-	@Subscribe
-	public void submitNewRender(RenderCreated renderCreated) {
+	private void refreshJson() {
 		
-		Bus.get().post(new RequestRenderTaskSubmission(renderCreated.getUuid()));
+		json = Settings.getInstance().getGson().toJson(bean);
+		jsonOutput.setValue(json);
 	}
 	
 	private Component wrap(Node node) {

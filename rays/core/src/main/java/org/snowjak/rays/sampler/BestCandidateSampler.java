@@ -47,7 +47,7 @@ import org.snowjak.rays.sample.Sample;
  * @author snowjak88
  *
  */
-@UIType(type="best-candidate", fields = { @UIField(name = "xStart", type = Double.class, defaultValue = "0"),
+@UIType(type = "best-candidate", fields = { @UIField(name = "xStart", type = Double.class, defaultValue = "0"),
 		@UIField(name = "yStart", type = Double.class, defaultValue = "0"),
 		@UIField(name = "xEnd", type = Double.class, defaultValue = "399"),
 		@UIField(name = "yEnd", type = Double.class, defaultValue = "299"),
@@ -138,6 +138,9 @@ public class BestCandidateSampler extends Sampler {
 		this.currentPixelX = getXStart();
 		this.currentPixelY = getYStart();
 		this.currentPixelSample = 0;
+		
+		samplesGenerated = 0;
+		setTotalSamples(-1);
 		
 		this.initialized = true;
 	}
