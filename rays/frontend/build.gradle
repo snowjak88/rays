@@ -1,12 +1,20 @@
 plugins { id 'com.ewerk.gradle.plugins.querydsl' version '1.0.9' }
 
-ext { vaadinVersion = '8.4.1' }
+ext { vaadinVersion = '8.+' }
+
+repositories {
+	maven { url "http://maven.vaadin.com/vaadin-addons" }
+}
 
 dependencies {
 	compile('org.springframework.boot:spring-boot-starter-amqp')
 	compile('org.springframework.boot:spring-boot-starter-data-jpa')
 	compile('org.springframework.boot:spring-boot-starter-security')
+	
 	compile('com.vaadin:vaadin-spring-boot-starter')
+	compile("com.vaadin:vaadin-push:${vaadinVersion}")
+	compile('org.vaadin:viritin:2.6')
+	compile('org.vaadin.artur:spring-data-provider:1.1.0')
 	
 	compile('com.querydsl:querydsl-jpa:4.1.4')
 	
@@ -18,8 +26,9 @@ dependencies {
 	runtime('org.hsqldb:hsqldb:2.4+')
 }
 
-dependencyManagement { imports { mavenBom "com.vaadin:vaadin-bom:${vaadinVersion}"
-	} }
+dependencyManagement {
+	imports { mavenBom "com.vaadin:vaadin-bom:${vaadinVersion}" }
+}
 
 querydsl {
 	querydslDefault = true

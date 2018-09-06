@@ -1,29 +1,39 @@
 package org.snowjak.rays.frontend.ui;
 
 import org.snowjak.rays.RenderTask;
-import org.snowjak.rays.frontend.events.AddTabRequest;
-import org.snowjak.rays.frontend.events.AddWindowRequest;
-import org.snowjak.rays.frontend.events.Bus;
-import org.snowjak.rays.frontend.events.RemoveTabRequest;
-import org.snowjak.rays.frontend.events.RemoveWindowRequest;
+import org.snowjak.rays.frontend.messages.frontend.AddTabRequest;
+import org.snowjak.rays.frontend.messages.frontend.AddWindowRequest;
+import org.snowjak.rays.frontend.messages.frontend.RemoveTabRequest;
+import org.snowjak.rays.frontend.messages.frontend.RemoveWindowRequest;
 import org.snowjak.rays.frontend.ui.components.InitialScreen;
 import org.snowjak.rays.frontend.ui.components.MainMenuBar;
 import org.snowjak.rays.frontend.ui.components.ObjectCreator;
+import org.snowjak.rays.frontend.ui.components.RenderList;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
+import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import com.vaadin.annotations.Push;
 import com.vaadin.server.VaadinRequest;
+import com.vaadin.shared.ui.ui.Transport;
 import com.vaadin.spring.annotation.SpringUI;
+import com.vaadin.spring.annotation.UIScope;
 import com.vaadin.ui.AbstractLayout;
-import com.vaadin.ui.Label;
 import com.vaadin.ui.TabSheet;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
 
 @SpringUI(path = "")
+@Push(transport = Transport.LONG_POLLING)
+@UIScope
 public class FrontEndUI extends UI {
 	
 	private static final long serialVersionUID = -8315077204786735072L;
+	
+	@Autowired
+	@Qualifier("frontendEventBus")
+	private EventBus frontendBus;
 	
 	@Autowired
 	private MainMenuBar menuBar;
@@ -34,6 +44,9 @@ public class FrontEndUI extends UI {
 	@Autowired
 	private ObjectCreator creator;
 	
+	@Autowired
+	private RenderList renderGrid;
+	
 	private TabSheet tabs;
 	
 	private AbstractLayout rootLayout;
@@ -41,19 +54,17 @@ public class FrontEndUI extends UI {
 	@Override
 	protected void init(VaadinRequest request) {
 		
-		Bus.get().register(this);
+		frontendBus.register(this);
 		
 		tabs = new TabSheet();
 		
-		final var first = new Label("Tab 1");
-		first.setCaption("First");
-		tabs.addComponent(first);
+		creator.setCaption("Creator");
+		tabs.addComponent(creator);
 		
-		final var second = new Label("Tab 2");
-		second.setCaption("Second");
-		tabs.addComponent(second);
+		renderGrid.setCaption("List");
+		tabs.addComponent(renderGrid);
 		
-		rootLayout = new VerticalLayout(menuBar, tabs, creator);
+		rootLayout = new VerticalLayout(menuBar, tabs);
 		
 		creator.setClass(RenderTask.class);
 		
@@ -64,35 +75,35 @@ public class FrontEndUI extends UI {
 	@Subscribe
 	public void receiveWindowRequest(AddWindowRequest request) {
 		
-		synchronized (this) {
-			if (!getWindows().contains(request.getWindow()))
-				addWindow(request.getWindow());
-		}
+		access(() -> {
+			request.getWindow().close();
+			addWindow(request.getWindow());
+		});
+		
 	}
 	
 	@Subscribe
 	public void receiveWindowRequest(RemoveWindowRequest request) {
 		
-		synchronized (this) {
-			if (getWindows().contains(request.getWindow()))
-				removeWindow(request.getWindow());
-		}
+		access(() -> {
+			removeWindow(request.getWindow());
+		});
 	}
 	
 	@Subscribe
 	public void receiveTabAddRequest(AddTabRequest request) {
 		
-		synchronized (this) {
+		access(() -> {
 			tabs.addComponent(request.getComponent());
-		}
+		});
 	}
 	
 	@Subscribe
 	public void receiveTabRemoveRequest(RemoveTabRequest request) {
 		
-		synchronized (this) {
+		access(() -> {
 			tabs.removeComponent(request.getComponent());
-		}
+		});
 	}
 	
 }

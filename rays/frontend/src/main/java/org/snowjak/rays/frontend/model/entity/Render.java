@@ -1,13 +1,18 @@
 package org.snowjak.rays.frontend.model.entity;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.Lob;
@@ -20,10 +25,15 @@ import org.snowjak.rays.film.Film;
 import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sampler.Sampler;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.google.gson.JsonParseException;
+import com.vaadin.server.Resource;
+import com.vaadin.server.StreamResource;
+import com.vaadin.server.StreamResource.StreamSource;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 public class Render {
 	
 	@Id
@@ -163,6 +173,11 @@ public class Render {
 		return children;
 	}
 	
+	public Stream<Render> streamChildren() {
+		
+		return children.stream();
+	}
+	
 	public void setChildren(Collection<Render> children) {
 		
 		this.children = children;
@@ -218,6 +233,11 @@ public class Render {
 		return percentComplete;
 	}
 	
+	public Double getPercentCompleteDouble() {
+		
+		return ((double) percentComplete) / 100d;
+	}
+	
 	public void setPercentComplete(int percentComplete) {
 		
 		this.percentComplete = percentComplete;
@@ -246,6 +266,23 @@ public class Render {
 	public Film inflateFilm() throws JsonParseException {
 		
 		return Settings.getInstance().getGson().fromJson(getFilmJson(), Film.class);
+	}
+	
+	public Resource inflateResultAsResource() {
+		
+		return new StreamResource(new StreamSource() {
+			
+			private static final long serialVersionUID = 5594542752451248017L;
+			
+			@Override
+			public InputStream getStream() {
+				
+				if (getPngBase64() == null)
+					return new ByteArrayInputStream(new byte[0]);
+				
+				return new ByteArrayInputStream(Base64.getDecoder().decode(getPngBase64()));
+			}
+		}, uuid + ".png");
 	}
 	
 }

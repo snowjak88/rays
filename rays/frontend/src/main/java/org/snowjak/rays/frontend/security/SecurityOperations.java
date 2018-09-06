@@ -6,10 +6,12 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snowjak.rays.frontend.events.Bus;
-import org.snowjak.rays.frontend.events.SuccessfulLogin;
-import org.snowjak.rays.frontend.events.SuccessfulLogout;
+import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogin;
+import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogout;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Scope;
+import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,6 +21,8 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import com.google.common.eventbus.EventBus;
+
 /**
  * Implements Spring Security operations programmatically (i.e., without relying
  * on URL-driven filters).
@@ -27,12 +31,17 @@ import org.springframework.stereotype.Component;
  *
  */
 @Component
+@Scope(scopeName = "vaadin-session", proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class SecurityOperations {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SecurityOperations.class);
 	
 	@Autowired
 	private AuthenticationManager authenticationManager;
+	
+	@Autowired
+	@Qualifier("frontendEventBus")
+	private EventBus frontendBus;
 	
 	/**
 	 * Returns <code>true</code> if an {@link Authentication} exists in the current
@@ -68,7 +77,7 @@ public class SecurityOperations {
 		SecurityContextHolder.getContext().setAuthentication(authenticatedToken);
 		
 		LOG.trace("Signalling the completed log-in.");
-		Bus.get().post(new SuccessfulLogin(authenticatedToken));
+		frontendBus.post(new SuccessfulLogin(authenticatedToken));
 		
 		LOG.info("Completed log-in request.");
 		return authenticatedToken;
@@ -87,7 +96,7 @@ public class SecurityOperations {
 		SecurityContextHolder.clearContext();
 		
 		LOG.debug("Publishing logout event ...");
-		Bus.get().post(new SuccessfulLogout(oldAuthentication));
+		frontendBus.post(new SuccessfulLogout(oldAuthentication));
 		
 		LOG.info("Completed log-out.");
 	}

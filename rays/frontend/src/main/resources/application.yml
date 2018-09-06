@@ -4,11 +4,18 @@ org:
       security:
         username-parameter: username
         password-parameter: password
+      frontend:
+        parallelism: 2
+      backend:
+        parallelism: 4
 server:
   port: 8080
 spring:
   rabbitmq:
     host: localhost
+    listener:
+      simple:
+        concurrency: 2
   datasource:
     initialization-mode: always
   jpa:
@@ -21,4 +28,4 @@ rabbitmq:
 logging:
   level:
     org.springframework.security: INFO
-    org.snowjak.rays: TRACE
+    org.snowjak.rays: DEBUG

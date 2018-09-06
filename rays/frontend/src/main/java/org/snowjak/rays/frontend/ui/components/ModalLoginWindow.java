@@ -1,44 +1,56 @@
 package org.snowjak.rays.frontend.ui.components;
 
-import org.snowjak.rays.frontend.events.AddWindowRequest;
-import org.snowjak.rays.frontend.events.Bus;
-import org.snowjak.rays.frontend.events.SuccessfulLogin;
-import org.snowjak.rays.frontend.events.SuccessfulLogout;
+import org.snowjak.rays.frontend.messages.frontend.AddWindowRequest;
+import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogin;
+import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogout;
 import org.snowjak.rays.frontend.security.SecurityOperationException;
 import org.snowjak.rays.frontend.security.SecurityOperations;
+import org.snowjak.rays.frontend.ui.FrontEndUI;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.stereotype.Component;
 
+import com.google.common.eventbus.AllowConcurrentEvents;
+import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.vaadin.server.UserError;
+import com.vaadin.spring.annotation.SpringComponent;
+import com.vaadin.spring.annotation.VaadinSessionScope;
 import com.vaadin.ui.LoginForm;
 import com.vaadin.ui.LoginForm.LoginEvent;
 import com.vaadin.ui.Window;
 
-@Component
+@SpringComponent
+@VaadinSessionScope
 public class ModalLoginWindow extends Window {
 	
 	private static final long serialVersionUID = -4500861536749715325L;
 	
 	private MessageSource messages;
-	
 	private SecurityOperations security;
+	private EventBus frontendBus;
 	
 	@Autowired
-	private ModalLoginWindow(MessageSource messages, SecurityOperations security) {
+	@Lazy
+	private FrontEndUI ui;
+	
+	@Autowired
+	private ModalLoginWindow(MessageSource messages, SecurityOperations security,
+			@Qualifier("frontendEventBus") EventBus frontendBus) {
 		
 		super(messages.getMessage("security.login.form.title", null, LocaleContextHolder.getLocale()));
 		this.messages = messages;
 		this.security = security;
+		this.frontendBus = frontendBus;
 		
 		center();
 		setModal(true);
 		setVisible(true);
 		setContent(createNewLoginForm());
 		
-		Bus.get().register(this);
+		frontendBus.register(this);
 	}
 	
 	private LoginForm createNewLoginForm() {
@@ -70,17 +82,23 @@ public class ModalLoginWindow extends Window {
 	}
 	
 	@Subscribe
+	@AllowConcurrentEvents
 	public void onSuccessfulLogin(SuccessfulLogin event) {
 		
-		close();
+		ui.access(() -> {
+			close();
+		});
 	}
 	
 	@Subscribe
+	@AllowConcurrentEvents
 	public void onSuccessfulLogout(SuccessfulLogout event) {
 		
-		setContent(createNewLoginForm());
-		setVisible(true);
-		Bus.get().post(new AddWindowRequest(this));
+		ui.access(() -> {
+			setContent(createNewLoginForm());
+			setVisible(true);
+			frontendBus.post(new AddWindowRequest(this));
+		});
 	}
 	
 }

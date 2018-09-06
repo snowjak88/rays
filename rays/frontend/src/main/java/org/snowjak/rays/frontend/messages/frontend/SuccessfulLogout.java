@@ -1,12 +1,12 @@
-package org.snowjak.rays.frontend.events;
+package org.snowjak.rays.frontend.messages.frontend;
 
 import org.springframework.security.core.Authentication;
 
-public class SuccessfulLogin {
+public class SuccessfulLogout {
 	
 	private Authentication authentication;
 	
-	public SuccessfulLogin(Authentication authentication) {
+	public SuccessfulLogout(Authentication authentication) {
 		
 		this.authentication = authentication;
 	}

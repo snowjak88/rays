@@ -8,6 +8,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,27 +24,39 @@ import org.snowjak.rays.Scene;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.film.Film;
 import org.snowjak.rays.film.Film.Image;
-import org.snowjak.rays.frontend.events.Bus;
-import org.snowjak.rays.frontend.messages.ReceivedNewRenderResult;
-import org.snowjak.rays.frontend.messages.RenderCreated;
-import org.snowjak.rays.frontend.messages.RenderProgressUpdate;
-import org.snowjak.rays.frontend.messages.RenderUpdated;
+import org.snowjak.rays.frontend.messages.backend.ReceivedNewRenderResult;
+import org.snowjak.rays.frontend.messages.backend.ReceivedRenderProgressUpdate;
+import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderCreationFromSingleJson;
+import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDecomposition;
+import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderCreation;
+import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderUpdate;
 import org.snowjak.rays.frontend.model.entity.Render;
 import org.snowjak.rays.frontend.model.repository.RenderRepository;
 import org.snowjak.rays.frontend.model.repository.SceneRepository;
 import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sampler.Sampler;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.gson.JsonParseException;
+import com.vaadin.server.VaadinSession;
 
 @Service
 public class RenderUpdateService {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RenderUpdateService.class);
+	
+	private final EventBus backendBus;
+	
+	@Autowired
+	@Lazy
+	@Qualifier("frontendEventBus")
+	private EventBus frontendBus;
 	
 	@Autowired
 	private RenderRepository renderRepository;
@@ -51,9 +64,27 @@ public class RenderUpdateService {
 	@Autowired
 	private SceneRepository sceneRepository;
 	
-	public RenderUpdateService() {
+	@Autowired
+	public RenderUpdateService(@Qualifier("backendEventBus") EventBus backendBus) {
 		
-		Bus.get().register(this);
+		this.backendBus = backendBus;
+		
+		backendBus.register(this);
+	}
+	
+	@Subscribe
+	public void requestRenderCreationFromSingleJson(RequestRenderCreationFromSingleJson request) {
+		
+		LOG.info("Creating a new Render from a single JSON document.");
+		
+		final var createdUUID = saveNewRender(request.getJson());
+		
+		LOG.debug("Finished creating a new Render from a single JSON document (UUID={}).", createdUUID.toString());
+		
+		if (request.hasNextInChain()) {
+			request.getNextInChain().setContext(createdUUID);
+			backendBus.post(request.getNextInChain());
+		}
 	}
 	
 	@Transactional
@@ -85,6 +116,22 @@ public class RenderUpdateService {
 		return renderID;
 	}
 	
+	@Subscribe
+	public void requestRenderDecomposition(RequestRenderDecomposition request) {
+		
+		LOG.info("Requesting render decomposition (UUID={}, region-size={}) ...", request.getUuid().toString(),
+				request.getRegionSize());
+		
+		final var childIDs = decomposeRender(request.getUuid(), request.getRegionSize());
+		
+		LOG.debug("Completed render-decomposition into {} child-Renders.", childIDs.size());
+		
+		if (request.hasNextInChain()) {
+			request.getNextInChain().setContext(childIDs);
+			backendBus.post(request.getNextInChain());
+		}
+	}
+	
 	/**
 	 * Decompose the given Render (specified by its UUID) into child Renders, each
 	 * covering a fraction of the total sampling-space.
@@ -108,7 +155,8 @@ public class RenderUpdateService {
 			return Collections.emptyList();
 		}
 		
-		final var parentRender = renderRepository.findById(uuid.toString()).orElse(null);
+		var parentRender = renderRepository.findById(uuid.toString()).orElse(null);
+		final var childList = new LinkedList<Render>();
 		final var childIdList = new LinkedList<UUID>();
 		
 		if (parentRender == null) {
@@ -138,8 +186,14 @@ public class RenderUpdateService {
 				parentRender.getChildren().add(childRender);
 				childRender.setParent(parentRender);
 				
+				renderRepository.save(childRender);
+				
 				childIdList.add(childRenderId);
+				childList.add(childRender);
 			}
+		
+		parentRender.setChildren(childList);
+		parentRender = renderRepository.save(parentRender);
 		
 		return childIdList;
 	}
@@ -158,9 +212,15 @@ public class RenderUpdateService {
 		render.setRendererJson(rendererJson);
 		render.setFilmJson(filmJson);
 		render.setScene(scene);
+		
+		render.setWidth(render.inflateFilm().getWidth());
+		render.setHeight(render.inflateFilm().getHeight());
+		render.setSpp(render.inflateSampler().getSamplesPerPixel());
+		
 		render = renderRepository.save(render);
 		
-		Bus.get().post(new RenderCreated(UUID.fromString(render.getUuid())));
+		if (VaadinSession.getCurrent() != null)
+			frontendBus.post(new ReceivedRenderCreation(render));
 		
 		return UUID.fromString(render.getUuid());
 	}
@@ -230,13 +290,12 @@ public class RenderUpdateService {
 	}
 	
 	@Subscribe
-	@Transactional
-	public void receiveProgressUpdate(RenderProgressUpdate renderProgressUpdate) {
+	public void receiveProgressUpdate(ReceivedRenderProgressUpdate renderProgressUpdate) {
 		
 		LOG.debug("UUID={}: Received progress update ({}%)", renderProgressUpdate.getInfo().getUuid(),
 				renderProgressUpdate.getInfo().getPercent());
 		
-		LOG.trace("UUID={}: Checking current progress so far ...");
+		LOG.trace("UUID={}: Checking current progress so far ...", renderProgressUpdate.getInfo().getUuid());
 		final Render render = renderRepository.findById(renderProgressUpdate.getInfo().getUuid().toString())
 				.orElse(null);
 		
@@ -247,20 +306,25 @@ public class RenderUpdateService {
 		}
 		
 		if (renderProgressUpdate.getInfo().getPercent() > render.getPercentComplete()) {
+			
 			LOG.trace("UUID={}: Updating progress to {}%", renderProgressUpdate.getInfo().getUuid(),
 					renderProgressUpdate.getInfo().getPercent());
-			render.setPercentComplete(renderProgressUpdate.getInfo().getPercent());
+			final var updatedRenders = updateRenderProgress(render.getUuid(),
+					renderProgressUpdate.getInfo().getPercent());
+			
+			for (var r : updatedRenders)
+				if (r.getPercentComplete() % 10 == 0)
+					if (VaadinSession.getCurrent() != null)
+						frontendBus.post(new ReceivedRenderUpdate(r));
+					
 		} else {
 			LOG.trace("UUID={}: Updated progress ({}%) is less than current progress ({}%)",
 					renderProgressUpdate.getInfo().getUuid(), renderProgressUpdate.getInfo().getPercent(),
 					render.getPercentComplete());
 		}
-		
-		Bus.get().post(new RenderUpdated(UUID.fromString(render.getUuid())));
 	}
 	
 	@Subscribe
-	@Transactional
 	public void receiveRenderResult(ReceivedNewRenderResult newRenderResult) {
 		
 		LOG.info("UUID={}: Received result.", newRenderResult.getImage().getUuid().toString());
@@ -273,19 +337,70 @@ public class RenderUpdateService {
 			return;
 		}
 		
+		markRenderAsComplete(render.getUuid());
+		
 		try {
-			saveImageToDatabase(newRenderResult.getImage(), render.getUuid());
+			
+			final var updatedRenders = saveImageToDatabase(newRenderResult.getImage(), render.getUuid());
+			for (var r : updatedRenders)
+				if (VaadinSession.getCurrent() != null)
+					frontendBus.post(new ReceivedRenderUpdate(r));
+				
 		} catch (IOException e) {
 			LOG.error("Could not save image to database!", e);
 		}
-		
-		Bus.get().post(new RenderUpdated(UUID.fromString(render.getUuid())));
 	}
 	
 	@Transactional
-	private void saveImageToDatabase(Image result, String renderID) throws IOException {
+	private Collection<Render> updateRenderProgress(String renderID, int percent) {
+		
+		final var renderList = new LinkedList<Render>();
+		
+		LOG.trace("UUID={}: Updating progress to {}%.", renderID, percent);
+		var render = renderRepository.findById(renderID).get();
+		
+		render.setPercentComplete(percent);
+		
+		render = renderRepository.save(render);
+		
+		renderList.add(render);
+		
+		if (render.isChild()) {
+			LOG.trace("UUID={}: Calculating progress-increase for parent ...", renderID);
+			final var parent = render.getParent();
+			
+			final var totalChildProgress = parent.streamChildren().mapToDouble(c -> (double) c.getPercentComplete())
+					.sum() / ((double) parent.getChildren().size());
+			renderList.addAll(updateRenderProgress(parent.getUuid(), (int) totalChildProgress));
+		}
+		
+		LOG.trace("UUID={}: Finished updating progress.", renderID);
+		
+		return renderList;
+	}
+	
+	@Transactional
+	private void markRenderAsComplete(String renderID) {
 		
 		final var render = renderRepository.findById(renderID).get();
+		
+		final var now = Instant.now();
+		LOG.info("UUID={}: Marking as complete @ {}", renderID, now.toString());
+		render.setCompleted(now);
+		
+		if (render.isChild()) {
+			LOG.trace("UUID={}: Marking parent as complete ...", renderID);
+			markRenderAsComplete(render.getParent().getUuid());
+		}
+		LOG.trace("UUID={}: Finished marking as complete.");
+		
+	}
+	
+	@Transactional
+	private Collection<Render> saveImageToDatabase(Image image, String renderID) throws IOException {
+		
+		var render = renderRepository.findById(renderID).get();
+		final var renderList = new LinkedList<Render>();
 		
 		LOG.debug("UUID={}: Checking if current render has a partial image to add to ...", render.getUuid());
 		if (render.getPngBase64() != null) {
@@ -297,7 +412,7 @@ public class RenderUpdateService {
 					.read(new ByteArrayInputStream(Base64.getDecoder().decode(render.getPngBase64())));
 			
 			LOG.trace("UUID={}: Retrieving new image ...", render.getUuid());
-			final var newImage = result.getBufferedImage();
+			final var newImage = image.getBufferedImage();
 			
 			LOG.trace("UUID={}: Allocating sum-image buffer ...", render.getUuid());
 			final var sumImage = new BufferedImage(max(existingImage.getWidth(), newImage.getWidth()),
@@ -315,21 +430,26 @@ public class RenderUpdateService {
 			ImageIO.write(sumImage, "png", new File("result.png"));
 			
 			render.setPngBase64(Base64.getEncoder().encodeToString(sumImageBuffer.toByteArray()));
-			renderRepository.save(render);
 			
 		} else {
 			
 			LOG.info("UUID={}: Saving received image to database.", render.getUuid());
 			
-			render.setPngBase64(result.getPng());
-			renderRepository.save(render);
+			render.setPngBase64(image.getPng());
 			
 		}
 		
 		if (render.isChild()) {
 			LOG.info("Also adding image to parent Render ...");
-			saveImageToDatabase(result, render.getParent().getUuid());
+			renderList.addAll(saveImageToDatabase(image, render.getParent().getUuid()));
 		}
+		
+		render = renderRepository.save(render);
+		
+		render.getPngBase64();
+		renderList.add(render);
+		
+		return renderList;
 	}
 	
 }

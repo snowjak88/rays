@@ -2,7 +2,6 @@ package org.snowjak.rays.worker;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -16,9 +15,9 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.film.Film.Image;
-import org.snowjak.rays.worker.RenderTaskReceiver;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -45,7 +44,15 @@ public class WorkerTest {
 		}
 		
 		@Bean
-		public ListeningExecutorService executor() {
+		@Qualifier("renderTaskExecutor")
+		public ListeningExecutorService renderTaskExecutor() {
+			
+			return MoreExecutors.newDirectExecutorService();
+		}
+		
+		@Bean
+		@Qualifier("renderResultExecutor")
+		public ListeningExecutorService renderResultExecutor() {
 			
 			return MoreExecutors.newDirectExecutorService();
 		}
@@ -79,9 +86,7 @@ public class WorkerTest {
 			fail("Unexpected exception: " + e.getClass().getName() + ": " + e.getMessage());
 		}
 		
-		final var returned = receiver.receive(json);
-		
-		assertEquals("", returned);
+		receiver.receive(json);
 		
 		final var resultImageCaptor = ArgumentCaptor.forClass(String.class);
 		verify(rabbit).convertAndSend(eq("test-result"), resultImageCaptor.capture());

@@ -1,4 +1,4 @@
-package org.snowjak.rays.frontend.events;
+package org.snowjak.rays.frontend.messages.frontend;
 
 import com.vaadin.ui.Window;
 

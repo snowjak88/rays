@@ -1,11 +1,11 @@
-package org.snowjak.rays.frontend.events;
+package org.snowjak.rays.frontend.messages.frontend;
 
 import com.vaadin.ui.Component;
 
-public class AddTabRequest {
+public class RemoveTabRequest {
 	private Component component;
 
-	public AddTabRequest(Component component) {
+	public RemoveTabRequest(Component component) {
 		
 		this.component = component;
 	}

@@ -1,4 +1,4 @@
-package org.snowjak.rays.frontend.messages;
+package org.snowjak.rays.frontend.messages.backend;
 
 import org.snowjak.rays.film.Film.Image;
 

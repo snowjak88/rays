@@ -1,12 +1,12 @@
-package org.snowjak.rays.frontend.messages;
+package org.snowjak.rays.frontend.messages.backend;
 
 import org.snowjak.rays.RenderTask.ProgressInfo;
 
-public class RenderProgressUpdate {
+public class ReceivedRenderProgressUpdate {
 	
 	private final ProgressInfo info;
 	
-	public RenderProgressUpdate(ProgressInfo info) {
+	public ReceivedRenderProgressUpdate(ProgressInfo info) {
 		
 		this.info = info;
 	}

@@ -3,6 +3,7 @@ package org.snowjak.rays.frontend.model.entity;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -11,10 +12,12 @@ import javax.persistence.Lob;
 import javax.persistence.Version;
 
 import org.snowjak.rays.Settings;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.google.gson.JsonParseException;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 public class Scene {
 	
 	@Id
@@ -23,6 +26,9 @@ public class Scene {
 	
 	@Version
 	private long version;
+	
+	@Basic(optional = true)
+	private String nickname = null;
 	
 	@Lob
 	@Basic(fetch = FetchType.EAGER, optional = false)
@@ -47,6 +53,16 @@ public class Scene {
 	public void setVersion(long version) {
 		
 		this.version = version;
+	}
+	
+	public String getNickname() {
+		
+		return nickname;
+	}
+	
+	public void setNickname(String nickname) {
+		
+		this.nickname = nickname;
 	}
 	
 	public String getJson() {

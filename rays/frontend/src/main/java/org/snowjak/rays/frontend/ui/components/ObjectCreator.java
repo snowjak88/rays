@@ -1,12 +1,10 @@
 package org.snowjak.rays.frontend.ui.components;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -18,14 +16,19 @@ import org.snowjak.rays.annotations.bean.CollectionNode;
 import org.snowjak.rays.annotations.bean.LiteralNode;
 import org.snowjak.rays.annotations.bean.Node;
 import org.snowjak.rays.annotations.bean.Nodes;
-import org.snowjak.rays.frontend.events.Bus;
-import org.snowjak.rays.frontend.messages.RequestRenderTaskSubmission;
-import org.snowjak.rays.frontend.service.RenderUpdateService;
+import org.snowjak.rays.frontend.messages.backend.commands.AbstractChainableCommand;
+import org.snowjak.rays.frontend.messages.backend.commands.RequestMultipleRenderTaskSubmission;
+import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderCreationFromSingleJson;
+import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDecomposition;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.ConversionService;
 
+import com.google.common.eventbus.EventBus;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.shared.ui.ValueChangeMode;
+import com.vaadin.spring.annotation.SpringComponent;
+import com.vaadin.spring.annotation.VaadinSessionScope;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.FormLayout;
@@ -35,7 +38,8 @@ import com.vaadin.ui.TextArea;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 
-@org.springframework.stereotype.Component
+@SpringComponent
+@VaadinSessionScope
 public class ObjectCreator extends FormLayout {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(ObjectCreator.class);
@@ -54,7 +58,12 @@ public class ObjectCreator extends FormLayout {
 	private ConversionService conversion;
 	
 	@Autowired
-	private RenderUpdateService renderUpdateService;
+	@Qualifier("frontendEventBus")
+	private EventBus frontendBus;
+	
+	@Autowired
+	@Qualifier("backendEventBus")
+	private EventBus backendBus;
 	
 	private BeanNode bean;
 	
@@ -100,20 +109,11 @@ public class ObjectCreator extends FormLayout {
 		
 		final var submitButton = new Button("Submit");
 		submitButton.addClickListener((ce) -> {
-			LOG.info("Saving JSON as new Render/Scene ...");
-			UUID renderID = renderUpdateService.saveNewRender(jsonOutput.getValue());
 			
-			LOG.info("Decomposing UUID={} ...", renderID.toString());
-			final Collection<UUID> childIDs = renderUpdateService.decomposeRender(renderID, 128);
+			backendBus
+					.post(AbstractChainableCommand.chain(new RequestRenderCreationFromSingleJson(jsonOutput.getValue()),
+							new RequestRenderDecomposition(128), new RequestMultipleRenderTaskSubmission()));
 			
-			LOG.info("Requesting render for {} child-renders ...", childIDs.size());
-			
-			for (UUID childID : childIDs) {
-				LOG.info("Requesting render for UUID={} ...", childID.toString());
-				Bus.get().post(new RequestRenderTaskSubmission(childID));
-			}
-			
-			LOG.info("Requested render for all child-renders.");
 		});
 		addComponent(submitButton);
 	}

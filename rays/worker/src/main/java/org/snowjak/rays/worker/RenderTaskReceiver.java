@@ -42,7 +42,7 @@ public class RenderTaskReceiver {
 	private RabbitTemplate rabbit;
 	
 	@RabbitListener(queues = "${rabbitmq.taskq}")
-	public String receive(String taskJson) {
+	public void receive(String taskJson) {
 		
 		try {
 			LOG.info("Received new render-task.");
@@ -82,11 +82,8 @@ public class RenderTaskReceiver {
 			
 		} catch (JsonParseException e) {
 			LOG.error("JSON -> RenderTask parse error!", e);
-			return e.getMessage();
+			throw e;
 		}
-		
-		LOG.debug("Replying to render-requestor with \"(successful)\" code.");
-		return "(successful)";
 		
 	}
 	
