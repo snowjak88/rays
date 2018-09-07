@@ -14,10 +14,10 @@ import org.snowjak.rays.frontend.messages.backend.commands.RequestSingleRenderTa
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.google.common.eventbus.AllowConcurrentEvents;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.gson.JsonParseException;
@@ -26,7 +26,6 @@ import com.google.gson.JsonParseException;
 public class RabbitMessageHandler {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RabbitMessageHandler.class);
-	
 	
 	private final EventBus bus;
 	
@@ -40,13 +39,14 @@ public class RabbitMessageHandler {
 	private RenderUpdateService renderUpdateService;
 	
 	@Autowired
-	public RabbitMessageHandler(@Qualifier("backendEventBus") EventBus bus) {
+	public RabbitMessageHandler(EventBus bus) {
 		
 		this.bus = bus;
 		bus.register(this);
 	}
 	
 	@Subscribe
+	@AllowConcurrentEvents
 	public void requestMultipleRenderTaskSubmission(RequestMultipleRenderTaskSubmission renderTaskSubmission) {
 		
 		LOG.info("Submitting {} new RenderTasks ...", renderTaskSubmission.getContext().size());
@@ -66,6 +66,7 @@ public class RabbitMessageHandler {
 	}
 	
 	@Subscribe
+	@AllowConcurrentEvents
 	public void requestSingleRenderTaskSubmission(RequestSingleRenderTaskSubmission renderTaskSubmission) {
 		
 		LOG.info("New RenderTask submission request for UUID={} ...", renderTaskSubmission.getUuid().toString());
@@ -78,7 +79,7 @@ public class RabbitMessageHandler {
 			bus.post(renderTaskSubmission.getNextInChain());
 	}
 	
-	public void submitRenderTask(UUID uuid) {
+	private void submitRenderTask(UUID uuid) {
 		
 		LOG.info("UUID={}: Submitting new RenderTask ...", uuid.toString());
 		

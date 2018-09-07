@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogin;
 import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogout;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -40,8 +39,7 @@ public class SecurityOperations {
 	private AuthenticationManager authenticationManager;
 	
 	@Autowired
-	@Qualifier("frontendEventBus")
-	private EventBus frontendBus;
+	private EventBus bus;
 	
 	/**
 	 * Returns <code>true</code> if an {@link Authentication} exists in the current
@@ -77,7 +75,7 @@ public class SecurityOperations {
 		SecurityContextHolder.getContext().setAuthentication(authenticatedToken);
 		
 		LOG.trace("Signalling the completed log-in.");
-		frontendBus.post(new SuccessfulLogin(authenticatedToken));
+		bus.post(new SuccessfulLogin(authenticatedToken));
 		
 		LOG.info("Completed log-in request.");
 		return authenticatedToken;
@@ -96,7 +94,7 @@ public class SecurityOperations {
 		SecurityContextHolder.clearContext();
 		
 		LOG.debug("Publishing logout event ...");
-		frontendBus.post(new SuccessfulLogout(oldAuthentication));
+		bus.post(new SuccessfulLogout(oldAuthentication));
 		
 		LOG.info("Completed log-out.");
 	}

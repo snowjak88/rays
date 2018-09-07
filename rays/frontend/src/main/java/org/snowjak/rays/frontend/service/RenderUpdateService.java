@@ -36,27 +36,20 @@ import org.snowjak.rays.frontend.model.repository.SceneRepository;
 import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sampler.Sampler;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.google.common.eventbus.AllowConcurrentEvents;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.gson.JsonParseException;
-import com.vaadin.server.VaadinSession;
 
 @Service
 public class RenderUpdateService {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RenderUpdateService.class);
 	
-	private final EventBus backendBus;
-	
-	@Autowired
-	@Lazy
-	@Qualifier("frontendEventBus")
-	private EventBus frontendBus;
+	private final EventBus bus;
 	
 	@Autowired
 	private RenderRepository renderRepository;
@@ -65,14 +58,15 @@ public class RenderUpdateService {
 	private SceneRepository sceneRepository;
 	
 	@Autowired
-	public RenderUpdateService(@Qualifier("backendEventBus") EventBus backendBus) {
+	public RenderUpdateService(EventBus bus) {
 		
-		this.backendBus = backendBus;
+		this.bus = bus;
 		
-		backendBus.register(this);
+		bus.register(this);
 	}
 	
 	@Subscribe
+	@AllowConcurrentEvents
 	public void requestRenderCreationFromSingleJson(RequestRenderCreationFromSingleJson request) {
 		
 		LOG.info("Creating a new Render from a single JSON document.");
@@ -83,12 +77,12 @@ public class RenderUpdateService {
 		
 		if (request.hasNextInChain()) {
 			request.getNextInChain().setContext(createdUUID);
-			backendBus.post(request.getNextInChain());
+			bus.post(request.getNextInChain());
 		}
 	}
 	
 	@Transactional
-	public UUID saveNewRender(String renderJson) throws JsonParseException {
+	private UUID saveNewRender(String renderJson) throws JsonParseException {
 		
 		LOG.info("Saving a new Render+Scene from a JSON descriptor.");
 		
@@ -110,13 +104,14 @@ public class RenderUpdateService {
 		LOG.debug("Saving bundled scene as a new Scene entry (ID={})", sceneEntity.getId());
 		sceneEntity = sceneRepository.save(sceneEntity);
 		
-		final var renderID = saveNewRender(samplerJson, rendererJson, filmJson, sceneEntity.getId());
+		final var renderID = saveNewRender(samplerJson, rendererJson, filmJson, sceneEntity.getId(), null);
 		
 		LOG.info("Saved JSON as new Render+Scene.");
 		return renderID;
 	}
 	
 	@Subscribe
+	@AllowConcurrentEvents
 	public void requestRenderDecomposition(RequestRenderDecomposition request) {
 		
 		LOG.info("Requesting render decomposition (UUID={}, region-size={}) ...", request.getUuid().toString(),
@@ -128,7 +123,7 @@ public class RenderUpdateService {
 		
 		if (request.hasNextInChain()) {
 			request.getNextInChain().setContext(childIDs);
-			backendBus.post(request.getNextInChain());
+			bus.post(request.getNextInChain());
 		}
 	}
 	
@@ -145,7 +140,7 @@ public class RenderUpdateService {
 	 * @return a collection of all created child Render UUIDs
 	 */
 	@Transactional
-	public Collection<UUID> decomposeRender(UUID uuid, int regionSize) {
+	private Collection<UUID> decomposeRender(UUID uuid, int regionSize) {
 		
 		LOG.info("Decomposing Render (UUID={}) -- region-size = {}", uuid.toString(), regionSize);
 		
@@ -179,12 +174,11 @@ public class RenderUpdateService {
 				final var childSamplerJson = Settings.getInstance().getGson().toJson(childSampler);
 				
 				final var childRenderId = saveNewRender(childSamplerJson, parentRender.getRendererJson(),
-						parentRender.getFilmJson(), parentRender.getScene().getId());
+						parentRender.getFilmJson(), parentRender.getScene().getId(), parentRender.getUuid());
 				LOG.debug("Created child render (UUID={})", childRenderId.toString());
 				
 				final var childRender = renderRepository.findById(childRenderId.toString()).get();
 				parentRender.getChildren().add(childRender);
-				childRender.setParent(parentRender);
 				
 				renderRepository.save(childRender);
 				
@@ -198,7 +192,9 @@ public class RenderUpdateService {
 		return childIdList;
 	}
 	
-	private UUID saveNewRender(String samplerJson, String rendererJson, String filmJson, long sceneId) {
+	@Transactional
+	private UUID saveNewRender(String samplerJson, String rendererJson, String filmJson, long sceneId,
+			String parentID) {
 		
 		final var foundScene = sceneRepository.findById(sceneId);
 		if (!foundScene.isPresent())
@@ -206,21 +202,24 @@ public class RenderUpdateService {
 		
 		final var scene = foundScene.get();
 		
+		final var parentRender = (parentID == null) ? null : renderRepository.findById(parentID).orElse(null);
+		
 		var render = new Render();
 		LOG.debug("Saving new Render entry (UUID={})", render.getUuid());
 		render.setSamplerJson(samplerJson);
 		render.setRendererJson(rendererJson);
 		render.setFilmJson(filmJson);
 		render.setScene(scene);
+		render.setParent(parentRender);
 		
-		render.setWidth(render.inflateFilm().getWidth());
-		render.setHeight(render.inflateFilm().getHeight());
+		render.setWidth(render.inflateSampler().getXEnd() - render.inflateSampler().getXStart() + 1);
+		render.setHeight(render.inflateSampler().getYEnd() - render.inflateSampler().getYStart() + 1);
 		render.setSpp(render.inflateSampler().getSamplesPerPixel());
 		
 		render = renderRepository.save(render);
 		
-		if (VaadinSession.getCurrent() != null)
-			frontendBus.post(new ReceivedRenderCreation(render));
+		LOG.debug("Posting new ReceivedRenderCreation ...");
+		bus.post(new ReceivedRenderCreation(render));
 		
 		return UUID.fromString(render.getUuid());
 	}
@@ -313,10 +312,11 @@ public class RenderUpdateService {
 					renderProgressUpdate.getInfo().getPercent());
 			
 			for (var r : updatedRenders)
-				if (r.getPercentComplete() % 10 == 0)
-					if (VaadinSession.getCurrent() != null)
-						frontendBus.post(new ReceivedRenderUpdate(r));
-					
+				if (r.getPercentComplete() % 10 == 0) {
+					LOG.debug("Posting new ReceivedRenderUpdate ...");
+					bus.post(new ReceivedRenderUpdate(r));
+				}
+			
 		} else {
 			LOG.trace("UUID={}: Updated progress ({}%) is less than current progress ({}%)",
 					renderProgressUpdate.getInfo().getUuid(), renderProgressUpdate.getInfo().getPercent(),
@@ -342,10 +342,12 @@ public class RenderUpdateService {
 		try {
 			
 			final var updatedRenders = saveImageToDatabase(newRenderResult.getImage(), render.getUuid());
-			for (var r : updatedRenders)
-				if (VaadinSession.getCurrent() != null)
-					frontendBus.post(new ReceivedRenderUpdate(r));
+			for (var r : updatedRenders) {
 				
+				LOG.debug("Posting new ReceivedRenderUpdate ...");
+				bus.post(new ReceivedRenderUpdate(r));
+			}
+			
 		} catch (IOException e) {
 			LOG.error("Could not save image to database!", e);
 		}

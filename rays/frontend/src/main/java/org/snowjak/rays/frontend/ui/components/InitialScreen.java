@@ -1,12 +1,13 @@
 package org.snowjak.rays.frontend.ui.components;
 
+import javax.annotation.PostConstruct;
+
 import org.snowjak.rays.frontend.messages.frontend.AddTabRequest;
 import org.snowjak.rays.frontend.messages.frontend.RemoveTabRequest;
 import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogin;
 import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogout;
 import org.snowjak.rays.frontend.security.SecurityOperations;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
@@ -20,17 +21,22 @@ public class InitialScreen extends Label {
 	
 	private static final long serialVersionUID = -511447530099670304L;
 	
-	private final EventBus frontendBus;
+	@Autowired
+	private EventBus bus;
+	@Autowired
+	private SecurityOperations security;
 	
 	@Autowired
-	public InitialScreen(SecurityOperations security, @Qualifier("frontendEventBus") EventBus frontendBus) {
+	public InitialScreen() {
 		
 		super("Initial screen here.");
 		setCaption("Initial");
+	}
+	
+	@PostConstruct
+	public void init() {
 		
-		this.frontendBus = frontendBus;
-		
-		frontendBus.register(this);
+		bus.register(this);
 		
 		if (!security.isAuthenticated())
 			this.setVisible(false);
@@ -39,12 +45,12 @@ public class InitialScreen extends Label {
 	@Subscribe
 	public void receiveLoginEvent(SuccessfulLogin event) {
 		
-		frontendBus.post(new AddTabRequest(this));
+		bus.post(new AddTabRequest(this));
 	}
 	
 	@Subscribe
 	public void receiveLogoutEvent(SuccessfulLogout event) {
 		
-		frontendBus.post(new RemoveTabRequest(this));
+		bus.post(new RemoveTabRequest(this));
 	}
 }

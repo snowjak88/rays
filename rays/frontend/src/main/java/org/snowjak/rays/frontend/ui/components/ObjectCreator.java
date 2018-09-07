@@ -28,7 +28,7 @@ import com.google.common.eventbus.EventBus;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.spring.annotation.SpringComponent;
-import com.vaadin.spring.annotation.VaadinSessionScope;
+import com.vaadin.spring.annotation.UIScope;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.FormLayout;
@@ -39,7 +39,7 @@ import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 
 @SpringComponent
-@VaadinSessionScope
+@UIScope
 public class ObjectCreator extends FormLayout {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(ObjectCreator.class);
@@ -58,12 +58,7 @@ public class ObjectCreator extends FormLayout {
 	private ConversionService conversion;
 	
 	@Autowired
-	@Qualifier("frontendEventBus")
-	private EventBus frontendBus;
-	
-	@Autowired
-	@Qualifier("backendEventBus")
-	private EventBus backendBus;
+	private EventBus bus;
 	
 	private BeanNode bean;
 	
@@ -110,9 +105,8 @@ public class ObjectCreator extends FormLayout {
 		final var submitButton = new Button("Submit");
 		submitButton.addClickListener((ce) -> {
 			
-			backendBus
-					.post(AbstractChainableCommand.chain(new RequestRenderCreationFromSingleJson(jsonOutput.getValue()),
-							new RequestRenderDecomposition(128), new RequestMultipleRenderTaskSubmission()));
+			bus.post(AbstractChainableCommand.chain(new RequestRenderCreationFromSingleJson(jsonOutput.getValue()),
+					new RequestRenderDecomposition(128), new RequestMultipleRenderTaskSubmission()));
 			
 		});
 		addComponent(submitButton);

@@ -83,6 +83,11 @@ public class Render {
 	@Column(length = 4194304)
 	private String pngBase64 = null;
 	
+	private transient Sampler sampler = null;
+	private transient Renderer renderer = null;
+	private transient Film film = null;
+	private transient Resource result = null;
+	
 	public String getUuid() {
 		
 		return uuid;
@@ -153,6 +158,11 @@ public class Render {
 		this.spp = spp;
 	}
 	
+	public String getSize() {
+		
+		return getWidth() + "x" + getHeight() + "(" + getSpp() + "spp)";
+	}
+	
 	public boolean isChild() {
 		
 		return (getParent() != null);
@@ -206,6 +216,7 @@ public class Render {
 	public void setSamplerJson(String samplerJson) {
 		
 		this.samplerJson = samplerJson;
+		this.sampler = null;
 	}
 	
 	public String getRendererJson() {
@@ -216,6 +227,7 @@ public class Render {
 	public void setRendererJson(String rendererJson) {
 		
 		this.rendererJson = rendererJson;
+		this.renderer = null;
 	}
 	
 	public String getFilmJson() {
@@ -226,6 +238,7 @@ public class Render {
 	public void setFilmJson(String filmJson) {
 		
 		this.filmJson = filmJson;
+		this.film = null;
 	}
 	
 	public int getPercentComplete() {
@@ -233,9 +246,9 @@ public class Render {
 		return percentComplete;
 	}
 	
-	public Double getPercentCompleteDouble() {
+	public Float getPercentCompleteFloat() {
 		
-		return ((double) percentComplete) / 100d;
+		return ((float) percentComplete) / 100f;
 	}
 	
 	public void setPercentComplete(int percentComplete) {
@@ -251,38 +264,48 @@ public class Render {
 	public void setPngBase64(String pngBase64) {
 		
 		this.pngBase64 = pngBase64;
+		this.result = null;
 	}
 	
 	public Sampler inflateSampler() throws JsonParseException {
 		
-		return Settings.getInstance().getGson().fromJson(getSamplerJson(), Sampler.class);
+		if (sampler == null)
+			sampler = Settings.getInstance().getGson().fromJson(getSamplerJson(), Sampler.class);
+		return sampler;
 	}
 	
 	public Renderer inflateRenderer() throws JsonParseException {
 		
-		return Settings.getInstance().getGson().fromJson(getRendererJson(), Renderer.class);
+		if (renderer == null)
+			renderer = Settings.getInstance().getGson().fromJson(getRendererJson(), Renderer.class);
+		return renderer;
 	}
 	
 	public Film inflateFilm() throws JsonParseException {
 		
-		return Settings.getInstance().getGson().fromJson(getFilmJson(), Film.class);
+		if (film == null)
+			film = Settings.getInstance().getGson().fromJson(getFilmJson(), Film.class);
+		return film;
 	}
 	
 	public Resource inflateResultAsResource() {
 		
-		return new StreamResource(new StreamSource() {
-			
-			private static final long serialVersionUID = 5594542752451248017L;
-			
-			@Override
-			public InputStream getStream() {
+		if (result == null)
+			result = new StreamResource(new StreamSource() {
 				
-				if (getPngBase64() == null)
-					return new ByteArrayInputStream(new byte[0]);
+				private static final long serialVersionUID = 5594542752451248017L;
 				
-				return new ByteArrayInputStream(Base64.getDecoder().decode(getPngBase64()));
-			}
-		}, uuid + ".png");
+				@Override
+				public InputStream getStream() {
+					
+					if (getPngBase64() == null)
+						return new ByteArrayInputStream(new byte[0]);
+					
+					return new ByteArrayInputStream(Base64.getDecoder().decode(getPngBase64()));
+				}
+			}, uuid + ".png");
+		
+		return result;
 	}
 	
 }

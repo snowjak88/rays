@@ -4,10 +4,6 @@ org:
       security:
         username-parameter: username
         password-parameter: password
-      frontend:
-        parallelism: 2
-      backend:
-        parallelism: 4
 server:
   port: 8080
 spring:
@@ -15,7 +11,7 @@ spring:
     host: localhost
     listener:
       simple:
-        concurrency: 2
+        concurrency: 4
   datasource:
     initialization-mode: always
   jpa:

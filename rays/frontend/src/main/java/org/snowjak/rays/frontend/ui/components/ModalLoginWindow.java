@@ -1,15 +1,15 @@
 package org.snowjak.rays.frontend.ui.components;
 
+import javax.annotation.PostConstruct;
+
 import org.snowjak.rays.frontend.messages.frontend.AddWindowRequest;
+import org.snowjak.rays.frontend.messages.frontend.RunInUIThread;
 import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogin;
 import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogout;
 import org.snowjak.rays.frontend.security.SecurityOperationException;
 import org.snowjak.rays.frontend.security.SecurityOperations;
-import org.snowjak.rays.frontend.ui.FrontEndUI;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.context.i18n.LocaleContextHolder;
 
 import com.google.common.eventbus.AllowConcurrentEvents;
@@ -28,29 +28,30 @@ public class ModalLoginWindow extends Window {
 	
 	private static final long serialVersionUID = -4500861536749715325L;
 	
-	private MessageSource messages;
+	private final MessageSource messages;
+	
+	@Autowired
 	private SecurityOperations security;
-	private EventBus frontendBus;
 	
 	@Autowired
-	@Lazy
-	private FrontEndUI ui;
+	private EventBus bus;
 	
 	@Autowired
-	private ModalLoginWindow(MessageSource messages, SecurityOperations security,
-			@Qualifier("frontendEventBus") EventBus frontendBus) {
+	private ModalLoginWindow(MessageSource messages) {
 		
 		super(messages.getMessage("security.login.form.title", null, LocaleContextHolder.getLocale()));
 		this.messages = messages;
-		this.security = security;
-		this.frontendBus = frontendBus;
+	}
+	
+	@PostConstruct
+	public void init() {
 		
 		center();
 		setModal(true);
 		setVisible(true);
 		setContent(createNewLoginForm());
 		
-		frontendBus.register(this);
+		bus.register(this);
 	}
 	
 	private LoginForm createNewLoginForm() {
@@ -85,20 +86,20 @@ public class ModalLoginWindow extends Window {
 	@AllowConcurrentEvents
 	public void onSuccessfulLogin(SuccessfulLogin event) {
 		
-		ui.access(() -> {
+		bus.post(new RunInUIThread(() -> {
 			close();
-		});
+		}));
 	}
 	
 	@Subscribe
 	@AllowConcurrentEvents
 	public void onSuccessfulLogout(SuccessfulLogout event) {
 		
-		ui.access(() -> {
+		bus.post(new RunInUIThread(() -> {
 			setContent(createNewLoginForm());
 			setVisible(true);
-			frontendBus.post(new AddWindowRequest(this));
-		});
+			bus.post(new AddWindowRequest(this));
+		}));
 	}
 	
 }

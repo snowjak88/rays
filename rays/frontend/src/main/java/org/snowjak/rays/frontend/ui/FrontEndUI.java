@@ -5,12 +5,12 @@ import org.snowjak.rays.frontend.messages.frontend.AddTabRequest;
 import org.snowjak.rays.frontend.messages.frontend.AddWindowRequest;
 import org.snowjak.rays.frontend.messages.frontend.RemoveTabRequest;
 import org.snowjak.rays.frontend.messages.frontend.RemoveWindowRequest;
+import org.snowjak.rays.frontend.messages.frontend.RunInUIThread;
 import org.snowjak.rays.frontend.ui.components.InitialScreen;
 import org.snowjak.rays.frontend.ui.components.MainMenuBar;
 import org.snowjak.rays.frontend.ui.components.ObjectCreator;
 import org.snowjak.rays.frontend.ui.components.RenderList;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
@@ -32,8 +32,7 @@ public class FrontEndUI extends UI {
 	private static final long serialVersionUID = -8315077204786735072L;
 	
 	@Autowired
-	@Qualifier("frontendEventBus")
-	private EventBus frontendBus;
+	private EventBus bus;
 	
 	@Autowired
 	private MainMenuBar menuBar;
@@ -54,7 +53,7 @@ public class FrontEndUI extends UI {
 	@Override
 	protected void init(VaadinRequest request) {
 		
-		frontendBus.register(this);
+		bus.register(this);
 		
 		tabs = new TabSheet();
 		
@@ -104,6 +103,12 @@ public class FrontEndUI extends UI {
 		access(() -> {
 			tabs.removeComponent(request.getComponent());
 		});
+	}
+	
+	@Subscribe
+	public void receiveUIThreadRequest(RunInUIThread request) {
+		
+		access(request.getTask());
 	}
 	
 }
