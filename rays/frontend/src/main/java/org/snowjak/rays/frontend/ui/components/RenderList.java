@@ -1,41 +1,35 @@
 package org.snowjak.rays.frontend.ui.components;
 
-import java.time.format.DateTimeFormatter;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.function.BiPredicate;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.frontend.messages.frontend.AddWindowRequest;
-import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderCreation;
-import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderUpdate;
 import org.snowjak.rays.frontend.messages.frontend.RunInUIThread;
-import org.snowjak.rays.frontend.model.entity.QRender;
-import org.snowjak.rays.frontend.model.entity.Render;
-import org.snowjak.rays.frontend.model.repository.RenderRepository;
+import org.snowjak.rays.frontend.ui.presentation.renderlist.AddRenderEventListener;
+import org.snowjak.rays.frontend.ui.presentation.renderlist.AddToRenderListEvent;
+import org.snowjak.rays.frontend.ui.presentation.renderlist.RemoveFromRenderListEvent;
+import org.snowjak.rays.frontend.ui.presentation.renderlist.RemoveRenderEventListener;
+import org.snowjak.rays.frontend.ui.presentation.renderlist.RenderListItemBean;
+import org.snowjak.rays.frontend.ui.presentation.renderlist.RenderListPresentation;
+import org.snowjak.rays.frontend.ui.presentation.renderlist.UpdateRenderEventListener;
+import org.snowjak.rays.frontend.ui.presentation.renderlist.UpdateRenderListEvent;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Sort.Direction;
 
 import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.Subscribe;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.spring.annotation.SpringComponent;
 import com.vaadin.spring.annotation.UIScope;
 import com.vaadin.ui.Button;
-import com.vaadin.ui.Component;
 import com.vaadin.ui.HorizontalLayout;
-import com.vaadin.ui.Label;
 import com.vaadin.ui.ProgressBar;
+import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 
 @SpringComponent
@@ -45,8 +39,6 @@ public class RenderList extends VerticalLayout {
 	private static final long serialVersionUID = 7875490599102330170L;
 	private static final Logger LOG = LoggerFactory.getLogger(RenderList.class);
 	
-	private Map<String, RenderListItem> renderedRenders = new HashMap<>();
-	
 	@Autowired
 	private ModalRenderResultWindow resultWindow;
 	
@@ -54,7 +46,22 @@ public class RenderList extends VerticalLayout {
 	private EventBus bus;
 	
 	@Autowired
-	private RenderRepository renderRepository;
+	private RenderListPresentation presentation;
+	
+	private final Map<String, Item> items = new HashMap<>();
+	
+	private final AddRenderEventListener addRenderListener = (e) -> {
+		LOG.info("addRenderListener (UUID={})", e.getRender().getId());
+		this.addRender(e.getRender());
+	};
+	private final UpdateRenderEventListener updateRenderListener = (e) -> {
+		LOG.info("updateRenderListener (UUID={})", e.getRender().getId());
+		this.updateRender(e.getRender());
+	};
+	private final RemoveRenderEventListener removeRenderListener = (e) -> {
+		LOG.info("removeRenderListener (UUID={})", e.getRender().getId());
+		this.removeRender(e.getRender());
+	};
 	
 	public RenderList() {
 		
@@ -66,272 +73,322 @@ public class RenderList extends VerticalLayout {
 	@PostConstruct
 	public void init() {
 		
-		bus.register(this);
+		presentation.addListener(AddToRenderListEvent.class, addRenderListener);
+		presentation.addListener(UpdateRenderListEvent.class, updateRenderListener);
+		presentation.addListener(RemoveFromRenderListEvent.class, removeRenderListener);
 		
-		renderRepository.findAll(QRender.render.parent.isNull(), Sort.by(Direction.DESC, "created"))
-				.forEach(r -> renderRender(r));
+		presentation.getRenders().forEach(r -> addRender(r));
 	}
 	
-	public void renderRender(Render render) {
+	@PreDestroy
+	public void onDestroy() {
 		
-		LOG.info("RendersList: Rendering render (UUID={}) ...", render.getUuid());
-		
-		if (renderedRenders.containsKey(render.getUuid()))
-			bus.post(new RunInUIThread(() -> {
-				LOG.debug("RendersList: Removing render (UUID={})", render.getUuid());
-				final var componentToRemove = renderedRenders.remove(render.getUuid());
-				removeComponent(componentToRemove);
-			}));
-		
-		LOG.debug("RendersList: Creating new RenderListItem (UUID={})", render.getUuid());
-		final var newItem = new RenderListItem(bus, resultWindow, render);
-		
-		bus.post(new RunInUIThread(() -> {
-			LOG.debug("RendersList: Adding render (UUID={})", render.getUuid());
-			renderedRenders.put(render.getUuid(), newItem);
-			addComponent(newItem);
-		}));
+		presentation.removeListener(removeRenderListener);
+		presentation.removeListener(updateRenderListener);
+		presentation.removeListener(addRenderListener);
 	}
 	
-	@Subscribe
-	public void renderCreated(ReceivedRenderCreation renderCreated) {
+	public void addRender(RenderListItemBean bean) {
 		
-		LOG.debug("RenderCreated (UUID={})", renderCreated.getRender().getUuid().toString());
-		
-		if (!renderCreated.getRender().isChild()) {
+		synchronized (this) {
 			
-			LOG.trace("RenderCreated (UUID={}): is a root-level Render.");
-			renderRender(renderCreated.getRender());
+			LOG.debug("addRender(UUID={}) ...", bean.getId());
 			
-		} else {
-			
-			LOG.trace("RenderCreated (UUID={}): is a child-level Render.");
-			renderedRenders.values().forEach(rli -> rli.updateRender(renderCreated.getRender()));
-			
-		}
-	}
-	
-	@Subscribe
-	public void renderUpdated(ReceivedRenderUpdate renderUpdated) {
-		
-		LOG.debug("RenderUpdated (UUID={})", renderUpdated.getRender().getUuid().toString());
-		
-		if (renderedRenders.containsKey(renderUpdated.getRender().getUuid()))
-			renderedRenders.get(renderUpdated.getRender().getUuid()).updateRender(renderUpdated.getRender());
-		else
-			
-			renderedRenders.values().forEach(rli -> rli.updateRender(renderUpdated.getRender()));
-	}
-	
-	public static class RenderListItem extends VerticalLayout {
-		
-		private static final long serialVersionUID = 614835789627285890L;
-		
-		private final ModalRenderResultWindow resultWindow;
-		private final EventBus bus;
-		private Render render;
-		private boolean isOpen = false;
-		
-		private HorizontalLayout itemLayout = new HorizontalLayout();
-		
-		@SuppressWarnings("rawtypes")
-		private List<RenderListColumn> columns = new LinkedList<>();
-		
-		private Button openCloseButton = null;
-		private Button resultButton = null;
-		
-		private VerticalLayout childrenContainer = null;
-		private List<RenderListItem> children = new LinkedList<>();
-		
-		public RenderListItem(EventBus bus, ModalRenderResultWindow resultWindow, Render render) {
-			
-			assert (bus != null);
-			assert (resultWindow != null);
-			assert (render != null);
-			
-			setMargin(false);
-			setWidth(100, Unit.PERCENTAGE);
-			
-			this.resultWindow = resultWindow;
-			this.bus = bus;
-			this.render = render;
-			
-			bus.post(new RunInUIThread(() -> addComponent(itemLayout)));
-			
-			updateOpenCloseButton();
-			
-			addColumn("uuid", Label::new, (l) -> l.setWidth(20, Unit.PERCENTAGE),
-					(r1, r2) -> !(r1.getUuid().equals(r2.getUuid())), Render::getUuid, Label::setValue);
-			addColumn("created", Label::new, (l) -> l.setWidth(20, Unit.PERCENTAGE),
-					(r1, r2) -> !(r1.getCreated().equals(r2.getCreated())),
-					(r) -> DateTimeFormatter.ISO_INSTANT.format(r.getCreated()), Label::setValue);
-			addColumn("size", Label::new, (l) -> l.setWidth(-1, Unit.PERCENTAGE),
-					(r1, r2) -> !(r1.getSize().equals(r2.getSize())), Render::getSize, Label::setValue);
-			addColumn("progress", ProgressBar::new, (p) -> p.setWidth(30, Unit.PERCENTAGE),
-					(r1, r2) -> r1.getPercentComplete() != r2.getPercentComplete(), Render::getPercentCompleteFloat,
-					ProgressBar::setValue);
-			
-			updateResultButton();
-			
-			updateChildList();
-			
-		}
-		
-		public String getUuid() {
-			
-			return render.getUuid();
-		}
-		
-		private <C extends Component, V> void addColumn(String tag, Supplier<C> columnInstanceSupplier,
-				Consumer<C> formatter, BiPredicate<Render, Render> shouldUpdateTest, Function<Render, V> valueSupplier,
-				BiConsumer<C, V> valueUpdater) {
-			
-			LOG.debug("RenderListItem: adding column \"{}\"", tag);
-			final var newColumn = new RenderListColumn<>(tag, columnInstanceSupplier, formatter, shouldUpdateTest,
-					valueSupplier, valueUpdater, render);
-			columns.add(newColumn);
-			bus.post(new RunInUIThread(() -> itemLayout.addComponent(newColumn.component)));
-		}
-		
-		@SuppressWarnings("unchecked")
-		public void updateRender(Render render) {
-			
-			if (this.render.getUuid().equals(render.getUuid())) {
-				final var prevRender = this.render;
-				this.render = render;
+			if (bean.getParent() == null) {
 				
-				LOG.debug("RenderListItem: Updating render (UUID={})", render.getUuid());
+				LOG.debug("addRender(UUID={}): is top-level ...", bean.getId());
 				
-				for (var c : columns) {
-					if (c.columnUpdateTest.test(prevRender, render)) {
-						LOG.debug("RenderListItem: Updating render (UUID={}): \"{}\"", render.getUuid(), c.tag);
-						bus.post(new RunInUIThread(() -> c.columnValueUpdater.accept(c.component,
-								c.columnValueSupplier.apply(this.render))));
-					}
+				if (items.containsKey(bean.getId())) {
+					LOG.debug("addRender(UUID={}): is top-level: already exists, removing first ...", bean.getId());
+					removeRender(items.get(bean.getId()).bean);
 				}
 				
-				if (prevRender.isParent() != render.isParent())
-					updateOpenCloseButton();
-				
-				if (prevRender.getPngBase64() != render.getPngBase64())
-					updateResultButton();
-				
-				if (render.streamChildren()
-						.anyMatch(r1 -> !prevRender.streamChildren().anyMatch(r2 -> r1.getUuid().equals(r2.getUuid())))
-						|| prevRender.streamChildren().anyMatch(
-								r1 -> !render.streamChildren().anyMatch(r2 -> r1.getUuid().equals(r2.getUuid()))))
-					updateChildList();
-				
-			} else
-				children.forEach(rli -> rli.updateRender(render));
-		}
-		
-		private void updateOpenCloseButton() {
-			
-			if (render.isParent()) {
-				
-				LOG.debug("RenderListItem: Updating open/close button.");
-				
-				if (openCloseButton == null) {
-					openCloseButton = new Button();
-					openCloseButton.addClickListener((ce) -> {
-						isOpen = !(isOpen);
-						bus.post(new RunInUIThread(() -> childrenContainer.setVisible(isOpen)));
-						updateOpenCloseButton();
-					});
-					bus.post(new RunInUIThread(() -> itemLayout.addComponentAsFirst(openCloseButton)));
-				}
-				
-				openCloseButton.setIcon((isOpen) ? VaadinIcons.ANGLE_DOWN : VaadinIcons.ANGLE_RIGHT);
+				final var item = new Item(bus, presentation, resultWindow, bean);
+				items.put(bean.getId(), item);
+				bus.post(new RunInUIThread(() -> addComponentAsFirst(item)));
 				
 			} else {
 				
-				if (openCloseButton != null) {
-					bus.post(new RunInUIThread(() -> itemLayout.removeComponent(openCloseButton)));
-					openCloseButton = null;
+				if (!items.containsKey(bean.getTopLevelParent().getId())) {
+					LOG.warn("addRender(UUID={}): child of UUID={}: top-level parent is unrecognized!", bean.getId(),
+							bean.getTopLevelParent());
+					return;
 				}
 				
+				LOG.debug("addRender(UUID={}): child of UUID={}: descending to find immediate parent ...", bean.getId(),
+						bean.getTopLevelParent());
+				items.get(bean.getTopLevelParent().getId()).addChild(bean);
+				
+			}
+		}
+	}
+	
+	public void updateRender(RenderListItemBean bean) {
+		
+		synchronized (this) {
+			
+			LOG.debug("updateRender(UUID={}) ...", bean.getId());
+			
+			if (!items.containsKey(bean.getTopLevelParent().getId())) {
+				LOG.warn("updateRender(UUID={}): given top-level parent is not recognized!", bean.getId());
+				return;
 			}
 			
+			items.get(bean.getTopLevelParent().getId()).update(bean);
+			
+		}
+	}
+	
+	public void removeRender(RenderListItemBean bean) {
+		
+		synchronized (this) {
+			
+			LOG.debug("removeRender(UUID={}) ...", bean.getId());
+			
+			if (!items.containsKey(bean.getId())) {
+				LOG.warn("removeRender(UUID={}): given ID is not recognized!", bean.getId());
+				return;
+			}
+			
+			final var c = items.get(bean.getId());
+			bus.post(new RunInUIThread(() -> removeComponent(c)));
+			items.remove(bean.getId());
+			
+		}
+	}
+	
+	public static class Item extends VerticalLayout {
+		
+		private static final long serialVersionUID = 6491829192231759715L;
+		
+		private final EventBus bus;
+		private final RenderListPresentation presentation;
+		private final ModalRenderResultWindow resultWindow;
+		private final RenderListItemBean bean;
+		private final HorizontalLayout fieldLayout = new HorizontalLayout();
+		
+		private final TextField id = new TextField(), created = new TextField(), submitted = new TextField(),
+				completed = new TextField();
+		private final ProgressBar progress = new ProgressBar();
+		private final Button openCloseButton = new Button(), decomposeButton = new Button(),
+				submitButton = new Button(), viewResultButton = new Button();
+		
+		private final VerticalLayout childrenLayout = new VerticalLayout();
+		private final Map<String, RenderList.Item> children = new HashMap<>();
+		
+		public Item(EventBus bus, RenderListPresentation presentation, ModalRenderResultWindow resultWindow,
+				RenderListItemBean bean) {
+			
+			this.bus = bus;
+			this.presentation = presentation;
+			this.resultWindow = resultWindow;
+			this.bean = new RenderListItemBean(bean);
+			
+			openCloseButton.setIcon(bean.isOpen() ? VaadinIcons.ANGLE_DOWN : VaadinIcons.ANGLE_RIGHT);
+			openCloseButton.addClickListener((ce) -> presentation.doOpenClose(bean.getId()));
+			
+			decomposeButton.setIcon(VaadinIcons.GRID_SMALL);
+			decomposeButton.addClickListener((ce) -> presentation.doDecomposeRender(bean.getId()));
+			
+			submitButton.setIcon(VaadinIcons.COMPILE);
+			submitButton.addClickListener((ce) -> presentation.doSubmitRender(bean.getId()));
+			
+			viewResultButton.setIcon(VaadinIcons.GRID);
+			viewResultButton.addClickListener((ce) -> {
+				resultWindow.setImage(bean.getId(), bean.getImage());
+				bus.post(new AddWindowRequest(resultWindow));
+			});
+			
+			id.setReadOnly(true);
+			created.setReadOnly(true);
+			submitted.setReadOnly(true);
+			completed.setReadOnly(true);
+			
+			fieldLayout.setMargin(false);
+			fieldLayout.setSpacing(false);
+			fieldLayout.addComponents(openCloseButton, id, created, submitted, completed, progress, decomposeButton,
+					submitButton, viewResultButton);
+			
+			fieldLayout.setExpandRatio(openCloseButton, 0);
+			fieldLayout.setExpandRatio(created, 1);
+			fieldLayout.setExpandRatio(submitted, 1);
+			fieldLayout.setExpandRatio(completed, 1);
+			fieldLayout.setExpandRatio(progress, 3);
+			fieldLayout.setExpandRatio(decomposeButton, 0);
+			fieldLayout.setExpandRatio(submitButton, 0);
+			fieldLayout.setExpandRatio(viewResultButton, 0);
+			
+			bean.getChildren().stream()
+					.forEach(r -> children.put(r.getId(), new Item(bus, presentation, resultWindow, r)));
+			
+			childrenLayout.setMargin(false);
+			childrenLayout.setSpacing(false);
+			childrenLayout.setVisible(bean.isOpen());
+			
+			addComponent(fieldLayout);
+			addComponent(childrenLayout);
+			
+			update(bean, true, true);
 		}
 		
-		private void updateResultButton() {
+		public void addChild(RenderListItemBean toAdd) {
 			
-			LOG.debug("RenderListItem: Updating result button.");
+			synchronized (this) {
+				
+				if (!toAdd.getParent().getId().equals(bean.getId())) {
+					LOG.debug(
+							"addChild(UUID={}) to UUID={} -- parent-IDs do not match. Descending to find a match on parent-ID ...",
+							toAdd.getId(), bean.getId());
+					children.forEach((id, i) -> i.addChild(toAdd));
+					return;
+				}
+				
+				LOG.debug("addChild(UUID={}) to UUID={} ...", toAdd.getId(), bean.getId());
+				
+				if (bean.getChildren().stream().anyMatch(r -> r.getId().equals(toAdd.getId()))) {
+					LOG.debug("addChild(UUID={}) to UUID={}: child already exists. Removing first ...", toAdd.getId(),
+							bean.getId());
+					removeChild(toAdd);
+				}
+				
+				bean.getChildren().add(toAdd);
+				children.put(toAdd.getId(), new Item(bus, presentation, resultWindow, toAdd));
+				bus.post(new RunInUIThread(() -> childrenLayout.addComponentAsFirst(children.get(toAdd.getId()))));
+			}
+		}
+		
+		public void removeChild(RenderListItemBean toRemove) {
 			
-			if (resultButton == null) {
-				resultButton = new Button(VaadinIcons.COMPILE);
-				resultButton.addClickListener((ce) -> {
-					bus.post(new RunInUIThread(
-							() -> resultWindow.setImage(render.getUuid(), render.inflateResultAsResource())));
-					bus.post(new AddWindowRequest(resultWindow));
+			synchronized (this) {
+				if (!toRemove.getChildren().stream().anyMatch(r -> r.getId().equals(toRemove.getId()))) {
+					LOG.debug(
+							"removeChild(UUID={}) from UUID={} -- no children match given ID. Descending to find a match ...",
+							toRemove.getId(), bean.getId());
+					children.forEach((id, i) -> i.removeChild(toRemove));
+					return;
+				}
+				
+				LOG.debug("removeChild(UUID={}) from UUID={} ...", toRemove.getId(), bean.getId());
+				
+				toRemove.getChildren().removeIf(r -> r.getId().equals(toRemove.getId()));
+				bus.post(new RunInUIThread(() -> childrenLayout.removeComponent(children.get(toRemove.getId()))));
+				children.remove(toRemove.getId());
+				
+			}
+		}
+		
+		public void update(RenderListItemBean newBean) {
+			
+			update(newBean, false, false);
+		}
+		
+		private void update(RenderListItemBean updatedBean, boolean forceUpdate, boolean runUpdatesInCurrentThread) {
+			
+			if (!updatedBean.getId().equals(bean.getId())) {
+				LOG.debug("update(UUID={}) -- doesn't match this bean (UUID={}). Descending to find a match ...",
+						updatedBean.getId(), bean.getId());
+				children.forEach((id, i) -> i.update(updatedBean, forceUpdate, runUpdatesInCurrentThread));
+				return;
+			}
+			
+			LOG.debug("update(UUID={}) ...", updatedBean.getId());
+			
+			final Collection<Runnable> uiUpdates = new LinkedList<>();
+			
+			if (forceUpdate || bean.isOpen() != updatedBean.isOpen()) {
+				LOG.trace("update(UUID={}): updating isOpen ...", updatedBean.getId());
+				bean.setOpen(updatedBean.isOpen());
+				uiUpdates.add(() -> {
+					openCloseButton.setIcon(bean.isOpen() ? VaadinIcons.ANGLE_DOWN : VaadinIcons.ANGLE_RIGHT);
+					childrenLayout.setVisible(bean.isOpen());
 				});
-				bus.post(new RunInUIThread(() -> itemLayout.addComponent(resultButton)));
 			}
 			
-			final var hasResult = (render.getPngBase64() != null && !(render.getPngBase64().trim().isEmpty()));
-			resultButton.setEnabled(hasResult);
+			if (forceUpdate || bean.isOpenable() != updatedBean.isOpenable()) {
+				LOG.trace("update(UUID={}): updating isOpenable ...", updatedBean.getId());
+				bean.setOpenable(updatedBean.isOpenable());
+				uiUpdates.add(() -> openCloseButton.setEnabled(bean.isOpenable()));
+			}
 			
-			bus.post(new RunInUIThread(() -> itemLayout.addComponent(resultButton)));
+			if (forceUpdate || !(bean.getId().equals(updatedBean.getId()))) {
+				LOG.trace("update(UUID={}): updating id ...", updatedBean.getId());
+				bean.setId(updatedBean.getId());
+				uiUpdates.add(() -> id.setValue(bean.getId()));
+			}
 			
+			if (forceUpdate || !(bean.getCreated().equals(updatedBean.getCreated()))) {
+				LOG.trace("update(UUID={}): updating created ...", updatedBean.getId());
+				bean.setCreated(updatedBean.getCreated());
+				uiUpdates.add(() -> created.setValue(bean.getCreated()));
+			}
+			
+			if (forceUpdate || !(bean.getSubmitted().equals(updatedBean.getSubmitted()))) {
+				LOG.trace("update(UUID={}): updating submitted ...", updatedBean.getId());
+				bean.setSubmitted(updatedBean.getSubmitted());
+				uiUpdates.add(() -> submitted.setValue(bean.getSubmitted()));
+			}
+			
+			if (forceUpdate || !(bean.getCompleted().equals(updatedBean.getCompleted()))) {
+				LOG.trace("update(UUID={}): updating completed ...", updatedBean.getId());
+				bean.setCompleted(updatedBean.getCompleted());
+				uiUpdates.add(() -> completed.setValue(bean.getCompleted()));
+			}
+			
+			if (forceUpdate || bean.getPercentComplete() != updatedBean.getPercentComplete()) {
+				LOG.trace("update(UUID={}): updating percentComplete ...", updatedBean.getId());
+				bean.setPercentComplete(updatedBean.getPercentComplete());
+				uiUpdates.add(() -> progress.setValue(bean.getPercentComplete()));
+			}
+			
+			if (forceUpdate || bean.isDecomposable() != updatedBean.isDecomposable()) {
+				LOG.trace("update(UUID={}): updating isDecomposable ...", updatedBean.getId());
+				bean.setDecomposable(updatedBean.isDecomposable());
+				uiUpdates.add(() -> decomposeButton.setEnabled(bean.isDecomposable()));
+			}
+			
+			if (forceUpdate || bean.isSubmittable() != updatedBean.isSubmittable()) {
+				LOG.trace("update(UUID={}): updating isSubmittable ...", updatedBean.getId());
+				bean.setSubmittable(updatedBean.isSubmittable());
+				uiUpdates.add(() -> submitButton.setEnabled(bean.isSubmittable()));
+			}
+			
+			if (forceUpdate || bean.isHasResult() != updatedBean.isHasResult()) {
+				LOG.trace("update(UUID={}): updating isHasResult ...", updatedBean.getId());
+				bean.setHasResult(updatedBean.isHasResult());
+				uiUpdates.add(() -> viewResultButton.setEnabled(updatedBean.isHasResult()));
+			}
+			
+			if (forceUpdate || bean.getImage() != updatedBean.getImage()) {
+				LOG.trace("update(UUID={}): updating image ...", updatedBean.getId());
+				bean.setImage(updatedBean.getImage());
+			}
+			
+			LOG.trace("update(UUID={}): executing updates ...", updatedBean.getId());
+			if (runUpdatesInCurrentThread)
+				uiUpdates.forEach(r -> r.run());
+			else
+				bus.post(new RunInUIThread(() -> uiUpdates.forEach(r -> r.run())));
 		}
 		
-		private void updateChildList() {
+		/**
+		 * Return the {@link Item} (whether this or a child-instance) corresponding to
+		 * the given render-ID, or <code>null</code> if no such Item could be
+		 * identified.
+		 * 
+		 * @param renderId
+		 * @return
+		 */
+		public Item getItemFor(String renderId) {
 			
-			if (childrenContainer == null) {
-				childrenContainer = new VerticalLayout();
-				childrenContainer.setVisible(isOpen);
-				bus.post(new RunInUIThread(() -> addComponent(childrenContainer)));
-			}
+			if (bean.getId().equals(renderId))
+				return this;
 			
-			LOG.debug("RenderListItem: Updating child list.");
+			if (children.containsKey(renderId))
+				return children.get(renderId);
 			
-			for (RenderListItem rli : children) {
-				if (!render.getChildren().stream().anyMatch(r -> r.getUuid().equals(rli.getUuid())))
-					bus.post(new RunInUIThread(() -> {
-						LOG.debug("RenderListItem: Removing child (UUID={})", rli.getUuid());
-						children.remove(rli);
-						childrenContainer.removeComponent(rli);
-					}));
-			}
-			
-			for (Render c : render.getChildren()) {
-				if (!children.stream().anyMatch(rli -> rli.getUuid().equals(c.getUuid()))) {
-					
-					LOG.debug("RenderListItem: Adding child (UUID={})", c.getUuid());
-					final var newChildItem = new RenderListItem(bus, resultWindow, c);
-					children.add(newChildItem);
-					bus.post(new RunInUIThread(() -> childrenContainer.addComponent(newChildItem)));
-					
-				}
-			}
+			return children.values().stream().map(c -> c.getItemFor(renderId)).filter(i -> i != null).findFirst()
+					.orElse(null);
 		}
-		
-		private static class RenderListColumn<C extends Component, V> {
-			
-			private String tag;
-			private final BiPredicate<Render, Render> columnUpdateTest;
-			private final Function<Render, V> columnValueSupplier;
-			private final BiConsumer<C, V> columnValueUpdater;
-			
-			private final C component;
-			
-			public RenderListColumn(String tag, Supplier<C> columnInstanceSupplier, Consumer<C> formatter,
-					BiPredicate<Render, Render> columnUpdateTest, Function<Render, V> columnValueSupplier,
-					BiConsumer<C, V> columnValueUpdater, Render render) {
-				
-				this.tag = tag;
-				this.columnUpdateTest = columnUpdateTest;
-				this.columnValueSupplier = columnValueSupplier;
-				this.columnValueUpdater = columnValueUpdater;
-				
-				component = columnInstanceSupplier.get();
-				formatter.accept(component);
-				columnValueUpdater.accept(component, columnValueSupplier.apply(render));
-			}
-			
-		}
-		
 	}
 	
 }

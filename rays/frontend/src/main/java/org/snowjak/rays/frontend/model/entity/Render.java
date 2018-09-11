@@ -46,7 +46,13 @@ public class Render {
 	private Instant created;
 	
 	@Basic
+	private Instant submitted;
+	
+	@Basic
 	private Instant completed;
+	
+	@Basic
+	private boolean decomposed;
 	
 	@Basic
 	private int width;
@@ -118,6 +124,16 @@ public class Render {
 		this.created = created;
 	}
 	
+	public Instant getSubmitted() {
+		
+		return submitted;
+	}
+	
+	public void setSubmitted(Instant submitted) {
+		
+		this.submitted = submitted;
+	}
+	
 	public Instant getCompleted() {
 		
 		return completed;
@@ -126,6 +142,16 @@ public class Render {
 	public void setCompleted(Instant completed) {
 		
 		this.completed = completed;
+	}
+	
+	public boolean isDecomposed() {
+		
+		return decomposed;
+	}
+	
+	public void setDecomposed(boolean decomposed) {
+		
+		this.decomposed = decomposed;
 	}
 	
 	public int getWidth() {

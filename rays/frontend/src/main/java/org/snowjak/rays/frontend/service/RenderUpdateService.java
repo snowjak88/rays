@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 
@@ -117,6 +118,16 @@ public class RenderUpdateService {
 		LOG.info("Requesting render decomposition (UUID={}, region-size={}) ...", request.getUuid().toString(),
 				request.getRegionSize());
 		
+		final var render = renderRepository.findById(request.getUuid().toString()).orElse(null);
+		if (render == null) {
+			LOG.warn("Cannot decompose given render (UUID={}) -- UUID not recognized.", request.getUuid().toString());
+			return;
+		}
+		
+		render.setDecomposed(true);
+		renderRepository.save(render);
+		bus.post(new ReceivedRenderUpdate(render));
+		
 		final var childIDs = decomposeRender(request.getUuid(), request.getRegionSize());
 		
 		LOG.debug("Completed render-decomposition into {} child-Renders.", childIDs.size());
@@ -151,13 +162,20 @@ public class RenderUpdateService {
 		}
 		
 		var parentRender = renderRepository.findById(uuid.toString()).orElse(null);
-		final var childList = new LinkedList<Render>();
-		final var childIdList = new LinkedList<UUID>();
 		
 		if (parentRender == null) {
 			LOG.warn("Cannot decompose Render (UUID={}) -- UUID not recognized.", uuid.toString());
 			return Collections.emptyList();
 		}
+		
+		if (parentRender.isDecomposed() && parentRender.getChildren().size() > 0) {
+			LOG.warn("Cannot decompose Render (UUID={}) -- render has already been decomposed!", uuid.toString());
+			return parentRender.getChildren().stream().map(Render::getUuid).map(UUID::fromString)
+					.collect(Collectors.toList());
+		}
+		
+		final var childList = new LinkedList<Render>();
+		final var childIdList = new LinkedList<UUID>();
 		
 		LOG.trace("Inflating Sampler from database ...");
 		final var sampler = Settings.getInstance().getGson().fromJson(parentRender.getSamplerJson(), Sampler.class);
@@ -186,8 +204,11 @@ public class RenderUpdateService {
 				childList.add(childRender);
 			}
 		
+		parentRender.setDecomposed(true);
 		parentRender.setChildren(childList);
 		parentRender = renderRepository.save(parentRender);
+		
+		bus.post(new ReceivedRenderUpdate(parentRender));
 		
 		return childIdList;
 	}
@@ -337,12 +358,17 @@ public class RenderUpdateService {
 			return;
 		}
 		
-		markRenderAsComplete(render.getUuid());
+		markRenderAsComplete(render.getUuid(), true);
 		
 		try {
 			
 			final var updatedRenders = saveImageToDatabase(newRenderResult.getImage(), render.getUuid());
 			for (var r : updatedRenders) {
+				
+				//
+				// Ensure that the JPA entity has lazy-loaded the saved image
+				//
+				r.getPngBase64();
 				
 				LOG.debug("Posting new ReceivedRenderUpdate ...");
 				bus.post(new ReceivedRenderUpdate(r));
@@ -354,7 +380,7 @@ public class RenderUpdateService {
 	}
 	
 	@Transactional
-	private Collection<Render> updateRenderProgress(String renderID, int percent) {
+	public Collection<Render> updateRenderProgress(String renderID, int percent) {
 		
 		final var renderList = new LinkedList<Render>();
 		
@@ -382,30 +408,59 @@ public class RenderUpdateService {
 	}
 	
 	@Transactional
-	private void markRenderAsComplete(String renderID) {
+	public void markRenderAsSubmitted(String renderID) {
 		
 		final var render = renderRepository.findById(renderID).get();
 		
 		final var now = Instant.now();
-		LOG.info("UUID={}: Marking as complete @ {}", renderID, now.toString());
-		render.setCompleted(now);
+		LOG.info("UUID={}: Marking as submitted @ {}", renderID, now.toString());
+		render.setSubmitted(now);
+		
+		renderRepository.save(render);
+		bus.post(new ReceivedRenderUpdate(render));
+		
+		if (render.isChild()) {
+			LOG.trace("UUID={}: Marking parent as submitted ...", renderID);
+			markRenderAsSubmitted(render.getParent().getUuid());
+		}
+		LOG.trace("UUID={}: Finished marking as submitted.");
+	}
+	
+	@Transactional
+	public void markRenderAsComplete(String renderID, boolean complete) {
+		
+		final var render = renderRepository.findById(renderID).get();
+		
+		if (render.isParent()) {
+			LOG.debug("UUID={}: Checking if all children complete ...");
+			if (!render.getChildren().stream().allMatch(cr -> cr.getCompleted() != null)) {
+				LOG.debug("UUID={}: Not all children are complete yet. Cannot mark parent as complete.");
+				return;
+			}
+		}
+		
+		final var now = Instant.now();
+		LOG.info("UUID={}: Marking as complete = {} @ {}", renderID, complete, now.toString());
+		render.setCompleted((complete) ? now : null);
+		
+		renderRepository.save(render);
 		
 		if (render.isChild()) {
 			LOG.trace("UUID={}: Marking parent as complete ...", renderID);
-			markRenderAsComplete(render.getParent().getUuid());
+			markRenderAsComplete(render.getParent().getUuid(), complete);
 		}
 		LOG.trace("UUID={}: Finished marking as complete.");
 		
 	}
 	
 	@Transactional
-	private Collection<Render> saveImageToDatabase(Image image, String renderID) throws IOException {
+	public Collection<Render> saveImageToDatabase(Image image, String renderID) throws IOException {
 		
 		var render = renderRepository.findById(renderID).get();
 		final var renderList = new LinkedList<Render>();
 		
 		LOG.debug("UUID={}: Checking if current render has a partial image to add to ...", render.getUuid());
-		if (render.getPngBase64() != null) {
+		if (image != null && render.getPngBase64() != null) {
 			
 			LOG.info("UUID={}: Adding received image to existing image.", render.getUuid());
 			
@@ -437,7 +492,7 @@ public class RenderUpdateService {
 			
 			LOG.info("UUID={}: Saving received image to database.", render.getUuid());
 			
-			render.setPngBase64(image.getPng());
+			render.setPngBase64((image != null) ? image.getPng() : null);
 			
 		}
 		

@@ -16,12 +16,8 @@ import org.snowjak.rays.annotations.bean.CollectionNode;
 import org.snowjak.rays.annotations.bean.LiteralNode;
 import org.snowjak.rays.annotations.bean.Node;
 import org.snowjak.rays.annotations.bean.Nodes;
-import org.snowjak.rays.frontend.messages.backend.commands.AbstractChainableCommand;
-import org.snowjak.rays.frontend.messages.backend.commands.RequestMultipleRenderTaskSubmission;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderCreationFromSingleJson;
-import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDecomposition;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.ConversionService;
 
 import com.google.common.eventbus.EventBus;
@@ -105,8 +101,7 @@ public class ObjectCreator extends FormLayout {
 		final var submitButton = new Button("Submit");
 		submitButton.addClickListener((ce) -> {
 			
-			bus.post(AbstractChainableCommand.chain(new RequestRenderCreationFromSingleJson(jsonOutput.getValue()),
-					new RequestRenderDecomposition(128), new RequestMultipleRenderTaskSubmission()));
+			bus.post(new RequestRenderCreationFromSingleJson(jsonOutput.getValue()));
 			
 		});
 		addComponent(submitButton);

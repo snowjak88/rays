@@ -53,8 +53,6 @@ public class FrontEndUI extends UI {
 	@Override
 	protected void init(VaadinRequest request) {
 		
-		bus.register(this);
-		
 		tabs = new TabSheet();
 		
 		creator.setCaption("Creator");
@@ -69,6 +67,20 @@ public class FrontEndUI extends UI {
 		
 		setContent(rootLayout);
 		
+	}
+	
+	@Override
+	public void attach() {
+		
+		bus.register(this);
+		super.attach();
+	}
+	
+	@Override
+	public void detach() {
+		
+		bus.unregister(this);
+		super.detach();
 	}
 	
 	@Subscribe

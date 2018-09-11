@@ -1,5 +1,6 @@
 package org.snowjak.rays.frontend.service;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -11,6 +12,7 @@ import org.snowjak.rays.frontend.messages.backend.ReceivedNewRenderResult;
 import org.snowjak.rays.frontend.messages.backend.ReceivedRenderProgressUpdate;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestMultipleRenderTaskSubmission;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestSingleRenderTaskSubmission;
+import org.snowjak.rays.frontend.model.repository.RenderRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +36,9 @@ public class RabbitMessageHandler {
 	
 	@Value("${rabbitmq.taskq}")
 	private String newRenderTaskQueue;
+	
+	@Autowired
+	private RenderRepository renderRepository;
 	
 	@Autowired
 	private RenderUpdateService renderUpdateService;
@@ -83,8 +88,44 @@ public class RabbitMessageHandler {
 		
 		LOG.info("UUID={}: Submitting new RenderTask ...", uuid.toString());
 		
+		LOG.debug("UUID={}: Retrieving Render record from database ...", uuid.toString());
+		final var entity = renderRepository.findById(uuid.toString()).orElse(null);
+		if (entity == null) {
+			LOG.error("Cannot submit new RenderTask -- cannot find Render entity (UUID={})", uuid.toString());
+			return;
+		}
+		
+		LOG.debug("UUID={}: Resetting render-progress to 0 ...", uuid.toString());
+		renderUpdateService.updateRenderProgress(uuid.toString(), 0);
+		
+		LOG.debug("UUID={}: Setting as incomplete ...", uuid.toString());
+		renderUpdateService.markRenderAsComplete(uuid.toString(), false);
+		
+		try {
+			LOG.debug("UUID={}: Clearing any saved image ...", uuid.toString());
+			renderUpdateService.saveImageToDatabase(null, uuid.toString());
+		} catch (IOException e) {
+			// Do nothing
+		}
+		
+		if (entity.isParent()) {
+			LOG.info("UUID={}: Render has {} child-Renders. Submitting children for processing ...", uuid.toString(),
+					entity.getChildren().size());
+			
+			entity.getChildren().forEach(cr -> submitRenderTask(UUID.fromString(cr.getUuid())));
+			
+			LOG.info("UUID={}: All children submitted for processing.", uuid.toString());
+			return;
+		}
+		
 		LOG.debug("UUID={}: Inflating RenderTask from database ...", uuid.toString());
 		final var task = renderUpdateService.getRenderTask(uuid);
+		
+		if (task == null) {
+			LOG.error("Cannot submit new RenderTask -- cannot inflate RenderTask from Render entity (UUID={})",
+					uuid.toString());
+			return;
+		}
 		
 		LOG.debug("UUID={}: Submitting new RenderTask ...", uuid.toString());
 		
@@ -95,6 +136,11 @@ public class RabbitMessageHandler {
 		
 		LOG.debug("UUID={}: Sending to RabbitMQ ...", task.getUuid());
 		rabbit.convertAndSend(newRenderTaskQueue, json);
+		
+		LOG.debug("UUID={}: Marking as submitted ...", task.getUuid());
+		renderUpdateService.markRenderAsSubmitted(task.getUuid().toString());
+		
+		LOG.info("UUID={}: Submitted new RenderTask.", uuid.toString());
 	}
 	
 	@RabbitListener(queues = "${rabbitmq.progressq}")
