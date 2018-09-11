@@ -21,16 +21,20 @@ import org.snowjak.rays.frontend.ui.presentation.renderlist.RenderListPresentati
 import org.snowjak.rays.frontend.ui.presentation.renderlist.UpdateRenderEventListener;
 import org.snowjak.rays.frontend.ui.presentation.renderlist.UpdateRenderListEvent;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 
 import com.google.common.eventbus.EventBus;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.spring.annotation.SpringComponent;
 import com.vaadin.spring.annotation.UIScope;
+import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.HorizontalLayout;
+import com.vaadin.ui.Label;
+import com.vaadin.ui.Panel;
 import com.vaadin.ui.ProgressBar;
-import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.themes.ValoTheme;
 
 @SpringComponent
 @UIScope
@@ -46,20 +50,23 @@ public class RenderList extends VerticalLayout {
 	private EventBus bus;
 	
 	@Autowired
+	private MessageSource messages;
+	
+	@Autowired
 	private RenderListPresentation presentation;
 	
 	private final Map<String, Item> items = new HashMap<>();
 	
 	private final AddRenderEventListener addRenderListener = (e) -> {
-		LOG.info("addRenderListener (UUID={})", e.getRender().getId());
+		LOG.trace("addRenderListener (UUID={})", e.getRender().getId());
 		this.addRender(e.getRender());
 	};
 	private final UpdateRenderEventListener updateRenderListener = (e) -> {
-		LOG.info("updateRenderListener (UUID={})", e.getRender().getId());
+		LOG.trace("updateRenderListener (UUID={})", e.getRender().getId());
 		this.updateRender(e.getRender());
 	};
 	private final RemoveRenderEventListener removeRenderListener = (e) -> {
-		LOG.info("removeRenderListener (UUID={})", e.getRender().getId());
+		LOG.trace("removeRenderListener (UUID={})", e.getRender().getId());
 		this.removeRender(e.getRender());
 	};
 	
@@ -90,71 +97,60 @@ public class RenderList extends VerticalLayout {
 	
 	public void addRender(RenderListItemBean bean) {
 		
-		synchronized (this) {
+		LOG.trace("addRender(UUID={}) ...", bean.getId());
+		
+		if (bean.getParent() == null) {
 			
-			LOG.debug("addRender(UUID={}) ...", bean.getId());
+			LOG.trace("addRender(UUID={}): is top-level ...", bean.getId());
 			
-			if (bean.getParent() == null) {
-				
-				LOG.debug("addRender(UUID={}): is top-level ...", bean.getId());
-				
-				if (items.containsKey(bean.getId())) {
-					LOG.debug("addRender(UUID={}): is top-level: already exists, removing first ...", bean.getId());
-					removeRender(items.get(bean.getId()).bean);
-				}
-				
-				final var item = new Item(bus, presentation, resultWindow, bean);
-				items.put(bean.getId(), item);
-				bus.post(new RunInUIThread(() -> addComponentAsFirst(item)));
-				
-			} else {
-				
-				if (!items.containsKey(bean.getTopLevelParent().getId())) {
-					LOG.warn("addRender(UUID={}): child of UUID={}: top-level parent is unrecognized!", bean.getId(),
-							bean.getTopLevelParent());
-					return;
-				}
-				
-				LOG.debug("addRender(UUID={}): child of UUID={}: descending to find immediate parent ...", bean.getId(),
-						bean.getTopLevelParent());
-				items.get(bean.getTopLevelParent().getId()).addChild(bean);
-				
+			if (items.containsKey(bean.getId())) {
+				LOG.trace("addRender(UUID={}): is top-level: already exists, removing first ...", bean.getId());
+				removeRender(items.get(bean.getId()).bean);
 			}
+			
+			final var item = new Item(bus, messages, presentation, resultWindow, bean);
+			items.put(bean.getId(), item);
+			bus.post(new RunInUIThread(() -> addComponentAsFirst(item)));
+			
+		} else {
+			
+			if (!items.containsKey(bean.getTopLevelParent().getId())) {
+				LOG.debug("addRender(UUID={}): child of UUID={}: top-level parent is unrecognized!", bean.getId(),
+						bean.getTopLevelParent());
+				return;
+			}
+			
+			LOG.trace("addRender(UUID={}): child of UUID={}: descending to find immediate parent ...", bean.getId(),
+					bean.getTopLevelParent());
+			items.get(bean.getTopLevelParent().getId()).addChild(bean);
+			
 		}
 	}
 	
 	public void updateRender(RenderListItemBean bean) {
 		
-		synchronized (this) {
-			
-			LOG.debug("updateRender(UUID={}) ...", bean.getId());
-			
-			if (!items.containsKey(bean.getTopLevelParent().getId())) {
-				LOG.warn("updateRender(UUID={}): given top-level parent is not recognized!", bean.getId());
-				return;
-			}
-			
-			items.get(bean.getTopLevelParent().getId()).update(bean);
-			
+		LOG.trace("updateRender(UUID={}) ...", bean.getId());
+		
+		if (!items.containsKey(bean.getTopLevelParent().getId())) {
+			LOG.debug("updateRender(UUID={}): given top-level parent is not recognized!", bean.getId());
+			return;
 		}
+		
+		items.get(bean.getTopLevelParent().getId()).update(bean);
 	}
 	
 	public void removeRender(RenderListItemBean bean) {
 		
-		synchronized (this) {
-			
-			LOG.debug("removeRender(UUID={}) ...", bean.getId());
-			
-			if (!items.containsKey(bean.getId())) {
-				LOG.warn("removeRender(UUID={}): given ID is not recognized!", bean.getId());
-				return;
-			}
-			
-			final var c = items.get(bean.getId());
-			bus.post(new RunInUIThread(() -> removeComponent(c)));
-			items.remove(bean.getId());
-			
+		LOG.trace("removeRender(UUID={}) ...", bean.getId());
+		
+		if (!items.containsKey(bean.getId())) {
+			LOG.debug("removeRender(UUID={}): given ID is not recognized!", bean.getId());
+			return;
 		}
+		
+		final var c = items.get(bean.getId());
+		bus.post(new RunInUIThread(() -> removeComponent(c)));
+		items.remove(bean.getId());
 	}
 	
 	public static class Item extends VerticalLayout {
@@ -162,119 +158,154 @@ public class RenderList extends VerticalLayout {
 		private static final long serialVersionUID = 6491829192231759715L;
 		
 		private final EventBus bus;
+		private final MessageSource messages;
 		private final RenderListPresentation presentation;
 		private final ModalRenderResultWindow resultWindow;
 		private final RenderListItemBean bean;
 		private final HorizontalLayout fieldLayout = new HorizontalLayout();
 		
-		private final TextField id = new TextField(), created = new TextField(), submitted = new TextField(),
-				completed = new TextField();
+		private final Label id = new Label(), created = new Label(), submitted = new Label(), completed = new Label();
 		private final ProgressBar progress = new ProgressBar();
 		private final Button openCloseButton = new Button(), decomposeButton = new Button(),
 				submitButton = new Button(), viewResultButton = new Button();
 		
+		private final Panel childrenPanel = new Panel();
 		private final VerticalLayout childrenLayout = new VerticalLayout();
 		private final Map<String, RenderList.Item> children = new HashMap<>();
 		
-		public Item(EventBus bus, RenderListPresentation presentation, ModalRenderResultWindow resultWindow,
-				RenderListItemBean bean) {
+		public Item(EventBus bus, MessageSource messages, RenderListPresentation presentation,
+				ModalRenderResultWindow resultWindow, RenderListItemBean bean) {
 			
 			this.bus = bus;
+			this.messages = messages;
 			this.presentation = presentation;
 			this.resultWindow = resultWindow;
 			this.bean = new RenderListItemBean(bean);
 			
+			setSpacing(false);
+			
 			openCloseButton.setIcon(bean.isOpen() ? VaadinIcons.ANGLE_DOWN : VaadinIcons.ANGLE_RIGHT);
 			openCloseButton.addClickListener((ce) -> presentation.doOpenClose(bean.getId()));
+			openCloseButton.setDescription(messages.getMessage("render.list.buttons.openclose", null, getLocale()));
+			openCloseButton.setStyleName(ValoTheme.BUTTON_BORDERLESS);
+			openCloseButton.setStyleName(ValoTheme.BUTTON_ICON_ONLY);
+			openCloseButton.setStyleName(ValoTheme.BUTTON_SMALL);
 			
+			id.setStyleName(ValoTheme.LABEL_TINY);
+			id.setDescription(messages.getMessage("render.list.fields.id", null, getLocale()));
+			
+			created.setStyleName(ValoTheme.LABEL_TINY);
+			created.setDescription(messages.getMessage("render.list.fields.created", null, getLocale()));
+			
+			submitted.setStyleName(ValoTheme.LABEL_TINY);
+			submitted.setDescription(messages.getMessage("render.list.fields.submitted", null, getLocale()));
+			
+			completed.setStyleName(ValoTheme.LABEL_TINY);
+			completed.setDescription(messages.getMessage("render.list.fields.completed", null, getLocale()));
+			
+			decomposeButton.setStyleName(ValoTheme.BUTTON_ICON_ONLY);
+			decomposeButton.setStyleName(ValoTheme.BUTTON_SMALL);
 			decomposeButton.setIcon(VaadinIcons.GRID_SMALL);
 			decomposeButton.addClickListener((ce) -> presentation.doDecomposeRender(bean.getId()));
+			decomposeButton.setDescription(messages.getMessage("render.list.buttons.decompose", null, getLocale()));
 			
+			submitButton.setStyleName(ValoTheme.BUTTON_ICON_ONLY);
+			submitButton.setStyleName(ValoTheme.BUTTON_SMALL);
 			submitButton.setIcon(VaadinIcons.COMPILE);
 			submitButton.addClickListener((ce) -> presentation.doSubmitRender(bean.getId()));
+			submitButton.setDescription(messages.getMessage("render.list.buttons.submit", null, getLocale()));
 			
+			viewResultButton.setStyleName(ValoTheme.BUTTON_ICON_ONLY);
+			viewResultButton.setStyleName(ValoTheme.BUTTON_SMALL);
 			viewResultButton.setIcon(VaadinIcons.GRID);
 			viewResultButton.addClickListener((ce) -> {
 				resultWindow.setImage(bean.getId(), bean.getImage());
 				bus.post(new AddWindowRequest(resultWindow));
 			});
+			viewResultButton.setDescription(messages.getMessage("render.list.buttons.viewresult", null, getLocale()));
 			
-			id.setReadOnly(true);
-			created.setReadOnly(true);
-			submitted.setReadOnly(true);
-			completed.setReadOnly(true);
-			
+			fieldLayout.setWidth(100, Unit.PERCENTAGE);
 			fieldLayout.setMargin(false);
-			fieldLayout.setSpacing(false);
+			fieldLayout.setSpacing(true);
 			fieldLayout.addComponents(openCloseButton, id, created, submitted, completed, progress, decomposeButton,
 					submitButton, viewResultButton);
 			
-			fieldLayout.setExpandRatio(openCloseButton, 0);
-			fieldLayout.setExpandRatio(created, 1);
-			fieldLayout.setExpandRatio(submitted, 1);
-			fieldLayout.setExpandRatio(completed, 1);
-			fieldLayout.setExpandRatio(progress, 3);
-			fieldLayout.setExpandRatio(decomposeButton, 0);
-			fieldLayout.setExpandRatio(submitButton, 0);
-			fieldLayout.setExpandRatio(viewResultButton, 0);
+//			fieldLayout.setExpandRatio(openCloseButton, 0);
+//			fieldLayout.setExpandRatio(created, 1);
+//			fieldLayout.setExpandRatio(submitted, 1);
+//			fieldLayout.setExpandRatio(completed, 1);
+//			fieldLayout.setExpandRatio(progress, 3);
+//			fieldLayout.setExpandRatio(decomposeButton, 0);
+//			fieldLayout.setExpandRatio(submitButton, 0);
+//			fieldLayout.setExpandRatio(viewResultButton, 0);
+			
+			fieldLayout.setComponentAlignment(openCloseButton, Alignment.MIDDLE_CENTER);
+			fieldLayout.setComponentAlignment(id, Alignment.MIDDLE_LEFT);
+			fieldLayout.setComponentAlignment(created, Alignment.MIDDLE_LEFT);
+			fieldLayout.setComponentAlignment(submitted, Alignment.MIDDLE_LEFT);
+			fieldLayout.setComponentAlignment(completed, Alignment.MIDDLE_LEFT);
+			fieldLayout.setComponentAlignment(progress, Alignment.MIDDLE_CENTER);
+			fieldLayout.setComponentAlignment(decomposeButton, Alignment.MIDDLE_CENTER);
+			fieldLayout.setComponentAlignment(submitButton, Alignment.MIDDLE_CENTER);
+			fieldLayout.setComponentAlignment(viewResultButton, Alignment.MIDDLE_CENTER);
 			
 			bean.getChildren().stream()
-					.forEach(r -> children.put(r.getId(), new Item(bus, presentation, resultWindow, r)));
+					.forEach(r -> children.put(r.getId(), new Item(bus, messages, presentation, resultWindow, r)));
+			
+			childrenPanel.setContent(childrenLayout);
+			childrenPanel.setCaption(messages.getMessage("render.list.childlist", null, getLocale()));
+			childrenPanel.setStyleName(ValoTheme.PANEL_SCROLL_INDICATOR);
+			childrenPanel.setStyleName(ValoTheme.PANEL_WELL);
+			childrenPanel.setVisible(bean.isOpen());
 			
 			childrenLayout.setMargin(false);
 			childrenLayout.setSpacing(false);
-			childrenLayout.setVisible(bean.isOpen());
 			
 			addComponent(fieldLayout);
-			addComponent(childrenLayout);
+			addComponent(childrenPanel);
 			
 			update(bean, true, true);
 		}
 		
 		public void addChild(RenderListItemBean toAdd) {
 			
-			synchronized (this) {
-				
-				if (!toAdd.getParent().getId().equals(bean.getId())) {
-					LOG.debug(
-							"addChild(UUID={}) to UUID={} -- parent-IDs do not match. Descending to find a match on parent-ID ...",
-							toAdd.getId(), bean.getId());
-					children.forEach((id, i) -> i.addChild(toAdd));
-					return;
-				}
-				
-				LOG.debug("addChild(UUID={}) to UUID={} ...", toAdd.getId(), bean.getId());
-				
-				if (bean.getChildren().stream().anyMatch(r -> r.getId().equals(toAdd.getId()))) {
-					LOG.debug("addChild(UUID={}) to UUID={}: child already exists. Removing first ...", toAdd.getId(),
-							bean.getId());
-					removeChild(toAdd);
-				}
-				
-				bean.getChildren().add(toAdd);
-				children.put(toAdd.getId(), new Item(bus, presentation, resultWindow, toAdd));
-				bus.post(new RunInUIThread(() -> childrenLayout.addComponentAsFirst(children.get(toAdd.getId()))));
+			if (!toAdd.getParent().getId().equals(bean.getId())) {
+				LOG.trace(
+						"addChild(UUID={}) to UUID={} -- parent-IDs do not match. Descending to find a match on parent-ID ...",
+						toAdd.getId(), bean.getId());
+				children.forEach((id, i) -> i.addChild(toAdd));
+				return;
 			}
+			
+			LOG.trace("addChild(UUID={}) to UUID={} ...", toAdd.getId(), bean.getId());
+			
+			if (bean.getChildren().stream().anyMatch(r -> r.getId().equals(toAdd.getId()))) {
+				LOG.trace("addChild(UUID={}) to UUID={}: child already exists. Removing first ...", toAdd.getId(),
+						bean.getId());
+				removeChild(toAdd);
+			}
+			
+			bean.getChildren().add(toAdd);
+			children.put(toAdd.getId(), new Item(bus, messages, presentation, resultWindow, toAdd));
+			bus.post(new RunInUIThread(() -> childrenLayout.addComponentAsFirst(children.get(toAdd.getId()))));
 		}
 		
 		public void removeChild(RenderListItemBean toRemove) {
 			
-			synchronized (this) {
-				if (!toRemove.getChildren().stream().anyMatch(r -> r.getId().equals(toRemove.getId()))) {
-					LOG.debug(
-							"removeChild(UUID={}) from UUID={} -- no children match given ID. Descending to find a match ...",
-							toRemove.getId(), bean.getId());
-					children.forEach((id, i) -> i.removeChild(toRemove));
-					return;
-				}
-				
-				LOG.debug("removeChild(UUID={}) from UUID={} ...", toRemove.getId(), bean.getId());
-				
-				toRemove.getChildren().removeIf(r -> r.getId().equals(toRemove.getId()));
-				bus.post(new RunInUIThread(() -> childrenLayout.removeComponent(children.get(toRemove.getId()))));
-				children.remove(toRemove.getId());
-				
+			if (!toRemove.getChildren().stream().anyMatch(r -> r.getId().equals(toRemove.getId()))) {
+				LOG.trace(
+						"removeChild(UUID={}) from UUID={} -- no children match given ID. Descending to find a match ...",
+						toRemove.getId(), bean.getId());
+				children.forEach((id, i) -> i.removeChild(toRemove));
+				return;
 			}
+			
+			LOG.trace("removeChild(UUID={}) from UUID={} ...", toRemove.getId(), bean.getId());
+			
+			toRemove.getChildren().removeIf(r -> r.getId().equals(toRemove.getId()));
+			bus.post(new RunInUIThread(() -> childrenLayout.removeComponent(children.get(toRemove.getId()))));
+			children.remove(toRemove.getId());
+			
 		}
 		
 		public void update(RenderListItemBean newBean) {
@@ -285,13 +316,13 @@ public class RenderList extends VerticalLayout {
 		private void update(RenderListItemBean updatedBean, boolean forceUpdate, boolean runUpdatesInCurrentThread) {
 			
 			if (!updatedBean.getId().equals(bean.getId())) {
-				LOG.debug("update(UUID={}) -- doesn't match this bean (UUID={}). Descending to find a match ...",
+				LOG.trace("update(UUID={}) -- doesn't match this bean (UUID={}). Descending to find a match ...",
 						updatedBean.getId(), bean.getId());
 				children.forEach((id, i) -> i.update(updatedBean, forceUpdate, runUpdatesInCurrentThread));
 				return;
 			}
 			
-			LOG.debug("update(UUID={}) ...", updatedBean.getId());
+			LOG.trace("update(UUID={}) ...", updatedBean.getId());
 			
 			final Collection<Runnable> uiUpdates = new LinkedList<>();
 			
@@ -300,7 +331,7 @@ public class RenderList extends VerticalLayout {
 				bean.setOpen(updatedBean.isOpen());
 				uiUpdates.add(() -> {
 					openCloseButton.setIcon(bean.isOpen() ? VaadinIcons.ANGLE_DOWN : VaadinIcons.ANGLE_RIGHT);
-					childrenLayout.setVisible(bean.isOpen());
+					childrenPanel.setVisible(bean.isOpen());
 				});
 			}
 			

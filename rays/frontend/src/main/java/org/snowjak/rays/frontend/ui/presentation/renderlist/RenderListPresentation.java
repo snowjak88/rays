@@ -90,30 +90,24 @@ public class RenderListPresentation extends AbstractPresentation<RenderListEvent
 	
 	public List<RenderListItemBean> getRenders() {
 		
-		synchronized (this) {
-			return Collections.unmodifiableList(renders);
-		}
+		return Collections.unmodifiableList(renders);
 	}
 	
 	@Subscribe
 	public void receiveRenderCreation(ReceivedRenderCreation creation) {
 		
-		synchronized (this) {
-			final var newBean = convertToBean(creation.getRender());
-			fireEvent(new AddToRenderListEvent(newBean));
-			
-			if (newBean.getParent() != null)
-				fireEvent(new UpdateRenderListEvent(newBean.getParent()));
-		}
+		final var newBean = convertToBean(creation.getRender());
+		fireEvent(new AddToRenderListEvent(newBean));
+		
+		if (newBean.getParent() != null)
+			fireEvent(new UpdateRenderListEvent(newBean.getParent()));
 	}
 	
 	@Subscribe
 	public void receiveRenderUpdate(ReceivedRenderUpdate update) {
 		
-		synchronized (this) {
-			final var updatedBean = convertToBean(update.getRender(), false, false, false);
-			fireEvent(new UpdateRenderListEvent(updatedBean));
-		}
+		final var updatedBean = convertToBean(update.getRender(), false, false, false);
+		fireEvent(new UpdateRenderListEvent(updatedBean));
 	}
 	
 	public void doOpenClose(String id) {
@@ -142,18 +136,15 @@ public class RenderListPresentation extends AbstractPresentation<RenderListEvent
 	
 	public void doSubmitRender(String id) {
 		
-		synchronized (this) {
-			
-			LOG.debug("doSubmitRender(UUID={}) ...", id);
-			
-			final var bean = getBeanById(id);
-			if (bean == null) {
-				LOG.warn("doSubmitRender(UUID={}) -- UUID not recognized!", id);
-				return;
-			}
-			
-			doSubmitRender(bean);
+		LOG.debug("doSubmitRender(UUID={}) ...", id);
+		
+		final var bean = getBeanById(id);
+		if (bean == null) {
+			LOG.warn("doSubmitRender(UUID={}) -- UUID not recognized!", id);
+			return;
 		}
+		
+		doSubmitRender(bean);
 	}
 	
 	private void doSubmitRender(RenderListItemBean bean) {
@@ -280,7 +271,9 @@ public class RenderListPresentation extends AbstractPresentation<RenderListEvent
 		//
 		
 		if (addToPresentation && !existingBean.isPresent())
-			renders.add(bean);
+			synchronized (this) {
+				renders.add(bean);
+			}
 		
 		return bean;
 	}
@@ -295,16 +288,20 @@ public class RenderListPresentation extends AbstractPresentation<RenderListEvent
 	 */
 	public RenderListItemBean getBeanById(String id) {
 		
-		return renders.stream().map(r -> getBeanById(id, r)).filter(r -> r != null).findFirst().orElse(null);
+		synchronized (this) {
+			return renders.stream().map(r -> getBeanById(id, r)).filter(r -> r != null).findFirst().orElse(null);
+		}
 	}
 	
 	private RenderListItemBean getBeanById(String id, RenderListItemBean current) {
 		
-		if (current.getId().equals(id))
-			return current;
-		
-		return current.getChildren().stream().map(r -> getBeanById(id, r)).filter(r -> r != null).findFirst()
-				.orElse(null);
+		synchronized (this) {
+			if (current.getId().equals(id))
+				return current;
+			
+			return current.getChildren().stream().map(r -> getBeanById(id, r)).filter(r -> r != null).findFirst()
+					.orElse(null);
+		}
 	}
 	
 	/**
