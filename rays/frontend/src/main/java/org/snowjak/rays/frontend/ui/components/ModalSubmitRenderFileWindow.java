@@ -55,8 +55,10 @@ public class ModalSubmitRenderFileWindow extends Window {
 		setVisible(true);
 		setClosable(true);
 		
-		os = new FileBackedOutputStream(8192);
-		final var upload = new Upload(messages.getMessage("renderfile.form.upload", null, getLocale()), (fn, mt) -> os);
+		final var upload = new Upload(messages.getMessage("renderfile.form.upload", null, getLocale()), (fn, mt) -> {
+			os = new FileBackedOutputStream(8192);
+			return os;
+		});
 		upload.setAcceptMimeTypes(MimeTypeUtils.APPLICATION_JSON_VALUE + "," + MimeTypeUtils.TEXT_PLAIN_VALUE);
 		
 		final var errorLabel = new Label();
