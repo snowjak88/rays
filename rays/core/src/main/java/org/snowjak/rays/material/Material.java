@@ -156,8 +156,8 @@ public interface Material {
 	
 	/**
 	 * Given that emission is occuring at the given {@link Interaction}, in the
-	 * specified {@code direction} -- what energy-distribution is emitted toward the
-	 * eye-point?
+	 * specified {@code direction} -- what energy-distribution is emitted in that
+	 * direction?
 	 * 
 	 * @param interaction
 	 * @param direction

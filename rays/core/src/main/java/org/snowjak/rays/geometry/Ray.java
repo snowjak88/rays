@@ -64,6 +64,19 @@ public class Ray implements Serializable {
 	}
 	
 	/**
+	 * Construct a new Ray with the given origin, direction, and "ray-depth", and
+	 * default t of 0.0
+	 * 
+	 * @param origin
+	 * @param direction
+	 * @param depth
+	 */
+	public Ray(Point3D origin, Vector3D direction, int depth) {
+		
+		this(origin, direction, 0d, depth);
+	}
+	
+	/**
 	 * Construct a new Ray with the given origin, direction, and t, and default
 	 * "ray-depth" of 0.
 	 * 
