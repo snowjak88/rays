@@ -1,6 +1,7 @@
 package org.snowjak.rays.frontend.ui.components;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 import org.snowjak.rays.frontend.messages.frontend.AddWindowRequest;
 import org.snowjak.rays.frontend.messages.frontend.RunInUIThread;
@@ -49,9 +50,16 @@ public class ModalLoginWindow extends Window {
 		center();
 		setModal(true);
 		setVisible(true);
+		setClosable(true);
 		setContent(createNewLoginForm());
 		
 		bus.register(this);
+	}
+	
+	@PreDestroy
+	public void onDestroy() {
+		
+		bus.unregister(this);
 	}
 	
 	private LoginForm createNewLoginForm() {

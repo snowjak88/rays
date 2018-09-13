@@ -1,72 +1,79 @@
 package org.snowjak.rays.frontend.ui;
 
-import org.snowjak.rays.RenderTask;
-import org.snowjak.rays.frontend.messages.frontend.AddTabRequest;
+import javax.annotation.PostConstruct;
+
 import org.snowjak.rays.frontend.messages.frontend.AddWindowRequest;
-import org.snowjak.rays.frontend.messages.frontend.RemoveTabRequest;
 import org.snowjak.rays.frontend.messages.frontend.RemoveWindowRequest;
 import org.snowjak.rays.frontend.messages.frontend.RunInUIThread;
-import org.snowjak.rays.frontend.ui.components.InitialScreen;
+import org.snowjak.rays.frontend.security.AuthorizedView;
 import org.snowjak.rays.frontend.ui.components.MainMenuBar;
-import org.snowjak.rays.frontend.ui.components.ObjectCreator;
-import org.snowjak.rays.frontend.ui.components.RenderList;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.vaadin.annotations.Push;
+import com.vaadin.navigator.Navigator;
+import com.vaadin.navigator.View;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.shared.ui.ui.Transport;
 import com.vaadin.spring.annotation.SpringUI;
-import com.vaadin.spring.annotation.UIScope;
-import com.vaadin.ui.AbstractLayout;
-import com.vaadin.ui.TabSheet;
+import com.vaadin.spring.annotation.SpringView;
+import com.vaadin.spring.annotation.SpringViewDisplay;
+import com.vaadin.ui.Label;
+import com.vaadin.ui.Panel;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
 
 @SpringUI(path = "")
 @Push(transport = Transport.LONG_POLLING)
-@UIScope
+@Lazy
 public class FrontEndUI extends UI {
 	
 	private static final long serialVersionUID = -8315077204786735072L;
+	
+	private final VerticalLayout rootLayout = new VerticalLayout();
 	
 	@Autowired
 	private EventBus bus;
 	
 	@Autowired
+	@Lazy
 	private MainMenuBar menuBar;
 	
 	@Autowired
-	private InitialScreen initialScreen;
+	@Lazy
+	private ViewContainer viewContainer;
 	
 	@Autowired
-	private ObjectCreator creator;
+	@Lazy
+	private Navigator navigator;
 	
-	@Autowired
-	private RenderList renderGrid;
+	@SpringView(name = HomeView.NAME)
+	@Lazy
+	@AuthorizedView("ROLE_.+")
+	public static class HomeView extends VerticalLayout implements View {
+		
+		public static final String NAME = "";
+		private static final long serialVersionUID = 7499986011808184784L;
+		
+		@PostConstruct
+		public void init() {
+			
+			addComponent(new Label("Home page. Think of something to be added here."));
+		}
+	}
 	
-	private TabSheet tabs;
-	
-	private AbstractLayout rootLayout;
+	@PostConstruct
+	public void postConstruct() {
+		
+		rootLayout.addComponents(menuBar, viewContainer);
+	}
 	
 	@Override
 	protected void init(VaadinRequest request) {
 		
-		tabs = new TabSheet();
-		
-		creator.setCaption("Creator");
-		tabs.addComponent(creator);
-		
-		renderGrid.setCaption("List");
-		tabs.addComponent(renderGrid);
-		
-		rootLayout = new VerticalLayout(menuBar, tabs);
-		
-		creator.setClass(RenderTask.class);
-		
 		setContent(rootLayout);
-		
 	}
 	
 	@Override
@@ -102,25 +109,15 @@ public class FrontEndUI extends UI {
 	}
 	
 	@Subscribe
-	public void receiveTabAddRequest(AddTabRequest request) {
-		
-		access(() -> {
-			tabs.addComponent(request.getComponent());
-		});
-	}
-	
-	@Subscribe
-	public void receiveTabRemoveRequest(RemoveTabRequest request) {
-		
-		access(() -> {
-			tabs.removeComponent(request.getComponent());
-		});
-	}
-	
-	@Subscribe
 	public void receiveUIThreadRequest(RunInUIThread request) {
 		
 		access(request.getTask());
 	}
 	
+	@SpringViewDisplay
+	public static class ViewContainer extends Panel {
+		
+		private static final long serialVersionUID = 2795652841550371207L;
+		
+	}
 }

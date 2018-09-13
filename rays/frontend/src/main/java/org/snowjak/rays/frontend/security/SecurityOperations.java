@@ -49,76 +49,97 @@ public class SecurityOperations {
 	 */
 	public boolean isAuthenticated() {
 		
-		return (SecurityContextHolder.getContext().getAuthentication() != null)
-				&& (SecurityContextHolder.getContext().getAuthentication().isAuthenticated())
-				&& !(SecurityContextHolder.getContext().getAuthentication() instanceof AnonymousAuthenticationToken);
+		synchronized (this) {
+			return (SecurityContextHolder.getContext().getAuthentication() != null)
+					&& (SecurityContextHolder.getContext().getAuthentication().isAuthenticated())
+					&& !(SecurityContextHolder.getContext()
+							.getAuthentication() instanceof AnonymousAuthenticationToken);
+		}
 	}
 	
 	public Authentication doLogIn(String username, String password) throws SecurityOperationException {
 		
-		LOG.info("Performing log-in request ...");
-		
-		LOG.debug("Building username/password token ...");
-		final Authentication preAuthenticationToken = new UsernamePasswordAuthenticationToken(username, password);
-		
-		LOG.debug("Attempting to authenticate token ...");
-		final Authentication authenticatedToken;
-		try {
-			authenticatedToken = authenticationManager.authenticate(preAuthenticationToken);
-		} catch (AuthenticationException e) {
+		synchronized (this) {
+			LOG.info("Performing log-in request ...");
 			
-			LOG.info("Could not complete log-in -- {}: {}", e.getClass().getSimpleName(), e.getMessage());
-			throw new SecurityOperationException(e);
+			LOG.debug("Building username/password token ...");
+			final Authentication preAuthenticationToken = new UsernamePasswordAuthenticationToken(username, password);
+			
+			LOG.debug("Attempting to authenticate token ...");
+			final Authentication authenticatedToken;
+			try {
+				authenticatedToken = authenticationManager.authenticate(preAuthenticationToken);
+			} catch (AuthenticationException e) {
+				
+				LOG.info("Could not complete log-in -- {}: {}", e.getClass().getSimpleName(), e.getMessage());
+				throw new SecurityOperationException(e);
+			}
+			
+			LOG.debug("Storing the authenticated token in the SecurityContext ...");
+			SecurityContextHolder.getContext().setAuthentication(authenticatedToken);
+			
+			LOG.trace("Signalling the completed log-in.");
+			bus.post(new SuccessfulLogin(authenticatedToken));
+			
+			LOG.info("Completed log-in request.");
+			return authenticatedToken;
 		}
-		
-		LOG.debug("Storing the authenticated token in the SecurityContext ...");
-		SecurityContextHolder.getContext().setAuthentication(authenticatedToken);
-		
-		LOG.trace("Signalling the completed log-in.");
-		bus.post(new SuccessfulLogin(authenticatedToken));
-		
-		LOG.info("Completed log-in request.");
-		return authenticatedToken;
 	}
 	
 	public void doLogOut() {
 		
-		LOG.info("Performing log-out request ...");
-		
-		final Authentication oldAuthentication = SecurityContextHolder.getContext().getAuthentication();
-		
-		LOG.debug("Deleting authentication from security context ...");
-		SecurityContextHolder.getContext().setAuthentication(null);
-		
-		LOG.debug("Clearing security context ...");
-		SecurityContextHolder.clearContext();
-		
-		LOG.debug("Publishing logout event ...");
-		bus.post(new SuccessfulLogout(oldAuthentication));
-		
-		LOG.info("Completed log-out.");
+		synchronized (this) {
+			LOG.info("Performing log-out request ...");
+			
+			final Authentication oldAuthentication = SecurityContextHolder.getContext().getAuthentication();
+			
+			LOG.debug("Deleting authentication from security context ...");
+			SecurityContextHolder.getContext().setAuthentication(null);
+			
+			LOG.debug("Clearing security context ...");
+			SecurityContextHolder.clearContext();
+			
+			LOG.debug("Publishing logout event ...");
+			bus.post(new SuccessfulLogout(oldAuthentication));
+			
+			LOG.info("Completed log-out.");
+		}
 	}
 	
 	public Collection<String> getAuthorities() {
 		
-		LOG.debug("Get active authorities ...");
-		
-		if (!isAuthenticated()) {
-			LOG.debug("Current session is not authenticated -- therefore, no authorities to return.");
-			return Collections.emptyList();
+		synchronized (this) {
+			LOG.debug("Get active authorities ...");
+			
+			if (!isAuthenticated()) {
+				LOG.debug("Current session is not authenticated -- therefore, no authorities to return.");
+				return Collections.emptyList();
+			}
+			
+			final var result = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+					.map(ga -> ga.getAuthority()).collect(Collectors.toList());
+			LOG.trace("Principal as authorities: {}", result);
+			return result;
 		}
-		
-		final var result = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-				.map(ga -> ga.getAuthority()).collect(Collectors.toList());
-		LOG.trace("Principal as authorities: {}", result);
-		return result;
 	}
 	
+	/**
+	 * Determines if the current principal possesses the given authority.
+	 * <p>
+	 * The {@code authority} parameter is treated as a regular-expression, which
+	 * means you can use pattern-matching when querying the principal's authorities.
+	 * </p>
+	 * 
+	 * @param authority
+	 * @return
+	 */
 	public boolean hasAuthority(String authority) {
 		
-		final var result = getAuthorities().contains(authority);
-		LOG.trace("Principal has authority \"{}\"? ==> {}", authority, result);
-		return result;
+		synchronized (this) {
+			final var result = getAuthorities().stream().anyMatch(a -> a.matches(authority));
+			LOG.trace("Principal has authority \"{}\"? ==> {}", authority, result);
+			return result;
+		}
 	}
 	
 }

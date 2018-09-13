@@ -2,13 +2,13 @@ package org.snowjak.rays.frontend.ui.components;
 
 import com.vaadin.server.Resource;
 import com.vaadin.spring.annotation.SpringComponent;
-import com.vaadin.spring.annotation.UIScope;
+import com.vaadin.spring.annotation.VaadinSessionScope;
 import com.vaadin.ui.Image;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.Window;
 
 @SpringComponent
-@UIScope
+@VaadinSessionScope
 public class ModalRenderResultWindow extends Window {
 	
 	private static final long serialVersionUID = 5190866332552898618L;

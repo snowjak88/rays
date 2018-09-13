@@ -10,6 +10,7 @@ import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snowjak.rays.RenderTask;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.annotations.bean.BeanNode;
 import org.snowjak.rays.annotations.bean.CollectionNode;
@@ -17,14 +18,16 @@ import org.snowjak.rays.annotations.bean.LiteralNode;
 import org.snowjak.rays.annotations.bean.Node;
 import org.snowjak.rays.annotations.bean.Nodes;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderCreationFromSingleJson;
+import org.snowjak.rays.frontend.security.AuthorizedView;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.ConversionService;
 
 import com.google.common.eventbus.EventBus;
 import com.vaadin.icons.VaadinIcons;
+import com.vaadin.navigator.View;
 import com.vaadin.shared.ui.ValueChangeMode;
-import com.vaadin.spring.annotation.SpringComponent;
-import com.vaadin.spring.annotation.UIScope;
+import com.vaadin.spring.annotation.SpringView;
+import com.vaadin.spring.annotation.VaadinSessionScope;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.FormLayout;
@@ -34,10 +37,12 @@ import com.vaadin.ui.TextArea;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 
-@SpringComponent
-@UIScope
-public class ObjectCreator extends FormLayout {
+@SpringView(name = ObjectCreator.NAME)
+@VaadinSessionScope
+@AuthorizedView({ "ROLE_CREATE_RENDER" })
+public class ObjectCreator extends FormLayout implements View {
 	
+	public static final String NAME = "object-creator";
 	private static final Logger LOG = LoggerFactory.getLogger(ObjectCreator.class);
 	
 	private static final long serialVersionUID = -2320590174526944151L;
@@ -64,6 +69,7 @@ public class ObjectCreator extends FormLayout {
 	public ObjectCreator() {
 		
 		super();
+		setClass(RenderTask.class);
 	}
 	
 	public void setClass(Class<?> clazz) {

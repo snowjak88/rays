@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.frontend.messages.frontend.AddWindowRequest;
 import org.snowjak.rays.frontend.messages.frontend.RunInUIThread;
+import org.snowjak.rays.frontend.security.AuthorizedView;
 import org.snowjak.rays.frontend.ui.presentation.renderlist.AddRenderEventListener;
 import org.snowjak.rays.frontend.ui.presentation.renderlist.AddToRenderListEvent;
 import org.snowjak.rays.frontend.ui.presentation.renderlist.RemoveFromRenderListEvent;
@@ -25,8 +27,9 @@ import org.springframework.context.MessageSource;
 
 import com.google.common.eventbus.EventBus;
 import com.vaadin.icons.VaadinIcons;
-import com.vaadin.spring.annotation.SpringComponent;
-import com.vaadin.spring.annotation.UIScope;
+import com.vaadin.navigator.View;
+import com.vaadin.spring.annotation.SpringView;
+import com.vaadin.spring.annotation.VaadinSessionScope;
 import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.HorizontalLayout;
@@ -36,10 +39,12 @@ import com.vaadin.ui.ProgressBar;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.themes.ValoTheme;
 
-@SpringComponent
-@UIScope
-public class RenderList extends VerticalLayout {
+@SpringView(name = RenderList.NAME)
+@VaadinSessionScope
+@AuthorizedView({ "ROLE_VIEW_ALL_RENDERS" })
+public class RenderList extends VerticalLayout implements View {
 	
+	public static final String NAME = "render-list";
 	private static final long serialVersionUID = 7875490599102330170L;
 	private static final Logger LOG = LoggerFactory.getLogger(RenderList.class);
 	
@@ -162,12 +167,16 @@ public class RenderList extends VerticalLayout {
 		private final RenderListPresentation presentation;
 		private final ModalRenderResultWindow resultWindow;
 		private final RenderListItemBean bean;
-		private final HorizontalLayout fieldLayout = new HorizontalLayout();
+		private final HorizontalLayout fieldLayout = new HorizontalLayout(), buttonsLayout = new HorizontalLayout(),
+				datesLayout = new HorizontalLayout();
 		
 		private final Label id = new Label(), created = new Label(), submitted = new Label(), completed = new Label();
 		private final ProgressBar progress = new ProgressBar();
 		private final Button openCloseButton = new Button(), decomposeButton = new Button(),
 				submitButton = new Button(), viewResultButton = new Button();
+		
+		private final AtomicBoolean resetDecomposeButtonIcon = new AtomicBoolean(false),
+				resetSubmitButtonIcon = new AtomicBoolean(false);
 		
 		private final Panel childrenPanel = new Panel();
 		private final VerticalLayout childrenLayout = new VerticalLayout();
@@ -188,11 +197,14 @@ public class RenderList extends VerticalLayout {
 			openCloseButton.addClickListener((ce) -> presentation.doOpenClose(bean.getId()));
 			openCloseButton.setDescription(messages.getMessage("render.list.buttons.openclose", null, getLocale()));
 			openCloseButton.setStyleName(ValoTheme.BUTTON_BORDERLESS);
-			openCloseButton.setStyleName(ValoTheme.BUTTON_ICON_ONLY);
 			openCloseButton.setStyleName(ValoTheme.BUTTON_SMALL);
+			openCloseButton.setWidthUndefined();
 			
 			id.setStyleName(ValoTheme.LABEL_TINY);
 			id.setDescription(messages.getMessage("render.list.fields.id", null, getLocale()));
+			id.setWidthUndefined();
+			
+			progress.setWidth(100, Unit.PERCENTAGE);
 			
 			created.setStyleName(ValoTheme.LABEL_TINY);
 			created.setDescription(messages.getMessage("render.list.fields.created", null, getLocale()));
@@ -206,13 +218,27 @@ public class RenderList extends VerticalLayout {
 			decomposeButton.setStyleName(ValoTheme.BUTTON_ICON_ONLY);
 			decomposeButton.setStyleName(ValoTheme.BUTTON_SMALL);
 			decomposeButton.setIcon(VaadinIcons.GRID_SMALL);
-			decomposeButton.addClickListener((ce) -> presentation.doDecomposeRender(bean.getId()));
+			decomposeButton.addClickListener((ce) -> {
+				bus.post(new RunInUIThread(() -> {
+					decomposeButton.setEnabled(false);
+					decomposeButton.setIcon(VaadinIcons.ELLIPSIS_DOTS_H);
+				}));
+				resetDecomposeButtonIcon.set(true);
+				presentation.doDecomposeRender(bean.getId());
+			});
 			decomposeButton.setDescription(messages.getMessage("render.list.buttons.decompose", null, getLocale()));
 			
 			submitButton.setStyleName(ValoTheme.BUTTON_ICON_ONLY);
 			submitButton.setStyleName(ValoTheme.BUTTON_SMALL);
 			submitButton.setIcon(VaadinIcons.COMPILE);
-			submitButton.addClickListener((ce) -> presentation.doSubmitRender(bean.getId()));
+			submitButton.addClickListener((ce) -> {
+				bus.post(new RunInUIThread(() -> {
+					submitButton.setEnabled(false);
+					submitButton.setIcon(VaadinIcons.ELLIPSIS_DOTS_H);
+				}));
+				resetSubmitButtonIcon.set(true);
+				presentation.doSubmitRender(bean.getId());
+			});
 			submitButton.setDescription(messages.getMessage("render.list.buttons.submit", null, getLocale()));
 			
 			viewResultButton.setStyleName(ValoTheme.BUTTON_ICON_ONLY);
@@ -224,30 +250,35 @@ public class RenderList extends VerticalLayout {
 			});
 			viewResultButton.setDescription(messages.getMessage("render.list.buttons.viewresult", null, getLocale()));
 			
+			buttonsLayout.setWidthUndefined();
+			buttonsLayout.setMargin(false);
+			buttonsLayout.setSpacing(false);
+			buttonsLayout.addComponents(decomposeButton, submitButton, viewResultButton);
+			buttonsLayout.setComponentAlignment(decomposeButton, Alignment.MIDDLE_CENTER);
+			buttonsLayout.setComponentAlignment(submitButton, Alignment.MIDDLE_CENTER);
+			buttonsLayout.setComponentAlignment(viewResultButton, Alignment.MIDDLE_CENTER);
+			
 			fieldLayout.setWidth(100, Unit.PERCENTAGE);
 			fieldLayout.setMargin(false);
 			fieldLayout.setSpacing(true);
-			fieldLayout.addComponents(openCloseButton, id, created, submitted, completed, progress, decomposeButton,
-					submitButton, viewResultButton);
-			
-//			fieldLayout.setExpandRatio(openCloseButton, 0);
-//			fieldLayout.setExpandRatio(created, 1);
-//			fieldLayout.setExpandRatio(submitted, 1);
-//			fieldLayout.setExpandRatio(completed, 1);
-//			fieldLayout.setExpandRatio(progress, 3);
-//			fieldLayout.setExpandRatio(decomposeButton, 0);
-//			fieldLayout.setExpandRatio(submitButton, 0);
-//			fieldLayout.setExpandRatio(viewResultButton, 0);
+			fieldLayout.addComponents(openCloseButton, id, progress, buttonsLayout);
 			
 			fieldLayout.setComponentAlignment(openCloseButton, Alignment.MIDDLE_CENTER);
 			fieldLayout.setComponentAlignment(id, Alignment.MIDDLE_LEFT);
-			fieldLayout.setComponentAlignment(created, Alignment.MIDDLE_LEFT);
-			fieldLayout.setComponentAlignment(submitted, Alignment.MIDDLE_LEFT);
-			fieldLayout.setComponentAlignment(completed, Alignment.MIDDLE_LEFT);
 			fieldLayout.setComponentAlignment(progress, Alignment.MIDDLE_CENTER);
-			fieldLayout.setComponentAlignment(decomposeButton, Alignment.MIDDLE_CENTER);
-			fieldLayout.setComponentAlignment(submitButton, Alignment.MIDDLE_CENTER);
-			fieldLayout.setComponentAlignment(viewResultButton, Alignment.MIDDLE_CENTER);
+			fieldLayout.setComponentAlignment(buttonsLayout, Alignment.MIDDLE_RIGHT);
+			
+			fieldLayout.setExpandRatio(openCloseButton, 0);
+			fieldLayout.setExpandRatio(id, 0);
+			fieldLayout.setExpandRatio(progress, 1);
+			fieldLayout.setExpandRatio(buttonsLayout, 0);
+			
+			datesLayout.setMargin(false);
+			datesLayout.setSpacing(true);
+			datesLayout.addComponents(created, submitted, completed);
+			datesLayout.setComponentAlignment(created, Alignment.MIDDLE_LEFT);
+			datesLayout.setComponentAlignment(submitted, Alignment.MIDDLE_LEFT);
+			datesLayout.setComponentAlignment(completed, Alignment.MIDDLE_LEFT);
 			
 			bean.getChildren().stream()
 					.forEach(r -> children.put(r.getId(), new Item(bus, messages, presentation, resultWindow, r)));
@@ -262,6 +293,7 @@ public class RenderList extends VerticalLayout {
 			childrenLayout.setSpacing(false);
 			
 			addComponent(fieldLayout);
+			addComponent(datesLayout);
 			addComponent(childrenPanel);
 			
 			update(bean, true, true);
@@ -371,10 +403,22 @@ public class RenderList extends VerticalLayout {
 				uiUpdates.add(() -> progress.setValue(bean.getPercentComplete()));
 			}
 			
+			if (forceUpdate || resetDecomposeButtonIcon.get()) {
+				LOG.trace("update(UUID={}): updating decompose button icon ...\", updatedBean.getId()");
+				resetDecomposeButtonIcon.set(false);
+				uiUpdates.add(() -> decomposeButton.setIcon(VaadinIcons.GRID_SMALL));
+			}
+			
 			if (forceUpdate || bean.isDecomposable() != updatedBean.isDecomposable()) {
 				LOG.trace("update(UUID={}): updating isDecomposable ...", updatedBean.getId());
 				bean.setDecomposable(updatedBean.isDecomposable());
 				uiUpdates.add(() -> decomposeButton.setEnabled(bean.isDecomposable()));
+			}
+			
+			if (forceUpdate || resetSubmitButtonIcon.get()) {
+				LOG.trace("update(UUID={}): updating submit button icon ...\", updatedBean.getId()");
+				resetSubmitButtonIcon.set(false);
+				uiUpdates.add(() -> submitButton.setIcon(VaadinIcons.COMPILE));
 			}
 			
 			if (forceUpdate || bean.isSubmittable() != updatedBean.isSubmittable()) {

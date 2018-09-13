@@ -1,7 +1,5 @@
 package org.snowjak.rays.frontend.ui.presentation;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -19,13 +17,7 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractPresentation<L extends AbstractListener<E>, E extends AbstractEvent> {
 	
-	private final Class<E> baseEventType;
 	private final Map<Class<? extends E>, Collection<L>> listeners = new HashMap<>();
-	
-	public AbstractPresentation(Class<E> baseEventType) {
-		
-		this.baseEventType = baseEventType;
-	}
 	
 	/**
 	 * Add the given listener to this Presentation, listening for events of the

@@ -68,7 +68,7 @@ public class RenderListPresentation extends AbstractPresentation<RenderListEvent
 	 */
 	public RenderListPresentation() {
 		
-		super(AbstractRenderListEvent.class);
+		super();
 	}
 	
 	@PostConstruct
