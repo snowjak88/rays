@@ -25,3 +25,4 @@ logging:
   level:
     org.springframework.security: INFO
     org.snowjak.rays: DEBUG
+    org.snowjak.rays.frontend.ui.components.ObjectCreator: TRACE

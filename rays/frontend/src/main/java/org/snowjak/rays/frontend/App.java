@@ -13,6 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import com.google.common.eventbus.AsyncEventBus;
@@ -75,7 +76,31 @@ public class App {
 	@Bean
 	public Executor eventBusExecutor() {
 		
-		final var executor = new ThreadPoolTaskExecutor();
+		//
+		// Create a custom extension of ThreadPoolTaskExecutor,
+		// which will automatically add the current Spring Security Authentication
+		// to the spawned task's thread.
+		//
+		// (This is needed because Spring Security stores its SecurityContext as
+		// a ThreadLocal object, which obviously isn't shared across threads.)
+		//
+		final var executor = new ThreadPoolTaskExecutor() {
+			
+			private static final long serialVersionUID = 5843176249602586428L;
+			
+			@Override
+			public void execute(Runnable task) {
+				
+				final var auth = SecurityContextHolder.getContext().getAuthentication();
+				
+				super.execute(() -> {
+					SecurityContextHolder.getContext().setAuthentication(auth);
+					
+					task.run();
+				});
+			}
+			
+		};
 		executor.setAllowCoreThreadTimeOut(true);
 		executor.setAwaitTerminationSeconds(60);
 		return executor;

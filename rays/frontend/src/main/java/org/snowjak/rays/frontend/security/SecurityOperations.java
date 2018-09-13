@@ -9,8 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogin;
 import org.snowjak.rays.frontend.messages.frontend.SuccessfulLogout;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Scope;
-import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,7 +28,6 @@ import com.google.common.eventbus.EventBus;
  *
  */
 @Component
-@Scope(scopeName = "vaadin-session", proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class SecurityOperations {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SecurityOperations.class);

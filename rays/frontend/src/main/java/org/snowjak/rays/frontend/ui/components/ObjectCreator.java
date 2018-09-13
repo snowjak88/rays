@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.PostConstruct;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.RenderTask;
@@ -69,6 +71,11 @@ public class ObjectCreator extends FormLayout implements View {
 	public ObjectCreator() {
 		
 		super();
+	}
+	
+	@PostConstruct
+	public void postConstruct() {
+		
 		setClass(RenderTask.class);
 	}
 	
