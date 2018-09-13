@@ -1,1 +1,107 @@
-{"renderer":{"type":"path-tracing","maxDepth":4},"film":{"filter":{"type":"box","extent":0},"width":400,"height":300},"sampler":{"type":"best-candidate","additional1DSamples":8,"samplesPerPixel":8,"additional2DSamples":8,"xEnd":399.0,"xStart":0.0,"yEnd":299.0,"yStart":0.0},"scene":{"primitives":[{"shape":{"type":"plane","worldToLocal":[{"type":"translate","dx":0.0,"dy":-2.0,"dz":0.0}]},"material":{"type":"lambertian","texture":{"type":"constant","mapping":{"type":"identity"},"rgb":{"red":1.0,"green":1.0,"blue":1.0}}}},{"shape":{"type":"sphere","worldToLocal":[{"type":"translate","dx":-2.0,"dy":0.0,"dz":0.0}],"radius":1.0},"material":{"type":"lambertian","texture":{"type":"constant","mapping":{"type":"identity"},"rgb":{"red":0.0,"green":1.0,"blue":0.0}}}},{"shape":{"type":"sphere","worldToLocal":[{"type":"translate","dx":2.0,"dy":0.0,"dz":0.0}],"radius":1.0},"material":{"type":"lambertian","texture":{"type":"constant","mapping":{"type":"identity"},"rgb":{"red":0.0,"green":0.0,"blue":1.0}}}},{"shape":{"type":"sphere","worldToLocal":[],"radius":1.0},"material":{"type":"perfect-mirror","tint":{"type":"constant","mapping":{"type":"identity"},"rgb":{"red":1.0,"green":1.0,"blue":1.0}}}}],"camera":{"type":"pinhole","worldToLocal":[{"type":"translate","dx":0.0,"dy":0.0,"dz":-8.0}],"worldWidth":4.0,"worldHeight":3.0,"pixelHeight":300,"pixelWidth":400,"focalLength":8.0},"lights":[{"type":"point","position":{"x":0.0,"y":5.0,"z":0.0},"rgb":{"red":6.0,"green":6.0,"blue":6.0}}]}}
+{
+	"renderer": {
+		"type": "path-tracing",
+		"maxDepth": 4
+	},
+	"film": {
+		"filter": { "type": "box", "extent": 0 },
+		"width": 400,
+		"height": 300
+	},
+	"sampler": {
+		"type": "best-candidate",
+		"samplesPerPixel": 8,
+		"additional1DSamples": 8,
+		"additional2DSamples": 8,
+		"xStart": 0.0,
+		"xEnd": 399.0,
+		"yStart":0.0
+		"yEnd":299.0
+	},
+	"scene": {
+		"primitives": [
+			{
+				"shape": {
+					"type": "plane",
+					"worldToLocal": [
+						{ "type": "translate", "dx":0.0, "dy":-2.0, "dz":0.0 }
+					]
+				},
+				"material": {
+					"type": "lambertian",
+					"texture": {
+						"type": "constant",
+						"mapping": { "type": "identity" },
+						"rgb": { "red": 1.0, "green": 1.0, "blue": 1.0 }
+					}
+				}
+			},
+			{
+				"shape": {
+					"type": "sphere",
+					"worldToLocal": [
+						{ "type": "translate", "dx": -2.0, "dy": 0.0, "dz": 0.0 }
+					],
+					"radius": 1.0
+				},
+				"material": {
+					"type": "lambertian",
+					"texture": {
+						"type": "constant",
+						"mapping": { "type": "identity" },
+						"rgb": { "red": 0.0, "green": 1.0, "blue": 0.0 }
+					}
+				}
+			},
+			{
+				"shape": {
+					"type": "sphere",
+					"worldToLocal": [ 
+						{ "type": "translate", "dx": 2.0, "dy": 0.0, "dz": 0.0 }
+					],
+					"radius": 1.0
+				},
+				"material": {
+					"type": "lambertian",
+					"texture": {
+						"type": "constant",
+						"mapping": { "type": "identity" },
+						"rgb": { "red": 0.0, "green": 0.0, "blue": 1.0 }
+					}
+				}
+			},
+			{
+				"shape": {
+					"type": "sphere",
+					"worldToLocal": [],
+					"radius": 1.0
+				},
+				"material": {
+					"type": "perfect-mirror",
+					"tint": {
+						"type": "constant",
+						"mapping": { "type": "identity" },
+						"rgb": { "red": 1.0, "green": 1.0,"blue": 1.0 }
+					}
+				}
+			} ],
+		"camera": {
+			"type": "pinhole",
+			"worldToLocal": [ 
+				{ "type": "translate", "dx": 0.0, "dy": 0.0, "dz": -8.0 }
+			],
+			"pixelWidth": 400,
+			"pixelHeight": 300,
+			"worldWidth": 4.0,
+			"worldHeight": 3.0,
+			"focalLength": 8.0
+		},
+		"lights": [
+			{
+				"type": "point",
+				"position": { "x": 0.0, "y": 5.0, "z": 0.0 },
+				"rgb": { "red": 6.0, "green": 6.0, "blue": 6.0 }
+			}
+		]
+	}
+}
