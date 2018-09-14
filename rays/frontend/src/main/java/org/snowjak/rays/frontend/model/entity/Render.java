@@ -18,6 +18,7 @@ import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.Table;
 import javax.persistence.Version;
 
 import org.snowjak.rays.Settings;
@@ -34,9 +35,11 @@ import com.vaadin.server.StreamResource.StreamSource;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
+@Table(name = "render")
 public class Render {
 	
 	@Id
+	@Column(length = 64)
 	private String uuid = UUID.randomUUID().toString();
 	
 	@Version
@@ -73,20 +76,24 @@ public class Render {
 	private Scene scene;
 	
 	@Basic(optional = false)
+	@Column(name="sampler_json")
 	private String samplerJson = "";
 	
 	@Basic(optional = false)
+	@Column(name="renderer_json")
 	private String rendererJson = "";
 	
 	@Basic(optional = false)
+	@Column(name="film_json")
 	private String filmJson = "";
 	
 	@Basic
+	@Column(name="percent_complete")
 	private int percentComplete = 0;
 	
 	@Lob
 	@Basic(optional = true, fetch = FetchType.LAZY)
-	@Column(length = 4194304)
+	@Column(name="png_base64", length = 4194304)
 	private String pngBase64 = null;
 	
 	private transient Sampler sampler = null;

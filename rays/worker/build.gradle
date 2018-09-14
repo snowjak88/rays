@@ -5,15 +5,3 @@ dependencies {
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 	testCompile('org.springframework.security:spring-security-test')
 }
-
-docker {
-	name = "${project.group}/${project.name}:${project.version}"
-	dockerfile project.file("Dockerfile")
-	tags "latest"
-	files jar.archivePath
-	buildArgs([ JAR_FILE: jar.archiveName ])
-	pull true
-}
-
-tasks.docker.dependsOn { tasks.bootRepackage }
-tasks.dockerPush.dependsOn { tasks.dockerTag }

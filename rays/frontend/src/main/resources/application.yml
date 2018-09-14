@@ -1,28 +1,35 @@
+#
 org:
   snowjak:
     rays:
       security:
+        # When the UI is generated, use these form-parameter names for username and password
         username-parameter: username
         password-parameter: password
+rabbitmq:
+  taskq: rays.render-task
+  progressq: rays.render-progress
+  resultq: rays.render-result
+#
+# Start the embedded Web-server on port 8080
 server:
   port: 8080
+#
 spring:
+  flyway:
+    locations: classpath:db/migration/{vendor}
   rabbitmq:
     host: localhost
     listener:
       simple:
         concurrency: 4
   datasource:
-    initialization-mode: always
+    url: jdbc:hsqldb:mem:rays
+    initialization-mode: never
   jpa:
     hibernate:
-      ddl-auto: update
-rabbitmq:
-  taskq: rays.render-task
-  progressq: rays.render-progress
-  resultq: rays.render-result
+      ddl-auto: none
 logging:
   level:
-    org.springframework.security: INFO
+    root: INFO
     org.snowjak.rays: DEBUG
-    org.snowjak.rays.frontend.ui.components.ObjectCreator: TRACE

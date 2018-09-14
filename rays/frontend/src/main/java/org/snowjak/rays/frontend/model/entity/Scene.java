@@ -9,6 +9,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Lob;
+import javax.persistence.Table;
 import javax.persistence.Version;
 
 import org.snowjak.rays.Settings;
@@ -18,10 +19,11 @@ import com.google.gson.JsonParseException;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
+@Table(name = "scene")
 public class Scene {
 	
 	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private long id;
 	
 	@Version

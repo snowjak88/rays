@@ -15,26 +15,30 @@ services:
       - SERVER1HTTP_ENABLED=false
   
   rays-frontend:
-    image: ${project('frontend').group}/${project('frontend').name}:${project('frontend').version}
+    image: ${group}/frontend:${version}
     environment:
-      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_HOST=rays-rabbitmq
       - SERVER_PORT=8080
-      - SPRING_DATASOURCE_URL=jdbc:mysql://frontend-db/
-      - SPRING_DATASOURCE_USER=root
-      - SPRING_DATASOURCE_PASSWORD=
+      - SPRING_DATASOURCE_URL=jdbc:mysql://rays-frontend-db/rays
+      - SPRING_DATASOURCE_USERNAME=rays
+      - SPRING_DATASOURCE_PASSWORD=rays
+      - SPRING_JPA_DATABASE=mysql
   
-  frontend-db:
+  rays-frontend-db:
     image: mysql/mysql-server:latest
     environment:
-      - MYSQL_ALLOW_EMPTY_PASSWORD=true
-      - MYSQL_ROOT_HOST=rays-frontend
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_ROOT_HOST=%
+      - MYSQL_DATABASE=rays
+      - MYSQL_USER=rays
+      - MYSQL_PASSWORD=rays
   
-  rabbitmq:
+  rays-rabbitmq:
     image: rabbitmq:alpine
   
   rays-worker:
-    image: ${project('worker').group}/${project('worker').name}:${project('worker').version}
+    image: ${group}/worker:${version}
     environment:
-      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_HOST=rays-rabbitmq
       - RAYS_WORKER_THREADS=1
     scale: 2

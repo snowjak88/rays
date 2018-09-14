@@ -1,5 +1,32 @@
+//
+//
+//
+//
+// TO COMPILE TEST RESULTS FROM ALL SUBPROJECTS
+// gradle allTests
+//
+//
+// TO GENERATE BASE DB SCHEMAS (HSQLDB,MySQL) FOR :frontend
+// gradle :frontend:generateSchema
+//
+//
+// TO BUILD DOCKER IMAGES:
+//
+// gradle :worker:docker
+// gradle :frontend:docker
+//
+//
+// TO GENERATE docker-compose.yml FILE
+// gradle generateDockerCompose
+//
+//
+// TO START docker-compose.yml SETUP
+// docker-compose up --no-start
+// docker-compose start
+//
+
 buildscript {
-	ext { springBootVersion = '2.0.4.RELEASE' }
+	ext { springBootVersion = '2.0.5.RELEASE' }
 	repositories { mavenCentral() }
 	dependencies { classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}") }
 }
@@ -10,48 +37,76 @@ plugins {
 }
 
 group = 'org.snowjak'
-version = '0.1.0'
+version = '0.2.0'
 wrapper { gradleVersion = 4.8 }
+
 
 allprojects {
 	apply plugin: 'eclipse'
 	apply plugin: 'java'
 	apply plugin: 'io.spring.dependency-management'
 	
+	repositories {
+		mavenCentral()
+		jcenter()
+		maven { url "http://maven.vaadin.com/vaadin-addons" }
+	}
+	
 	sourceCompatibility = 10
 	
-	tasks.withType(JavaCompile) {
-		options.compilerArgs << '-parameters'
-	}
+	tasks.withType(JavaCompile) { options.compilerArgs << '-parameters' }
 }
 
 subprojects { p ->
 	
+	p.group = rootProject.group
+	p.version = rootProject.version
+	
 	if( p.name != "core" ) {
 		
+		apply plugin: 'io.spring.dependency-management'
+		apply plugin: 'org.springframework.boot'
+		
 		if(p.name != "spectrum-generator") {
-			apply plugin: 'org.springframework.boot'
 			apply plugin: 'com.palantir.docker'
+			
+			task copyDataToDockerBuildDir(type: Copy) {
+				from 'data/'
+				into "$buildDir/docker/data"
+				duplicatesStrategy = 'include'
+				
+				dependsOn 'copyDataFromCore'
+				dependsOn 'dockerPrepare'
+			}
+			
+			docker {
+				name = "${p.group}/${p.name}:${p.version}"
+				dockerfile p.file("Dockerfile")
+				tags "latest"
+				files p.jar.archivePath
+				buildArgs([ JAR_FILE: p.jar.archiveName, DATA_DIR: 'data' ])
+				pull true
+			}
+			
+			p.tasks.docker.dependsOn { 'copyDataToDockerBuildDir' }
+			
+			p.tasks.docker.dependsOn {'bootJar' }
+			p.tasks.dockerPush.dependsOn { 'dockerTag' }
 		}
 		
 		clean.delete << file('data/')
 		
-		task copyCoreData(type: Copy) {
+		task copyDataFromCore(type: Copy) {
 			from project(":core").file( "data/")
 			into p.file("data/")
 			duplicatesStrategy = 'include'
 		}
-		processResources.dependsOn( copyCoreData )
+		processResources.dependsOn( copyDataFromCore )
 		
 		dependencies { compile project(":core") }
 		
 		clean.dependsOn( project(":core").clean )
 		test.dependsOn( project(":core").test )
-	}
-	
-	repositories {
-		mavenCentral()
-		jcenter()
 	}
 	
 	test.ignoreFailures = true
@@ -68,17 +123,21 @@ task allTests(type: TestReport) {
 
 clean.delete << file('build/docker-compose.yml.template.expanded')
 
-task expandDockerComposeTemplate(type: Copy, dependsOn: 'processResources') {
-	from project.file( "docker-compose.yml.template" )
+task expandDockerComposeTemplate(type: Copy) {
+	from 'docker-compose.yml.template'
 	expand( project.properties )
-	into project.file( "./build" )
+	into 'build'
 	rename { "docker-compose.yml.template.expanded" }
+	duplicatesStrategy 'INCLUDE'
 	
-	mustRunAfter "processResources"
+	dependsOn ":worker:docker"
+	dependsOn ":frontend:docker"
 }
 
 dockerCompose {
 	template project.file( "build/docker-compose.yml.template.expanded" )
 }
 
-generateDockerCompose { dependsOn "expandDockerComposeTemplate" }
+generateDockerCompose {
+	dependsOn "expandDockerComposeTemplate"
+}
