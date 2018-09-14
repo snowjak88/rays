@@ -108,7 +108,7 @@ public class PathTracingRenderer extends Renderer {
 			
 		}
 		
-		return result;
+		return mat.getDirectLightReflection(interaction, result);
 	}
 	
 	protected Spectrum estimateEmission(Interaction<Primitive> interaction, TracedSample sample) {

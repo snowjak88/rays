@@ -16,11 +16,11 @@
 // gradle :frontend:docker
 //
 //
-// TO GENERATE docker-compose.yml FILE
+// TO GENERATE docker-compose.yml FILE FROM ITS TEMPLATE
 // gradle generateDockerCompose
 //
 //
-// TO START docker-compose.yml SETUP
+// TO START docker-compose.yml CONFIGURATION
 // docker-compose up --no-start
 // docker-compose start
 //
@@ -37,7 +37,7 @@ plugins {
 }
 
 group = 'org.snowjak'
-version = '0.2.0'
+version = '0.2.1'
 wrapper { gradleVersion = 4.8 }
 
 
