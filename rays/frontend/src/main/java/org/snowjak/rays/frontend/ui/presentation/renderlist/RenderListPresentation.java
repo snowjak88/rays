@@ -16,6 +16,7 @@ import javax.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDecomposition;
+import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDeletion;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestSingleRenderTaskSubmission;
 import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderCreation;
 import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderUpdate;
@@ -110,6 +111,27 @@ public class RenderListPresentation extends AbstractPresentation<RenderListEvent
 		fireEvent(new UpdateRenderListEvent(updatedBean));
 	}
 	
+	public void doDelete(String id) {
+		
+		synchronized (this) {
+			
+			LOG.debug("doDelete(UUID={})", id);
+			
+			final var bean = getBeanById(id);
+			if (bean == null) {
+				LOG.warn("doDelete(UUID={}) -- UUID not recognized!", id);
+				return;
+			}
+			
+			if (bean.getParent() != null)
+				bean.getParent().getChildren().removeIf(r -> r.getId().equals(bean.getId()));
+			renders.removeIf(r -> r.getId().equals(bean.getId()));
+			
+			fireEvent(new RemoveFromRenderListEvent(bean));
+			bus.post(new RequestRenderDeletion(UUID.fromString(id)));
+		}
+	}
+	
 	public void doOpenClose(String id) {
 		
 		synchronized (this) {
@@ -201,6 +223,7 @@ public class RenderListPresentation extends AbstractPresentation<RenderListEvent
 		//
 		// Set rules-based properties
 		//
+		bean.setRemovable(!entity.isChild());
 		
 		bean.setOpenable(entity.isParent() && !entity.getChildren().isEmpty());
 		

@@ -29,6 +29,7 @@ import org.snowjak.rays.frontend.messages.backend.ReceivedNewRenderResult;
 import org.snowjak.rays.frontend.messages.backend.ReceivedRenderProgressUpdate;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderCreationFromSingleJson;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDecomposition;
+import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDeletion;
 import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderCreation;
 import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderUpdate;
 import org.snowjak.rays.frontend.model.entity.Render;
@@ -82,6 +83,54 @@ public class RenderUpdateService {
 		}
 	}
 	
+	@Subscribe
+	@AllowConcurrentEvents
+	public void requestRenderDecomposition(RequestRenderDecomposition request) {
+		
+		LOG.info("Requesting render decomposition (UUID={}, region-size={}) ...", request.getUuid().toString(),
+				request.getRegionSize());
+		
+		final var render = renderRepository.findById(request.getUuid().toString()).orElse(null);
+		if (render == null) {
+			LOG.warn("Cannot decompose given render (UUID={}) -- UUID not recognized.", request.getUuid().toString());
+			return;
+		}
+		
+		render.setDecomposed(true);
+		renderRepository.save(render);
+		bus.post(new ReceivedRenderUpdate(render));
+		
+		final var childIDs = decomposeRender(request.getUuid(), request.getRegionSize());
+		
+		LOG.debug("Completed render-decomposition into {} child-Renders.", childIDs.size());
+		
+		if (request.hasNextInChain()) {
+			request.getNextInChain().setContext(childIDs);
+			bus.post(request.getNextInChain());
+		}
+	}
+	
+	@Subscribe
+	@AllowConcurrentEvents
+	public void requestRenderDeletion(RequestRenderDeletion request) {
+		
+		LOG.info("Requesting render deletion (UUID={})", request.getUuid().toString());
+		
+		final var render = renderRepository.findById(request.getUuid().toString()).orElse(null);
+		if (render == null) {
+			LOG.warn("Cannot delete given render (UUID={}) -- UUID not recognized.", request.getUuid().toString());
+			return;
+		}
+		
+		renderRepository.delete(render);
+		
+		LOG.debug("Deleted render (UUID={}).", request.getUuid().toString());
+		
+		if (request.hasNextInChain()) {
+			bus.post(request.getNextInChain());
+		}
+	}
+	
 	@Transactional
 	private UUID saveNewRender(String renderJson) throws JsonParseException {
 		
@@ -109,33 +158,6 @@ public class RenderUpdateService {
 		
 		LOG.info("Saved JSON as new Render+Scene.");
 		return renderID;
-	}
-	
-	@Subscribe
-	@AllowConcurrentEvents
-	public void requestRenderDecomposition(RequestRenderDecomposition request) {
-		
-		LOG.info("Requesting render decomposition (UUID={}, region-size={}) ...", request.getUuid().toString(),
-				request.getRegionSize());
-		
-		final var render = renderRepository.findById(request.getUuid().toString()).orElse(null);
-		if (render == null) {
-			LOG.warn("Cannot decompose given render (UUID={}) -- UUID not recognized.", request.getUuid().toString());
-			return;
-		}
-		
-		render.setDecomposed(true);
-		renderRepository.save(render);
-		bus.post(new ReceivedRenderUpdate(render));
-		
-		final var childIDs = decomposeRender(request.getUuid(), request.getRegionSize());
-		
-		LOG.debug("Completed render-decomposition into {} child-Renders.", childIDs.size());
-		
-		if (request.hasNextInChain()) {
-			request.getNextInChain().setContext(childIDs);
-			bus.post(request.getNextInChain());
-		}
 	}
 	
 	/**

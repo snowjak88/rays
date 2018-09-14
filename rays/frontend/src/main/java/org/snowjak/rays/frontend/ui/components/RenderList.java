@@ -29,7 +29,7 @@ import com.google.common.eventbus.EventBus;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.navigator.View;
 import com.vaadin.spring.annotation.SpringView;
-import com.vaadin.spring.annotation.VaadinSessionScope;
+import com.vaadin.spring.annotation.ViewScope;
 import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.HorizontalLayout;
@@ -40,7 +40,7 @@ import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.themes.ValoTheme;
 
 @SpringView(name = RenderList.NAME)
-@VaadinSessionScope
+@ViewScope
 @AuthorizedView({ "ROLE_VIEW_ALL_RENDERS" })
 public class RenderList extends VerticalLayout implements View {
 	
@@ -173,10 +173,9 @@ public class RenderList extends VerticalLayout implements View {
 		private final Label id = new Label(), created = new Label(), submitted = new Label(), completed = new Label();
 		private final ProgressBar progress = new ProgressBar();
 		private final Button openCloseButton = new Button(), decomposeButton = new Button(),
-				submitButton = new Button(), viewResultButton = new Button();
+				submitButton = new Button(), viewResultButton = new Button(), removeButton = new Button();
 		
-		private final AtomicBoolean resetDecomposeButtonIcon = new AtomicBoolean(false),
-				resetSubmitButtonIcon = new AtomicBoolean(false);
+		private final AtomicBoolean resetButtonIcons = new AtomicBoolean(false);
 		
 		private final Panel childrenPanel = new Panel();
 		private final VerticalLayout childrenLayout = new VerticalLayout();
@@ -221,9 +220,11 @@ public class RenderList extends VerticalLayout implements View {
 			decomposeButton.addClickListener((ce) -> {
 				bus.post(new RunInUIThread(() -> {
 					decomposeButton.setEnabled(false);
+					submitButton.setEnabled(false);
+					removeButton.setEnabled(false);
 					decomposeButton.setIcon(VaadinIcons.ELLIPSIS_DOTS_H);
 				}));
-				resetDecomposeButtonIcon.set(true);
+				resetButtonIcons.set(true);
 				presentation.doDecomposeRender(bean.getId());
 			});
 			decomposeButton.setDescription(messages.getMessage("render.list.buttons.decompose", null, getLocale()));
@@ -233,10 +234,12 @@ public class RenderList extends VerticalLayout implements View {
 			submitButton.setIcon(VaadinIcons.COMPILE);
 			submitButton.addClickListener((ce) -> {
 				bus.post(new RunInUIThread(() -> {
+					decomposeButton.setEnabled(false);
 					submitButton.setEnabled(false);
+					removeButton.setEnabled(false);
 					submitButton.setIcon(VaadinIcons.ELLIPSIS_DOTS_H);
 				}));
-				resetSubmitButtonIcon.set(true);
+				resetButtonIcons.set(true);
 				presentation.doSubmitRender(bean.getId());
 			});
 			submitButton.setDescription(messages.getMessage("render.list.buttons.submit", null, getLocale()));
@@ -250,13 +253,20 @@ public class RenderList extends VerticalLayout implements View {
 			});
 			viewResultButton.setDescription(messages.getMessage("render.list.buttons.viewresult", null, getLocale()));
 			
+			removeButton.setStyleName(ValoTheme.BUTTON_ICON_ONLY);
+			removeButton.setStyleName(ValoTheme.BUTTON_SMALL);
+			removeButton.setIcon(VaadinIcons.CLOSE);
+			removeButton.addClickListener((ce) -> presentation.doDelete(bean.getId()));
+			removeButton.setDescription(messages.getMessage("render.list.buttons.remove", null, getLocale()));
+			
 			buttonsLayout.setWidthUndefined();
 			buttonsLayout.setMargin(false);
 			buttonsLayout.setSpacing(false);
-			buttonsLayout.addComponents(decomposeButton, submitButton, viewResultButton);
+			buttonsLayout.addComponents(decomposeButton, submitButton, viewResultButton, removeButton);
 			buttonsLayout.setComponentAlignment(decomposeButton, Alignment.MIDDLE_CENTER);
 			buttonsLayout.setComponentAlignment(submitButton, Alignment.MIDDLE_CENTER);
 			buttonsLayout.setComponentAlignment(viewResultButton, Alignment.MIDDLE_CENTER);
+			buttonsLayout.setComponentAlignment(removeButton, Alignment.MIDDLE_CENTER);
 			
 			fieldLayout.setWidth(100, Unit.PERCENTAGE);
 			fieldLayout.setMargin(false);
@@ -370,7 +380,10 @@ public class RenderList extends VerticalLayout implements View {
 			if (forceUpdate || bean.isOpenable() != updatedBean.isOpenable()) {
 				LOG.trace("update(UUID={}): updating isOpenable ...", updatedBean.getId());
 				bean.setOpenable(updatedBean.isOpenable());
-				uiUpdates.add(() -> openCloseButton.setEnabled(bean.isOpenable()));
+				uiUpdates.add(() -> {
+					openCloseButton.setEnabled(bean.isOpenable());
+					openCloseButton.setVisible(bean.isOpenable());
+				});
 			}
 			
 			if (forceUpdate || !(bean.getId().equals(updatedBean.getId()))) {
@@ -403,28 +416,33 @@ public class RenderList extends VerticalLayout implements View {
 				uiUpdates.add(() -> progress.setValue(bean.getPercentComplete()));
 			}
 			
-			if (forceUpdate || resetDecomposeButtonIcon.get()) {
+			if (forceUpdate || resetButtonIcons.get()) {
 				LOG.trace("update(UUID={}): updating decompose button icon ...\", updatedBean.getId()");
-				resetDecomposeButtonIcon.set(false);
 				uiUpdates.add(() -> decomposeButton.setIcon(VaadinIcons.GRID_SMALL));
+				
+				LOG.trace("update(UUID={}): updating submit button icon ...\", updatedBean.getId()");
+				uiUpdates.add(() -> submitButton.setIcon(VaadinIcons.COMPILE));
 			}
 			
-			if (forceUpdate || bean.isDecomposable() != updatedBean.isDecomposable()) {
+			if (forceUpdate || bean.isDecomposable() != updatedBean.isDecomposable() || resetButtonIcons.get()) {
 				LOG.trace("update(UUID={}): updating isDecomposable ...", updatedBean.getId());
 				bean.setDecomposable(updatedBean.isDecomposable());
 				uiUpdates.add(() -> decomposeButton.setEnabled(bean.isDecomposable()));
 			}
 			
-			if (forceUpdate || resetSubmitButtonIcon.get()) {
-				LOG.trace("update(UUID={}): updating submit button icon ...\", updatedBean.getId()");
-				resetSubmitButtonIcon.set(false);
-				uiUpdates.add(() -> submitButton.setIcon(VaadinIcons.COMPILE));
-			}
-			
-			if (forceUpdate || bean.isSubmittable() != updatedBean.isSubmittable()) {
+			if (forceUpdate || bean.isSubmittable() != updatedBean.isSubmittable() || resetButtonIcons.get()) {
 				LOG.trace("update(UUID={}): updating isSubmittable ...", updatedBean.getId());
 				bean.setSubmittable(updatedBean.isSubmittable());
 				uiUpdates.add(() -> submitButton.setEnabled(bean.isSubmittable()));
+			}
+			
+			if (forceUpdate || bean.isRemovable() != updatedBean.isRemovable() || resetButtonIcons.get()) {
+				LOG.trace("update(UUID={}): updating isRemovable ...", updatedBean.getId());
+				bean.setRemovable(updatedBean.isRemovable());
+				uiUpdates.add(() -> {
+					removeButton.setEnabled(bean.isRemovable());
+					removeButton.setVisible(bean.isRemovable());
+				});
 			}
 			
 			if (forceUpdate || bean.isHasResult() != updatedBean.isHasResult()) {
@@ -437,6 +455,8 @@ public class RenderList extends VerticalLayout implements View {
 				LOG.trace("update(UUID={}): updating image ...", updatedBean.getId());
 				bean.setImage(updatedBean.getImage());
 			}
+			
+			resetButtonIcons.set(false);
 			
 			LOG.trace("update(UUID={}): executing updates ...", updatedBean.getId());
 			if (runUpdatesInCurrentThread)

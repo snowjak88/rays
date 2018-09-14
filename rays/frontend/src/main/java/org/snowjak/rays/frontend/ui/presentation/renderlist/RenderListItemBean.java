@@ -16,6 +16,7 @@ public class RenderListItemBean {
 	private boolean isDecomposable, isSubmittable;
 	private boolean hasResult;
 	
+	private boolean isRemovable;
 	private boolean isOpen, isOpenable;
 	private RenderListItemBean topLevelParent = null;
 	private RenderListItemBean parent = null;
@@ -38,6 +39,7 @@ public class RenderListItemBean {
 		this.isDecomposable = toCopy.isDecomposable;
 		this.isSubmittable = toCopy.isSubmittable;
 		this.hasResult = toCopy.hasResult;
+		this.isRemovable = toCopy.isRemovable;
 		this.isOpen = toCopy.isOpen;
 		this.isOpenable = toCopy.isOpenable;
 		this.topLevelParent = toCopy.topLevelParent;
@@ -133,6 +135,16 @@ public class RenderListItemBean {
 	public void setHasResult(boolean hasResult) {
 		
 		this.hasResult = hasResult;
+	}
+	
+	public boolean isRemovable() {
+		
+		return isRemovable;
+	}
+	
+	public void setRemovable(boolean isRemovable) {
+		
+		this.isRemovable = isRemovable;
 	}
 	
 	public boolean isOpen() {

@@ -10,6 +10,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.persistence.Basic;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityListeners;
@@ -66,34 +67,34 @@ public class Render {
 	@Basic
 	private int spp;
 	
-	@ManyToOne(fetch = FetchType.EAGER, optional = true)
+	@ManyToOne(fetch = FetchType.EAGER, optional = true, cascade = { CascadeType.REFRESH })
 	private Render parent = null;
 	
-	@OneToMany(fetch = FetchType.EAGER, mappedBy = "parent")
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "parent", cascade = { CascadeType.ALL })
 	private Collection<Render> children = new LinkedList<>();
 	
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@ManyToOne(fetch = FetchType.LAZY, optional = false, cascade = { CascadeType.REFRESH })
 	private Scene scene;
 	
 	@Basic(optional = false)
-	@Column(name="sampler_json")
+	@Column(name = "sampler_json")
 	private String samplerJson = "";
 	
 	@Basic(optional = false)
-	@Column(name="renderer_json")
+	@Column(name = "renderer_json")
 	private String rendererJson = "";
 	
 	@Basic(optional = false)
-	@Column(name="film_json")
+	@Column(name = "film_json")
 	private String filmJson = "";
 	
 	@Basic
-	@Column(name="percent_complete")
+	@Column(name = "percent_complete")
 	private int percentComplete = 0;
 	
 	@Lob
 	@Basic(optional = true, fetch = FetchType.LAZY)
-	@Column(name="png_base64", length = 4194304)
+	@Column(name = "png_base64", length = 4194304)
 	private String pngBase64 = null;
 	
 	private transient Sampler sampler = null;
