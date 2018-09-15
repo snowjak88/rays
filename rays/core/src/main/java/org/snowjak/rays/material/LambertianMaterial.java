@@ -91,7 +91,10 @@ public class LambertianMaterial implements Material {
 		
 		final var cos_i = Vector3D.from(interaction.getNormal()).normalize().dotProduct(direction.normalize());
 		
-		return SpectralPowerDistribution.fromRGB(texture.getRGB(interaction)).multiply(incident.multiply(cos_i));
+		return incident.multiply(
+				SpectralPowerDistribution.fromRGB(texture.getRGB(interaction))
+					.multiply(1d / PI)
+					.multiply(cos_i));
 	}
 	
 	@Override

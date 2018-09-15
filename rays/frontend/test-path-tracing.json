@@ -13,7 +13,7 @@
 	},
 	"sampler": {
 		"type": "best-candidate",
-		"samplesPerPixel": 8,
+		"samplesPerPixel": 4,
 		"additional1DSamples": 8,
 		"additional2DSamples": 8,
 		"xStart": 0.0,

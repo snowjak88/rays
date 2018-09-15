@@ -135,7 +135,8 @@ public class PathTracingRenderer extends Renderer {
 					interaction.getInteractingRay().getDepth() + 1);
 			final var reflectiveIncident = this.estimate(new TracedSample(sample.getSample(), reflectiveRay), scene);
 			
-			return mat.getReflection(interaction, reflectiveV, reflectiveIncident.getRadiance());
+			return mat.getReflection(interaction, reflectiveV, reflectiveIncident.getRadiance())
+					.multiply(1d / mat.getReflectionP(interaction, reflectiveV));
 		}
 		
 		return new SpectralPowerDistribution();
@@ -153,7 +154,8 @@ public class PathTracingRenderer extends Renderer {
 			final var transmissiveIncident = this.estimate(new TracedSample(sample.getSample(), transmissiveRay),
 					scene);
 			
-			return mat.getReflection(interaction, transmissiveV, transmissiveIncident.getRadiance());
+			return mat.getTransmission(interaction, transmissiveV, transmissiveIncident.getRadiance())
+					.multiply(1d / mat.getTransmissionP(interaction, transmissiveV));
 		}
 		
 		return new SpectralPowerDistribution();
