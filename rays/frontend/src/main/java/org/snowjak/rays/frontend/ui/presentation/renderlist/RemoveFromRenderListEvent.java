@@ -2,9 +2,16 @@ package org.snowjak.rays.frontend.ui.presentation.renderlist;
 
 public class RemoveFromRenderListEvent extends AbstractRenderListEvent {
 	
-	public RemoveFromRenderListEvent(RenderListItemBean render) {
+	private final String id;
+	public RemoveFromRenderListEvent(String id) {
 		
-		super(render);
+		super();
+		this.id =id;
+	}
+	
+	public String getId() {
+		
+		return id;
 	}
 	
 }

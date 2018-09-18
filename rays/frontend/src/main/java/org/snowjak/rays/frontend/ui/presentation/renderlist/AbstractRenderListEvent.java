@@ -4,17 +4,9 @@ import org.snowjak.rays.frontend.ui.presentation.AbstractEvent;
 
 public abstract class AbstractRenderListEvent extends AbstractEvent {
 	
-	private final RenderListItemBean value;
-	
-	public AbstractRenderListEvent(RenderListItemBean value) {
+	public AbstractRenderListEvent() {
 		
 		super();
-		this.value = value;
-	}
-	
-	public RenderListItemBean getRender() {
-		
-		return value;
 	}
 	
 }

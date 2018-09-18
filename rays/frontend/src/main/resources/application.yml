@@ -25,6 +25,8 @@ spring:
         concurrency: 4
   datasource:
     url: jdbc:hsqldb:mem:rays
+    hikari:
+      initialization-fail-timeout: -1
     initialization-mode: never
   jpa:
     hibernate:

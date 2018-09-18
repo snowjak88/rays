@@ -1,10 +1,10 @@
 package org.snowjak.rays.frontend.ui.presentation.renderlist;
 
-public class AddToRenderListEvent extends AbstractRenderListEvent {
+public class UpdateChildrenListRenderListEvent extends AbstractRenderListEvent {
 	
 	private final String id;
 	
-	public AddToRenderListEvent(String id) {
+	public UpdateChildrenListRenderListEvent(String id) {
 		
 		super();
 		this.id = id;

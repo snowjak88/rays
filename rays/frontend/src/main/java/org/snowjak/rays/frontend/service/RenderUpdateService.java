@@ -30,7 +30,9 @@ import org.snowjak.rays.frontend.messages.backend.ReceivedRenderProgressUpdate;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderCreationFromSingleJson;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDecomposition;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDeletion;
+import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderChildrenUpdate;
 import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderCreation;
+import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderDeletion;
 import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderUpdate;
 import org.snowjak.rays.frontend.model.entity.Render;
 import org.snowjak.rays.frontend.model.repository.RenderRepository;
@@ -75,6 +77,9 @@ public class RenderUpdateService {
 		
 		final var createdUUID = saveNewRender(request.getJson());
 		
+		LOG.debug("Posting new ReceivedRenderCreation ...");
+		bus.post(new ReceivedRenderCreation(renderRepository.findById(createdUUID.toString()).orElse(null)));
+		
 		LOG.debug("Finished creating a new Render from a single JSON document (UUID={}).", createdUUID.toString());
 		
 		if (request.hasNextInChain()) {
@@ -102,6 +107,12 @@ public class RenderUpdateService {
 		
 		final var childIDs = decomposeRender(request.getUuid(), request.getRegionSize());
 		
+		childIDs.stream().map(childID -> renderRepository.findById(childID.toString()).orElse(null))
+				.filter(r -> r != null).forEach(childRender -> bus.post(new ReceivedRenderCreation(childRender)));
+		bus.post(new ReceivedRenderUpdate(renderRepository.findById(request.getUuid().toString()).orElse(null)));
+		bus.post(
+				new ReceivedRenderChildrenUpdate(renderRepository.findById(request.getUuid().toString()).orElse(null)));
+		
 		LOG.debug("Completed render-decomposition into {} child-Renders.", childIDs.size());
 		
 		if (request.hasNextInChain()) {
@@ -125,6 +136,7 @@ public class RenderUpdateService {
 		renderRepository.delete(render);
 		
 		LOG.debug("Deleted render (UUID={}).", request.getUuid().toString());
+		bus.post(new ReceivedRenderDeletion(render.getUuid()));
 		
 		if (request.hasNextInChain()) {
 			bus.post(request.getNextInChain());
@@ -196,7 +208,6 @@ public class RenderUpdateService {
 					.collect(Collectors.toList());
 		}
 		
-		final var childList = new LinkedList<Render>();
 		final var childIdList = new LinkedList<UUID>();
 		
 		LOG.trace("Inflating Sampler from database ...");
@@ -219,18 +230,13 @@ public class RenderUpdateService {
 				
 				final var childRender = renderRepository.findById(childRenderId.toString()).get();
 				parentRender.getChildren().add(childRender);
-				
-				renderRepository.save(childRender);
+				parentRender = renderRepository.save(parentRender);
 				
 				childIdList.add(childRenderId);
-				childList.add(childRender);
 			}
 		
 		parentRender.setDecomposed(true);
-		parentRender.setChildren(childList);
 		parentRender = renderRepository.save(parentRender);
-		
-		bus.post(new ReceivedRenderUpdate(parentRender));
 		
 		return childIdList;
 	}
@@ -260,9 +266,6 @@ public class RenderUpdateService {
 		render.setSpp(render.inflateSampler().getSamplesPerPixel());
 		
 		render = renderRepository.save(render);
-		
-		LOG.debug("Posting new ReceivedRenderCreation ...");
-		bus.post(new ReceivedRenderCreation(render));
 		
 		return UUID.fromString(render.getUuid());
 	}

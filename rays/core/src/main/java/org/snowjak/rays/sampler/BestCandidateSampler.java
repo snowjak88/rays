@@ -1,13 +1,16 @@
 package org.snowjak.rays.sampler;
 
-import static org.apache.commons.math3.util.FastMath.*;
+import static org.apache.commons.math3.util.FastMath.log;
 import static org.apache.commons.math3.util.FastMath.min;
 import static org.apache.commons.math3.util.FastMath.pow;
+import static org.apache.commons.math3.util.FastMath.sqrt;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -17,8 +20,8 @@ import java.util.stream.IntStream;
 
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.Util;
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.util.Pair;
 import org.snowjak.rays.sample.FixedSample;
@@ -249,11 +252,20 @@ public class BestCandidateSampler extends Sampler {
 		points.add(firstPoint);
 		insertPointIntoBlock(firstPoint);
 		
-		while (points.size() < blockSize * blockSize * getSamplesPerPixel()) {
+		final var desiredSize = blockSize * blockSize * getSamplesPerPixel();
+		while (points.size() < desiredSize) {
 			
-			final var newPoint = IntStream.range(0, blockSize).mapToObj(i -> generatePoint(blockSize, blockSize))
-					.filter(p -> hasFreeIndex(block[(int) p.getX()][(int) p.getY()]))
-					.sorted((p1, p2) -> Double.compare(distanceSq(p2, points), distanceSq(p1, points))).findFirst();
+			final Optional<Point2D> newPoint;
+			
+			if (points.size() < desiredSize / 2)
+				newPoint = IntStream.range(0, blockSize).mapToObj(i -> generatePoint(blockSize, blockSize))
+						.filter(p -> hasFreeIndex(block[(int) p.getX()][(int) p.getY()]))
+						.sorted((p1, p2) -> Double.compare(distanceSq(p2, points), distanceSq(p1, points))).findFirst();
+			
+			else
+				newPoint = getFreeIndices(block).stream()
+						.map(indices -> generatePoint((int) indices[0], (int) indices[1], 1.0, 1.0))
+						.sorted((p1, p2) -> Double.compare(distanceSq(p2, points), distanceSq(p1, points))).findFirst();
 			
 			if (newPoint.isPresent()) {
 				points.add(newPoint.get());
@@ -265,7 +277,13 @@ public class BestCandidateSampler extends Sampler {
 	
 	private Point2D generatePoint(double xExtent, double yExtent) {
 		
-		return new Point2D(Settings.RND.nextDouble() * xExtent, Settings.RND.nextDouble() * yExtent);
+		return generatePoint(0, 0, xExtent, yExtent);
+	}
+	
+	private Point2D generatePoint(int xOffset, int yOffset, double xExtent, double yExtent) {
+		
+		return new Point2D((double) xOffset + Settings.RND.nextDouble() * xExtent,
+				(double) yOffset + Settings.RND.nextDouble() * yExtent);
 	}
 	
 	private void insertPointIntoBlock(Point2D point) {
@@ -274,6 +292,19 @@ public class BestCandidateSampler extends Sampler {
 		
 		if (hasFreeIndex(block[x][y]))
 			block[x][y][getFreeIndex(block[x][y])] = new Point2D(point.getX() - x, point.getY() - y);
+	}
+	
+	private List<int[]> getFreeIndices(Object[][][] array) {
+		
+		final var result = new LinkedList<int[]>();
+		
+		for (int i = 0; i < array.length; i++)
+			for (int j = 0; j < array[i].length; j++)
+				for (int k = 0; k < array[i][j].length; k++) {
+					if (array[i][j][k] == null)
+						result.add(new int[] { i, j, k });
+				}
+		return result;
 	}
 	
 	private boolean hasFreeIndex(Object[] array) {
