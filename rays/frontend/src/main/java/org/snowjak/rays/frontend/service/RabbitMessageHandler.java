@@ -11,6 +11,7 @@ import org.snowjak.rays.film.Film.Image;
 import org.snowjak.rays.frontend.messages.backend.ReceivedNewRenderResult;
 import org.snowjak.rays.frontend.messages.backend.ReceivedRenderProgressUpdate;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestMultipleRenderTaskSubmission;
+import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDeletion;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestSingleRenderTaskSubmission;
 import org.snowjak.rays.frontend.model.repository.RenderRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -36,6 +37,9 @@ public class RabbitMessageHandler {
 	
 	@Value("${rabbitmq.taskq}")
 	private String newRenderTaskQueue;
+	
+	@Value("${rabbitmq.deleteExchange}")
+	private String renderDeletionExchange;
 	
 	@Autowired
 	private RenderRepository renderRepository;
@@ -141,6 +145,30 @@ public class RabbitMessageHandler {
 		renderUpdateService.markRenderAsSubmitted(task.getUuid().toString());
 		
 		LOG.info("UUID={}: Submitted new RenderTask.", uuid.toString());
+	}
+	
+	@Subscribe
+	public void handleRenderDeletion(RequestRenderDeletion request) {
+		
+		LOG.debug("Render (UUID={}) is being deleted -- notifying workers ...", request.getUuid());
+		
+		LOG.trace("Inflating render (UUID={}) from database ...", request.getUuid());
+		final var entity = renderRepository.findById(request.getUuid().toString()).orElse(null);
+		
+		if (entity == null) {
+			LOG.warn(
+					"Render UUID={} not found in the database -- cannot handle explicit deletion of children. Child renders may be currently processing on workers.",
+					request.getUuid());
+		} else {
+			
+			if (!entity.getChildren().isEmpty()) {
+				LOG.debug("Also signalling {} child-renders for deletion ...", entity.getChildren().size());
+				entity.getChildren().forEach(
+						c -> this.handleRenderDeletion(new RequestRenderDeletion(UUID.fromString(c.getUuid()))));
+			}
+		}
+		
+		rabbit.convertAndSend(renderDeletionExchange, "", request.getUuid());
 	}
 	
 	@RabbitListener(queues = "${rabbitmq.progressq}")

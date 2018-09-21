@@ -10,6 +10,7 @@ rabbitmq:
   taskq: rays.render-task
   progressq: rays.render-progress
   resultq: rays.render-result
+  deleteExchange: rays.render-delete
 #
 # Start the embedded Web-server on port 8080
 server:

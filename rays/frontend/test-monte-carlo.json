@@ -2,7 +2,7 @@
 	"renderer": {
 		"type": "monte-carlo",
 		"maxDepth": 4,
-		"n": 64
+		"n": 16
 	},
 	"film": {
 		"filter": {
@@ -14,9 +14,9 @@
 	},
 	"sampler": {
 		"type": "best-candidate",
-		"samplesPerPixel": 4,
-		"additional1DSamples": 8,
-		"additional2DSamples": 8,
+		"samplesPerPixel": 1,
+		"additional1DSamples": 16,
+		"additional2DSamples": 16,
 		"xStart": 0.0,
 		"xEnd": 399.0,
 		"yStart": 0.0,

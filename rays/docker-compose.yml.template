@@ -1,7 +1,7 @@
-version: '2.2'
+version: '3'
 
 services:
-  nginx-proxy:
+  proxy:
     image: blacklabelops/nginx:latest
     ports:
       - "80:80"
@@ -14,20 +14,20 @@ services:
       - SERVER1HTTPS_ENABLED=true
       - SERVER1HTTP_ENABLED=false
   
-  rays-frontend:
+  frontend:
     image: ${group}/frontend:${version}
     depends_on:
-      - rays-frontend-db
+      - frontend-db
       - rays-rabbitmq
     environment:
       - SPRING_RABBITMQ_HOST=rays-rabbitmq
       - SERVER_PORT=8080
-      - SPRING_DATASOURCE_URL=jdbc:mysql://rays-frontend-db/rays
+      - SPRING_DATASOURCE_URL=jdbc:mysql://frontend-db/rays
       - SPRING_DATASOURCE_USERNAME=rays
       - SPRING_DATASOURCE_PASSWORD=rays
       - SPRING_JPA_DATABASE=mysql
   
-  rays-frontend-db:
+  frontend-db:
     image: mysql/mysql-server:latest
     environment:
       - MYSQL_ROOT_PASSWORD=root
@@ -36,15 +36,16 @@ services:
       - MYSQL_USER=rays
       - MYSQL_PASSWORD=rays
   
-  rays-rabbitmq:
+  rabbitmq:
     image: rabbitmq:alpine
   
-  rays-worker:
+  worker:
     image: ${group}/worker:${version}
     depends_on:
-      - rays-rabbitmq
-      - rays-frontend
+      - rabbitmq
+      - frontend
     environment:
-      - SPRING_RABBITMQ_HOST=rays-rabbitmq
+      - SPRING_RABBITMQ_HOST=rabbitmq
       - RAYS_WORKER_THREADS=1
-    scale: 2
+    deploy:
+      replicas: 2

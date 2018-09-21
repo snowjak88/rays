@@ -3,6 +3,7 @@ package org.snowjak.rays.frontend;
 import java.util.concurrent.Executor;
 
 import org.springframework.amqp.core.AmqpAdmin;
+import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -34,6 +35,9 @@ public class App {
 	@Value("${rabbitmq.resultq}")
 	private String renderResultQueueName;
 	
+	@Value("${rabbitmq.deleteExchange}")
+	private String renderDeleteExchangeName;
+	
 	public static void main(String[] args) {
 		
 		SpringApplication.run(App.class, args);
@@ -45,7 +49,7 @@ public class App {
 		final var admin = new RabbitAdmin(connectionFactory);
 		admin.declareQueue(taskQueue());
 		admin.declareQueue(progressQueue());
-		admin.declareQueue(resultQueue());
+		admin.declareExchange(deleteFanout());
 		return admin;
 	}
 	
@@ -65,6 +69,12 @@ public class App {
 	public Queue resultQueue() {
 		
 		return new Queue(renderResultQueueName);
+	}
+	
+	@Bean
+	public FanoutExchange deleteFanout() {
+		
+		return new FanoutExchange(renderDeleteExchangeName);
 	}
 	
 	@Bean

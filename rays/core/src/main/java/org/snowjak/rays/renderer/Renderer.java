@@ -103,6 +103,11 @@ public abstract class Renderer {
 		int lastPercentage = -1;
 		
 		while (sampler.hasNextSample()) {
+			if (Thread.interrupted())
+				//
+				// The current thread was interrupted!
+				return;
+			
 			final var sample = sampler.getNextSample();
 			
 			//
