@@ -9,7 +9,7 @@ services:
     environment:
       - NGINX_REDIRECT_PORT80=true
       - SERVER1REVERSE_PROXY_LOCATION1=/
-      - SERVER1REVERSE_PROXY_PASS1=http://rays-frontend:8080
+      - SERVER1REVERSE_PROXY_PASS1=http://frontend:8080
       - SERVER1CERTIFICATE_DNAME=/CN=snowjak88/OU=rays/O=snowjak88.org
       - SERVER1HTTPS_ENABLED=true
       - SERVER1HTTP_ENABLED=false
@@ -18,9 +18,9 @@ services:
     image: ${group}/frontend:${version}
     depends_on:
       - frontend-db
-      - rays-rabbitmq
+      - rays-mq
     environment:
-      - SPRING_RABBITMQ_HOST=rays-rabbitmq
+      - SPRING_RABBITMQ_HOST=rays-mq
       - SERVER_PORT=8080
       - SPRING_DATASOURCE_URL=jdbc:mysql://frontend-db/rays
       - SPRING_DATASOURCE_USERNAME=rays
@@ -36,16 +36,16 @@ services:
       - MYSQL_USER=rays
       - MYSQL_PASSWORD=rays
   
-  rabbitmq:
+  rays-mq:
     image: rabbitmq:alpine
   
   worker:
     image: ${group}/worker:${version}
     depends_on:
-      - rabbitmq
+      - rays-mq
       - frontend
     environment:
-      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_HOST=rays-mq
       - RAYS_WORKER_THREADS=1
     deploy:
       replicas: 2
