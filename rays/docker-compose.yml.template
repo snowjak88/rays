@@ -39,7 +39,7 @@ services:
   rays-mq:
     image: rabbitmq:alpine
   
-  worker:
+  worker1:
     image: ${group}/worker:${version}
     depends_on:
       - rays-mq
@@ -47,5 +47,12 @@ services:
     environment:
       - SPRING_RABBITMQ_HOST=rays-mq
       - RAYS_WORKER_THREADS=1
-    deploy:
-      replicas: 2
+
+  worker2:
+    image: ${group}/worker:${version}
+    depends_on:
+      - rays-mq
+      - frontend
+    environment:
+      - SPRING_RABBITMQ_HOST=rays-mq
+      - RAYS_WORKER_THREADS=1
