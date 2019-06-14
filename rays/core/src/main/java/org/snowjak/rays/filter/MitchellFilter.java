@@ -14,8 +14,8 @@ import org.snowjak.rays.sample.Sample;
  * @author snowjak88
  */
 @UIType(type = "mitchell", fields = { @UIField(name = "extent", type = Integer.class, defaultValue = "0"),
-		@UIField(name = "b", type = Double.class, defaultValue = "0.5"),
-		@UIField(name = "c", type = Double.class, defaultValue = "0.25") })
+		@UIField(name = "b", type = Double.class, defaultValue = "0.33333"),
+		@UIField(name = "c", type = Double.class, defaultValue = "0.33333") })
 public class MitchellFilter implements Filter {
 	
 	private int extent;
@@ -57,9 +57,10 @@ public class MitchellFilter implements Filter {
 		// on the interval [-1,+1].
 		//
 		final double filterCenterX = (double) pixelX + 0.5, filterCenterY = (double) pixelY + 0.5;
+		final double filterExtent = (double) extent + 0.5;
 		
-		final double x = 2d * (sample.getFilmPoint().getX() - filterCenterX) / ((double) (extent + 1)),
-				y = 2d * (sample.getFilmPoint().getY() - filterCenterY) / ((double) (extent + 1));
+		final double x = (sample.getFilmPoint().getX() - filterCenterX) / filterExtent,
+				y = (sample.getFilmPoint().getY() - filterCenterY) / filterExtent;
 		
 		return getMitchell1D(x) * getMitchell1D(y);
 	}
@@ -68,14 +69,14 @@ public class MitchellFilter implements Filter {
 		
 		//
 		// Convert x from the interval [-1,+1] to [0,2], reflected about 0.
-		final double ax = 2d * FastMath.abs(x);
+		final double ax = FastMath.abs(2d * x);
 		
 		if (ax > 1.0)
-			return ((-b - 6.0 * c) * FastMath.pow(x, 3) + (6.0 * b + 30.0 * c) * FastMath.pow(x, 2)
-					+ (-12.0 * b - 48.0 * c) * x + (8.0 * b + 24.0 * c)) * (1.0 / 6.0);
+			 	return ((-b - 6.0 * c) * ax * ax * ax + (6.0 * b + 30.0 * c) * ax * ax
+						+ (-12.0 * b - 48.0 * c) * ax + (8.0 * b + 24.0 * c)) * (1.0 / 6.0);
 		
-		return ((12.0 - 9.0 * b - 6.0 * c) * FastMath.pow(x, 3) + (-18.0 + 12.0 * b + 6.0 * c) * FastMath.pow(x, 2)
-				+ (6.0 - 2.0 * b)) * (1.0 / 6.0);
+		 	return ((12.0 - 9.0 * b - 6.0 * c) * ax * ax * ax
+					+ (-18.0 + 12.0 * b + 6.0 * c) * ax * ax + (6.0 - 2.0 * b)) * (1.0 / 6.0);
 		
 	}
 	
