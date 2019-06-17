@@ -1,7 +1,6 @@
 package org.snowjak.rays.film;
 
-import static org.apache.commons.math3.util.FastMath.max;
-import static org.apache.commons.math3.util.FastMath.min;
+import static org.apache.commons.math3.util.FastMath.floor;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
@@ -14,8 +13,8 @@ import java.util.UUID;
 import javax.imageio.ImageIO;
 
 import org.snowjak.rays.RenderTask;
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.filter.Filter;
 import org.snowjak.rays.sample.EstimatedSample;
 import org.snowjak.rays.sample.FixedSample;
@@ -56,11 +55,11 @@ public class Film {
 	
 	private void initialize() {
 		
-		this.receivedSpectra = new Spectrum[width][height];
-		this.receivedSpectraCounts = new int[width][height];
+		this.receivedSpectra = new Spectrum[width + filter.getExtentX() * 2][height + filter.getExtentY() * 2];
+		this.receivedSpectraCounts = new int[width + filter.getExtentX() * 2][height + filter.getExtentY() * 2];
 		
-		for (int x = 0; x < width; x++)
-			for (int y = 0; y < height; y++) {
+		for (int x = 0; x < receivedSpectra.length; x++)
+			for (int y = 0; y < receivedSpectra[x].length; y++) {
 				receivedSpectra[x][y] = null;
 				receivedSpectraCounts[x][y] = 0;
 			}
@@ -86,13 +85,11 @@ public class Film {
 				initialize();
 		}
 		
-		final int filmX = (int) estimate.getSample().getFilmPoint().getX(),
-				filmY = (int) estimate.getSample().getFilmPoint().getY();
+		final int filmX = (int) floor(estimate.getSample().getFilmPoint().getX()),
+				filmY = (int) floor(estimate.getSample().getFilmPoint().getY());
 		
-		for (int pixelX = max(0, filmX - filter.getExtentX()); pixelX <= min(width - 1,
-				filmX + filter.getExtentX()); pixelX++)
-			for (int pixelY = max(0, filmY - filter.getExtentY()); pixelY <= min(height - 1,
-					filmY + filter.getExtentY()); pixelY++)
+		for (int pixelX = filmX - filter.getExtentX(); pixelX <= filmX + filter.getExtentX(); pixelX++)
+			for (int pixelY = filmY - filter.getExtentY(); pixelY <= filmY + filter.getExtentY(); pixelY++)
 				if (filter.isContributing(estimate.getSample(), pixelX, pixelY)) {
 					
 					final Spectrum sampleRadiance = estimate.getRadiance()
@@ -100,12 +97,21 @@ public class Film {
 					
 					synchronized (this) {
 						
-						if (receivedSpectra[pixelX][pixelY] == null) {
-							receivedSpectra[pixelX][pixelY] = sampleRadiance;
-							receivedSpectraCounts[pixelX][pixelY] = 1;
+						final var indexX = pixelX + filter.getExtentX();
+						final var indexY = pixelY + filter.getExtentY();
+						
+						if (indexX < 0 || indexX >= receivedSpectra.length)
+							continue;
+						
+						if (indexY < 0 || indexY >= receivedSpectra[indexX].length)
+							continue;
+						
+						if (receivedSpectra[indexX][indexY] == null) {
+							receivedSpectra[indexX][indexY] = sampleRadiance;
+							receivedSpectraCounts[indexX][indexY] = 1;
 						} else {
-							receivedSpectra[pixelX][pixelY] = receivedSpectra[pixelX][pixelY].add(sampleRadiance);
-							receivedSpectraCounts[pixelX][pixelY]++;
+							receivedSpectra[indexX][indexY] = receivedSpectra[indexX][indexY].add(sampleRadiance);
+							receivedSpectraCounts[indexX][indexY]++;
 						}
 						
 					}
@@ -133,6 +139,19 @@ public class Film {
 	 */
 	public Image getImage(UUID uuid) {
 		
+		return getImage(uuid, 0, 0, width - 1, height - 1);
+	}
+	
+	/**
+	 * Compile that portion of the {@link Image} gathered so far by this Film
+	 * instance, which lies within the bounds indicated by
+	 * {@code [xStart,yStart]-[xEnd,yEnd]}. Tag it with the given {@link UUID}
+	 * (e.g., to associate it with a certain {@link RenderTask}).
+	 * 
+	 * @return
+	 */
+	public Image getImage(UUID uuid, int xStart, int yStart, int xEnd, int yEnd) {
+		
 		synchronized (this) {
 			if (!initialized)
 				initialize();
@@ -145,12 +164,16 @@ public class Film {
 			for (int x = 0; x < width; x++)
 				for (int y = 0; y < height; y++) {
 					
-					if (receivedSpectra[x][y] == null)
+					final var indexX = x + filter.getExtentX();
+					final var indexY = y + filter.getExtentY();
+					
+					if ((x < xStart || x > xEnd) || (y < yStart || y > yEnd) || receivedSpectra[indexX][indexY] == null
+							|| receivedSpectraCounts[indexX][indexY] < 1)
 						image.setRGB(x, y, RGB.toPacked(RGB.BLACK, 0d));
 					
 					else {
-						final var rgb = receivedSpectra[x][y].multiply(1d / (double) receivedSpectraCounts[x][y])
-								.toRGB();
+						final var rgb = receivedSpectra[indexX][indexY]
+								.multiply(1d / (double) receivedSpectraCounts[indexX][indexY]).toRGB();
 						image.setRGB(x, y, rgb.toPacked());
 					}
 				}

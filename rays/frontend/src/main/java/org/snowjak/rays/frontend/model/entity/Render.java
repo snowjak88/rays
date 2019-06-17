@@ -67,6 +67,12 @@ public class Render {
 	@Basic
 	private int spp;
 	
+	@Basic
+	private int offsetX;
+	
+	@Basic
+	private int offsetY;
+	
 	@ManyToOne(fetch = FetchType.EAGER, optional = true, cascade = { CascadeType.REFRESH })
 	private Render parent = null;
 	
@@ -190,6 +196,40 @@ public class Render {
 	public void setSpp(int spp) {
 		
 		this.spp = spp;
+	}
+	
+	/**
+	 * @return the offsetX
+	 */
+	public int getOffsetX() {
+		
+		return offsetX;
+	}
+	
+	/**
+	 * @param offsetX
+	 *            the offsetX to set
+	 */
+	public void setOffsetX(int offsetX) {
+		
+		this.offsetX = offsetX;
+	}
+	
+	/**
+	 * @return the offsetY
+	 */
+	public int getOffsetY() {
+		
+		return offsetY;
+	}
+	
+	/**
+	 * @param offsetY
+	 *            the offsetY to set
+	 */
+	public void setOffsetY(int offsetY) {
+		
+		this.offsetY = offsetY;
 	}
 	
 	public String getSize() {

@@ -166,7 +166,7 @@ public class RenderUpdateService {
 		LOG.debug("Saving bundled scene as a new Scene entry (ID={})", sceneEntity.getId());
 		sceneEntity = sceneRepository.save(sceneEntity);
 		
-		final var renderID = saveNewRender(samplerJson, rendererJson, filmJson, sceneEntity.getId(), null);
+		final var renderID = saveNewRender(samplerJson, rendererJson, filmJson, sceneEntity.getId(), null, 0, 0);
 		
 		LOG.info("Saved JSON as new Render+Scene.");
 		return renderID;
@@ -225,7 +225,7 @@ public class RenderUpdateService {
 				final var childSamplerJson = Settings.getInstance().getGson().toJson(childSampler);
 				
 				final var childRenderId = saveNewRender(childSamplerJson, parentRender.getRendererJson(),
-						parentRender.getFilmJson(), parentRender.getScene().getId(), parentRender.getUuid());
+						parentRender.getFilmJson(), parentRender.getScene().getId(), parentRender.getUuid(), x1, y1);
 				LOG.debug("Created child render (UUID={})", childRenderId.toString());
 				
 				final var childRender = renderRepository.findById(childRenderId.toString()).get();
@@ -245,6 +245,13 @@ public class RenderUpdateService {
 	private UUID saveNewRender(String samplerJson, String rendererJson, String filmJson, long sceneId,
 			String parentID) {
 		
+		return saveNewRender(samplerJson, rendererJson, filmJson, sceneId, parentID, 0, 0);
+	}
+	
+	@Transactional
+	private UUID saveNewRender(String samplerJson, String rendererJson, String filmJson, long sceneId, String parentID,
+			int offsetX, int offsetY) {
+		
 		final var foundScene = sceneRepository.findById(sceneId);
 		if (!foundScene.isPresent())
 			return null;
@@ -261,9 +268,13 @@ public class RenderUpdateService {
 		render.setScene(scene);
 		render.setParent(parentRender);
 		
-		render.setWidth(render.inflateSampler().getXEnd() - render.inflateSampler().getXStart() + 1);
-		render.setHeight(render.inflateSampler().getYEnd() - render.inflateSampler().getYStart() + 1);
-		render.setSpp(render.inflateSampler().getSamplesPerPixel());
+		final var sampler = render.inflateSampler();
+		
+		render.setWidth(sampler.getXEnd() - sampler.getXStart() + 1);
+		render.setHeight(sampler.getYEnd() - sampler.getYStart() + 1);
+		render.setSpp(sampler.getSamplesPerPixel());
+		render.setOffsetX(offsetX);
+		render.setOffsetY(offsetY);
 		
 		render = renderRepository.save(render);
 		
@@ -327,7 +338,8 @@ public class RenderUpdateService {
 			throw new JsonParseException("Cannot inflate Scene (ID = " + sceneEntity.getId() + ")", e);
 		}
 		
-		final var renderTask = new RenderTask(uuid, sampler, renderer, film, scene);
+		final var renderTask = new RenderTask(uuid, sampler, renderer, film, scene, renderEntity.get().getOffsetX(),
+				renderEntity.get().getOffsetY());
 		
 		LOG.debug("UUID={}: Created RenderTask from database.");
 		return renderTask;
@@ -481,6 +493,13 @@ public class RenderUpdateService {
 	@Transactional
 	public Collection<Render> saveImageToDatabase(Image image, String renderID) throws IOException {
 		
+		return saveImageToDatabase(image, renderID, 0, 0);
+	}
+	
+	@Transactional
+	public Collection<Render> saveImageToDatabase(Image image, String renderID, int offsetX, int offsetY)
+			throws IOException {
+		
 		var render = renderRepository.findById(renderID).get();
 		final var renderList = new LinkedList<Render>();
 		
@@ -523,7 +542,8 @@ public class RenderUpdateService {
 		
 		if (render.isChild()) {
 			LOG.info("Also adding image to parent Render ...");
-			renderList.addAll(saveImageToDatabase(image, render.getParent().getUuid()));
+			renderList.addAll(
+					saveImageToDatabase(image, render.getParent().getUuid(), render.getOffsetX(), render.getOffsetY()));
 		}
 		
 		render = renderRepository.save(render);

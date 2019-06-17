@@ -39,20 +39,29 @@ public class RenderTask implements Callable<Image> {
 	private Scene scene = null;
 	private Film film = null;
 	
+	private int offsetX = 0, offsetY = 0;
+	
 	private transient Consumer<ProgressInfo> progressConsumer = null;
 	
 	public RenderTask(Sampler sampler, Renderer renderer, Film film, Scene scene) {
 		
-		this(UUID.randomUUID(), sampler, renderer, film, scene);
+		this(UUID.randomUUID(), sampler, renderer, film, scene, 0, 0);
 	}
 	
 	public RenderTask(UUID uuid, Sampler sampler, Renderer renderer, Film film, Scene scene) {
+		
+		this(uuid, sampler, renderer, film, scene, 0, 0);
+	}
+	
+	public RenderTask(UUID uuid, Sampler sampler, Renderer renderer, Film film, Scene scene, int offsetX, int offsetY) {
 		
 		this.uuid = uuid;
 		this.sampler = sampler;
 		this.renderer = renderer;
 		this.film = film;
 		this.scene = scene;
+		this.offsetX = offsetX;
+		this.offsetY = offsetY;
 	}
 	
 	public Consumer<ProgressInfo> getProgressConsumer() {
@@ -90,6 +99,16 @@ public class RenderTask implements Callable<Image> {
 		return scene;
 	}
 	
+	public int getOffsetX() {
+		
+		return offsetX;
+	}
+	
+	public int getOffsetY() {
+		
+		return offsetY;
+	}
+	
 	/**
 	 * Execute this RenderTask. Blocks until rendering is complete -- i.e., the
 	 * configured {@link Sampler} has no more {@link Sample}s to provide.
@@ -112,10 +131,15 @@ public class RenderTask implements Callable<Image> {
 		LOG.log(Level.INFO, "Camera: {0}", getScene().getCamera().getClass().getSimpleName());
 		LOG.log(Level.INFO, "Reporting progress? == {0}", (consumer != null));
 		
-		renderer.render(sampler, film, scene, consumer);
+		final var samplerPlusFilterExtents = sampler.partition(sampler.getXStart() - film.getFilter().getExtentX() * 2,
+				sampler.getYStart() - film.getFilter().getExtentY() * 2,
+				sampler.getXEnd() + film.getFilter().getExtentX() * 2,
+				sampler.getYEnd() + film.getFilter().getExtentY() * 2);
+		
+		renderer.render(samplerPlusFilterExtents, film, scene, consumer);
 		
 		LOG.log(Level.INFO, "RenderTask complete! UUID={0}", getUuid());
-		return film.getImage(getUuid());
+		return film.getImage(getUuid(), sampler.getXStart(), sampler.getYStart(), sampler.getXEnd(), sampler.getYEnd());
 	}
 	
 	public static class ProgressInfo {

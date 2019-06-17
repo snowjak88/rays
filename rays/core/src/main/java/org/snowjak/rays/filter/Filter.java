@@ -1,5 +1,7 @@
 package org.snowjak.rays.filter;
 
+import static org.apache.commons.math3.util.FastMath.floor;
+
 import org.snowjak.rays.sample.Sample;
 
 /**
@@ -59,10 +61,13 @@ public interface Filter {
 	 */
 	public default boolean isContributing(Sample sample, int pixelX, int pixelY) {
 		
-		final int filmX = (int) sample.getFilmPoint().getX(), filmY = (int) sample.getFilmPoint().getY();
+		final var filmX = floor(sample.getFilmPoint().getX());
+		final var filmY = floor(sample.getFilmPoint().getY());
+		final var extentX = (double) getExtentX() + 0.5;
+		final var extentY = (double) getExtentY() + 0.5;
 		
-		return (filmX >= pixelX - getExtentX() && filmX <= pixelX + getExtentX())
-				&& (filmY >= pixelY - getExtentY() && filmY <= pixelY + getExtentY());
+		return (filmX >= (double) pixelX - extentX && filmX <= (double) pixelX + extentX)
+				&& (filmY >= (double) pixelY - extentY && filmY <= (double) pixelY + extentY);
 	}
 	
 }
