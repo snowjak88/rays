@@ -1,0 +1,16 @@
+{
+	"queues": [
+		{
+			"name": "rays.render-task"
+		},
+		{
+			"name": "rays.render-progress"
+		},
+		{
+			"name": "rays.render-result"
+		},
+		{
+			"name": "rays.render-delete"
+		}
+	]
+}

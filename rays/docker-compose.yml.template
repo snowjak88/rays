@@ -17,6 +17,7 @@ services:
   frontend:
     image: ${group}/frontend:${version}
     depends_on:
+      - proxy
       - frontend-db
       - rays-mq
     environment:
@@ -37,7 +38,9 @@ services:
       - MYSQL_PASSWORD=rays
   
   rays-mq:
-    image: rabbitmq:alpine
+    build:
+      context: ./rays-mq
+    image: rays-mq:latest
   
   worker1:
     image: ${group}/worker:${version}
