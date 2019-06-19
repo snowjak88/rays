@@ -1,6 +1,10 @@
 package org.snowjak.rays;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
@@ -8,6 +12,8 @@ import org.junit.Test;
 import org.snowjak.rays.camera.OrthographicCamera;
 import org.snowjak.rays.material.Material;
 import org.snowjak.rays.shape.SphereShape;
+import org.snowjak.rays.transform.RotationTransform;
+import org.snowjak.rays.transform.TranslationTransform;
 
 public class SceneTest {
 	
@@ -27,7 +33,7 @@ public class SceneTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "{\"primitives\":[{\"shape\":{\"type\":\"sphere\",\"radius\":0.5,\"worldToLocal\":[]}}],\"camera\":{\"type\":\"orthographic\",\"pixelWidth\":300.0,\"pixelHeight\":400.0,\"worldWidth\":3.0,\"worldHeight\":4.0,\"worldToLocal\":[]}}";
+		final var json = "{\"primitives\":[{\"shape\":{\"type\":\"sphere\",\"radius\":0.5,\"worldToLocal\":[{\"type\":\"translate\",\"dx\":0},{\"type\":\"rotate\",\"axis\":{\"x\":1,\"y\":0,\"z\":0},\"degrees\":90}]}}],\"camera\":{\"type\":\"orthographic\",\"pixelWidth\":300.0,\"pixelHeight\":400.0,\"worldWidth\":3.0,\"worldHeight\":4.0,\"worldToLocal\":[]}}";
 		
 		final var result = Settings.getInstance().getGson().fromJson(json, Scene.class);
 		
@@ -43,7 +49,9 @@ public class SceneTest {
 		assertTrue(primitive.getShape() instanceof SphereShape);
 		assertEquals(0.5, ((SphereShape) primitive.getShape()).getRadius(), 0.00001);
 		assertNotNull(primitive.getShape().getWorldToLocalTransforms());
-		assertTrue(primitive.getShape().getWorldToLocalTransforms().isEmpty());
+		assertEquals(2, primitive.getShape().getWorldToLocalTransforms().size());
+		assertTrue(primitive.getShape().getWorldToLocalTransforms().get(0) instanceof TranslationTransform);
+		assertTrue(primitive.getShape().getWorldToLocalTransforms().get(1) instanceof RotationTransform);
 		
 		assertNull(primitive.getMaterial());
 		

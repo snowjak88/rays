@@ -20,7 +20,7 @@ import org.snowjak.rays.geometry.util.Matrix;
 public class RotationTransform implements Transform {
 	
 	private Vector3D axis;
-	private double degreesOfRotation;
+	private double degrees;
 	
 	private transient Matrix worldToLocal = null;
 	private transient Matrix localToWorld = null;
@@ -33,20 +33,20 @@ public class RotationTransform implements Transform {
 	 * specified axis-vector by the specified number of degrees.
 	 * 
 	 * @param axis
-	 * @param degreesOfRotation
+	 * @param degrees
 	 */
 	
-	public RotationTransform(Vector3D axis, double degreesOfRotation) {
+	public RotationTransform(Vector3D axis, double degrees) {
 		
 		this.axis = axis;
-		this.degreesOfRotation = degreesOfRotation;
+		this.degrees = degrees;
 	}
 	
 	private void initializeMatrices() {
 		
 		axis = axis.normalize();
 		
-		final double radians = degreesOfRotation * FastMath.PI / 180d;
+		final double radians = degrees * FastMath.PI / 180d;
 		final double ax = axis.getX(), ay = axis.getY(), az = axis.getZ();
 		final double ax2 = (ax * ax), ay2 = (ay * ay), az2 = (az * az);
 		final double cos = FastMath.cos(radians), sin = FastMath.sin(radians);
@@ -163,16 +163,16 @@ public class RotationTransform implements Transform {
 		this.axis = axis;
 	}
 	
-	public double getDegreesOfRotation() {
+	public double getDegrees() {
 		
-		return degreesOfRotation;
+		return degrees;
 	}
 	
-	protected void setDegreesOfRotation(double degreesOfRotation) {
+	protected void setDegrees(double degrees) {
 		
 		worldToLocal = null;
 		localToWorld = null;
-		this.degreesOfRotation = degreesOfRotation;
+		this.degrees = degrees;
 	}
 	
 }

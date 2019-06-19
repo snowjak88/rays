@@ -30,6 +30,8 @@ public class Test {
 			
 			final var task = Settings.getInstance().getGson().fromJson(json, RenderTask.class);
 			
+			task.setProgressConsumer((pi) -> System.out.println("Render " + pi.getPercent() + "% complete ..."));
+			
 			ImageIO.write(task.call().getBufferedImage(), "png", new File("result.png"));
 			
 		} catch (IOException e) {

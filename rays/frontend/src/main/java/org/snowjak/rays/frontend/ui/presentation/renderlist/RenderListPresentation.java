@@ -31,6 +31,7 @@ import org.snowjak.rays.frontend.model.repository.RenderRepository;
 import org.snowjak.rays.frontend.ui.components.ModalRenderResultWindow;
 import org.snowjak.rays.frontend.ui.presentation.AbstractPresentation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -144,6 +145,9 @@ public class RenderListPresentation
 			return supplier;
 		}
 	}
+	
+	@Value("${org.snowjak.rays.decomposition-size}")
+	private int renderDecompositionSize;
 	
 	@Autowired
 	private RenderRepository renderRepository;
@@ -319,7 +323,7 @@ public class RenderListPresentation
 		
 		disableButtons(id);
 		
-		bus.post(new RequestRenderDecomposition(UUID.fromString(id), 128));
+		bus.post(new RequestRenderDecomposition(UUID.fromString(id), renderDecompositionSize));
 	}
 	
 	public void doSubmitRender(String id) {

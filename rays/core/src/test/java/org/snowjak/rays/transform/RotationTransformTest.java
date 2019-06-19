@@ -116,7 +116,7 @@ public class RotationTransformTest {
 		assertEquals(expected.getAxis().getY(), rotation.getAxis().getY(), 0.00001);
 		assertEquals(expected.getAxis().getZ(), rotation.getAxis().getZ(), 0.00001);
 		
-		assertEquals(expected.getDegreesOfRotation(), rotation.getDegreesOfRotation(), 0.00001);
+		assertEquals(expected.getDegrees(), rotation.getDegrees(), 0.00001);
 	}
 	
 }

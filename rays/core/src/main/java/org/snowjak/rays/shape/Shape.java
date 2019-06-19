@@ -82,7 +82,7 @@ public abstract class Shape implements Transformable, DescribesSurface<Shape> {
 		if (!hasBoundingVolume())
 			return true;
 		
-		return worldAabb.isIntersecting(worldToLocal(ray));
+		return worldAabb.isIntersecting(ray);
 	}
 	
 	@Override

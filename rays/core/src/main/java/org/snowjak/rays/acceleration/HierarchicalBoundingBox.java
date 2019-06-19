@@ -18,7 +18,7 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 	
 	public HierarchicalBoundingBox(Primitive... primitives) {
 		
-		this(Arrays.asList(primitives));
+		this(Arrays.stream(primitives).collect(Collectors.toCollection(LinkedList::new)));
 	}
 	
 	public HierarchicalBoundingBox(Collection<Primitive> primitives) {
@@ -58,7 +58,7 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 			
 		}
 		
-		root = nodes.getFirst();
+		root = (nodes.isEmpty()) ? null : nodes.getFirst();
 	}
 	
 	TreeNode getRootNode() {
@@ -130,8 +130,14 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 	
 	private Collection<Primitive> getPrimitives(TreeNode currentNode) {
 		
-		if (currentNode.isLeaf())
-			return Arrays.asList(((LeafNode) currentNode).getPrimitive());
+		if (currentNode == null)
+			return new LinkedList<>();
+		
+		if (currentNode.isLeaf()) {
+			final var result = new LinkedList<Primitive>();
+			result.add(((LeafNode) currentNode).getPrimitive());
+			return result;
+		}
 		
 		final var result = new LinkedList<Primitive>();
 		result.addAll(getPrimitives(((BranchNode) currentNode).getBranch1()));
