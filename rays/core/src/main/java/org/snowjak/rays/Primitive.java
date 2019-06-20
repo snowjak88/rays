@@ -2,8 +2,8 @@ package org.snowjak.rays;
 
 import java.util.List;
 
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
@@ -63,6 +63,12 @@ public class Primitive implements Interactable<Primitive>, Transformable {
 	}
 	
 	@Override
+	public double getSurfaceArea() {
+		
+		return shape.getSurfaceArea();
+	}
+	
+	@Override
 	public SurfaceDescriptor<Primitive> getSurface(Ray ray) {
 		
 		final var sd = shape.getSurface(ray);
@@ -85,9 +91,21 @@ public class Primitive implements Interactable<Primitive>, Transformable {
 	}
 	
 	@Override
+	public double sampleSurfaceP(Sample sample, SurfaceDescriptor<?> surface) {
+		
+		return shape.sampleSurfaceP(sample, surface);
+	}
+	
+	@Override
 	public SurfaceDescriptor<Primitive> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
 		
 		return new SurfaceDescriptor<>(this, shape.sampleSurfaceFacing(neighbor, sample));
+	}
+	
+	@Override
+	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
+		
+		return shape.sampleSurfaceFacingP(neighbor, sample, surface);
 	}
 	
 	@Override

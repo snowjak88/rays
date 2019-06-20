@@ -26,6 +26,15 @@ public interface DescribesSurface<D extends DescribesSurface<D>> {
 	public boolean isIntersectableWith(Ray ray);
 	
 	/**
+	 * Compute the total surface-area occupied by this surface (after applying all
+	 * local-to-world transforms).
+	 * 
+	 * @return -1 if this surface's area cannot be calculated -- e.g., if it is
+	 *         infinite
+	 */
+	public double getSurfaceArea();
+	
+	/**
 	 * Given a {@link Ray} (considered to be in the global reference-frame),
 	 * determine if the Ray intersects with this surface and, if it does, construct
 	 * the resulting {@link SurfaceDescriptor}. If not, return <code>null</code>.
@@ -53,6 +62,16 @@ public interface DescribesSurface<D extends DescribesSurface<D>> {
 	public SurfaceDescriptor<D> sampleSurface(Sample sample);
 	
 	/**
+	 * Given a sample of this surface (obtained via {@link #sampleSurface(Sample)}),
+	 * compute the probability that this sample would have been chosen.
+	 * 
+	 * @param sample
+	 * @param surface
+	 * @return
+	 */
+	public double sampleSurfaceP(Sample sample, SurfaceDescriptor<?> surface);
+	
+	/**
 	 * Sample a point from the surface of this object such that the sampled point is
 	 * "near" the specified <code>neighbor</code>ing point.
 	 * 
@@ -61,6 +80,18 @@ public interface DescribesSurface<D extends DescribesSurface<D>> {
 	 * @return
 	 */
 	public SurfaceDescriptor<D> sampleSurfaceFacing(Point3D neighbor, Sample sample);
+	
+	/**
+	 * Given a sample of this surface (obtained via
+	 * {@link #sampleSurfaceFacing(Point3D, Sample)}), compute the probability that
+	 * this sample would have been chosen.
+	 * 
+	 * @param neighbor
+	 * @param sample
+	 * @param surface
+	 * @return
+	 */
+	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface);
 	
 	/**
 	 * Given a neighboring point <code>viewedFrom</code>, compute the solid-angle

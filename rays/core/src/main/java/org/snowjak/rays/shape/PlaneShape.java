@@ -7,8 +7,8 @@ import java.util.Collection;
 import java.util.List;
 
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
@@ -26,7 +26,8 @@ import org.snowjak.rays.transform.Transform;
  * 
  * @author snowjak88
  */
-@UIType(type="plane", fields = { @UIField(name = "worldToLocal", type = Collection.class, collectedType = Transform.class) })
+@UIType(type = "plane", fields = {
+		@UIField(name = "worldToLocal", type = Collection.class, collectedType = Transform.class) })
 public class PlaneShape extends Shape {
 	
 	private static final Normal3D LOCAL_NORMAL = Normal3D.from(Vector3D.J);
@@ -61,9 +62,15 @@ public class PlaneShape extends Shape {
 		final double rayOriginY = localRay.getOrigin().getY();
 		final double rayDirectionY = localRay.getDirection().getY();
 		
-		final boolean isNonIntersecting = ( Settings.getInstance().nearlyEqual(signum(rayOriginY), signum(rayDirectionY)) )
-					|| ( Settings.getInstance().nearlyEqual(rayDirectionY, 0d) );
+		final boolean isNonIntersecting = (Settings.getInstance().nearlyEqual(signum(rayOriginY),
+				signum(rayDirectionY))) || (Settings.getInstance().nearlyEqual(rayDirectionY, 0d));
 		return !(isNonIntersecting);
+	}
+	
+	@Override
+	public double getSurfaceArea() {
+		
+		return -1d;
 	}
 	
 	@Override
@@ -86,7 +93,7 @@ public class PlaneShape extends Shape {
 		// we should report this plane's normal as pointing toward -Y.
 		final Normal3D reportedNormal;
 		
-		if ( localRay.getDirection().getY() > 0d )
+		if (localRay.getDirection().getY() > 0d)
 			reportedNormal = LOCAL_NORMAL.negate();
 		else
 			reportedNormal = LOCAL_NORMAL;
@@ -118,9 +125,28 @@ public class PlaneShape extends Shape {
 	}
 	
 	@Override
+	public double sampleSurfaceP(Sample sample, SurfaceDescriptor<?> surface) {
+		
+		return 1d;
+	}
+	
+	@Override
 	public SurfaceDescriptor<Shape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
 		
-		return sampleSurface(sample);
+		final SurfaceDescriptor<Shape> sd = sampleSurface(sample);
+		
+		final var localNeighbor = worldToLocal(neighbor);
+		
+		if (localNeighbor.getY() < 0d)
+			return new SurfaceDescriptor<>(this, sd.getPoint(), sd.getNormal().negate(), sd.getParam());
+		
+		return sd;
+	}
+	
+	@Override
+	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
+		
+		return sampleSurfaceP(sample, surface);
 	}
 	
 	@Override

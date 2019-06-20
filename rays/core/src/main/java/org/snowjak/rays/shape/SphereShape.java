@@ -14,8 +14,8 @@ import java.util.Collections;
 import java.util.List;
 
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
@@ -33,6 +33,7 @@ public class SphereShape extends Shape {
 	private double radius;
 	
 	private transient AABB localAabb = null;
+	private transient double surfaceArea = -1d;
 	
 	public SphereShape(double radius) {
 		
@@ -48,6 +49,7 @@ public class SphereShape extends Shape {
 		
 		super(worldToLocal);
 		this.radius = radius;
+		this.surfaceArea = -1d;
 	}
 	
 	@Override
@@ -57,6 +59,19 @@ public class SphereShape extends Shape {
 			localAabb = new AABB(new Point3D(-radius, -radius, -radius), new Point3D(+radius, +radius, +radius));
 		
 		return localAabb;
+	}
+	
+	@Override
+	public double getSurfaceArea() {
+		
+		if (this.surfaceArea <= 0d) {
+			final var localRadius = new Vector3D(radius, 0, 0);
+			final var worldRadius = localToWorld(localRadius);
+			
+			this.surfaceArea = 4.0 * PI * worldRadius.getMagnitudeSq();
+		}
+		
+		return this.surfaceArea;
 	}
 	
 	@Override
@@ -157,6 +172,12 @@ public class SphereShape extends Shape {
 	}
 	
 	@Override
+	public double sampleSurfaceP(Sample sample, SurfaceDescriptor<?> surface) {
+		
+		return 1d / (4d * PI);
+	}
+	
+	@Override
 	public SurfaceDescriptor<Shape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
 		
 		final Vector3D towardsV_local = Vector3D.from(worldToLocal(neighbor));
@@ -185,6 +206,12 @@ public class SphereShape extends Shape {
 		final Normal3D normal_local = Normal3D.from(samplePoint_local.normalize());
 		return localToWorld(new SurfaceDescriptor<>(this, Point3D.from(samplePoint_local), normal_local,
 				getParamFromLocalSurface(Point3D.from(samplePoint_local))));
+	}
+	
+	@Override
+	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
+		
+		return 1d / (2d * PI);
 	}
 	
 	@Override

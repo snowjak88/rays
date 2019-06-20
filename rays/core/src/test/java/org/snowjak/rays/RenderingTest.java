@@ -68,7 +68,7 @@ public class RenderingTest {
 		
 		final var l = scene.getLights().iterator().next();
 		
-		final var lp = l.sampleSurface(interaction);
+		final var lp = l.sampleSurface(interaction, sample);
 		assertEquals(0, lp.getX(), 0.00001);
 		assertEquals(3, lp.getY(), 0.00001);
 		assertEquals(3d + sin(45d * PI / 180d), lp.getZ(), 0.00001);

@@ -165,29 +165,23 @@
 		},
 		"lights": [
 			{
-				"type": "point",
-				"position": {
-					"x": 0.0,
-					"y": 5.0,
-					"z": -2.0
+				"type": "diffuse",
+				"shape": {
+					"type": "sphere",
+					"radius": 1.0,
+					"worldToLocal": [
+						{
+							"type": "translate",
+							"dx": 0,
+							"dy": 4.9,
+							"dz": 0
+						}
+					]
 				},
 				"rgb": {
-					"red": 14.0,
-					"green": 14.0,
-					"blue": 14.0
-				}
-			},
-			{
-				"type": "point",
-				"position": {
-					"x": 0.0,
-					"y": 5.0,
-					"z": 2.0
-				},
-				"rgb": {
-					"red": 14.0,
-					"green": 14.0,
-					"blue": 14.0
+					"red": 30.0,
+					"green": 30.0,
+					"blue": 30.0
 				}
 			}
 		]

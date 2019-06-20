@@ -55,7 +55,7 @@ public class PathTracingRenderer extends Renderer {
 		
 		//
 		// Add direct-illumination
-		energy = energy.add(estimateDirectLighting(interaction, scene));
+		energy = energy.add(estimateDirectLighting(interaction, sample, scene));
 		
 		//
 		// Add path-traced emission
@@ -74,7 +74,7 @@ public class PathTracingRenderer extends Renderer {
 		return new EstimatedSample(sample.getSample(), energy);
 	}
 	
-	protected Spectrum estimateDirectLighting(Interaction<Primitive> interaction, Scene scene) {
+	protected Spectrum estimateDirectLighting(Interaction<Primitive> interaction, TracedSample sample, Scene scene) {
 		
 		final var mat = interaction.getInteracted().getMaterial();
 		
@@ -83,7 +83,7 @@ public class PathTracingRenderer extends Renderer {
 			
 			for (Light light : scene.getLights()) {
 				
-				final var lightP = light.sampleSurface(interaction);
+				final var lightP = light.sampleSurface(interaction, sample.getSample());
 				final var lightV = Vector3D.from(lightP.subtract(interaction.getPoint()));
 				
 				//

@@ -88,6 +88,30 @@ public class ShapeTest {
 				// test.
 				return null;
 			}
+			
+			@Override
+			public double getSurfaceArea() {
+				
+				// We don't care about this method for the purposes of this
+				// test.
+				return 0;
+			}
+			
+			@Override
+			public double sampleSurfaceP(Sample sample, SurfaceDescriptor<?> surface) {
+				
+				// We don't care about this method for the purposes of this
+				// test.
+				return 0;
+			}
+			
+			@Override
+			public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
+				
+				// We don't care about this method for the purposes of this
+				// test.
+				return 0;
+			}
 		};
 	}
 	

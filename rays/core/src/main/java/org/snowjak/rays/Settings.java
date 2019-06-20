@@ -18,6 +18,7 @@ import org.snowjak.rays.camera.PinholeCamera;
 import org.snowjak.rays.filter.BoxFilter;
 import org.snowjak.rays.filter.Filter;
 import org.snowjak.rays.filter.MitchellFilter;
+import org.snowjak.rays.light.DiffuseLight;
 import org.snowjak.rays.light.Light;
 import org.snowjak.rays.light.PointLight;
 import org.snowjak.rays.material.LambertianMaterial;
@@ -232,7 +233,8 @@ public class Settings {
 			gb.registerTypeAdapterFactory(
 				RuntimeTypeAdapterFactory
 						.of(Light.class, "type")
-						.registerSubtype(PointLight.class, "point"));
+						.registerSubtype(PointLight.class, "point")
+						.registerSubtype(DiffuseLight.class, "diffuse"));
 			//@formatter:on
 			
 			//
