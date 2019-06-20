@@ -3,6 +3,7 @@ package org.snowjak.rays.shape;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -55,7 +56,7 @@ public class PlaneShapeTest {
 	}
 	
 	@Test
-	public void testIsIntersectableWith() {
+	public void testIsIntersectableWith1() {
 		
 		final PlaneShape plane = new PlaneShape();
 		
@@ -64,7 +65,25 @@ public class PlaneShapeTest {
 	}
 	
 	@Test
-	public void testGetIntersection() {
+	public void testIsIntersectableWith2() {
+		
+		final PlaneShape plane = new PlaneShape();
+		
+		Ray ray = new Ray(new Point3D(3, -3, 0), new Vector3D(-1, +1, 0).normalize());
+		assertTrue(plane.isIntersectableWith(ray));
+	}
+	
+	@Test
+	public void testIsIntersectableWith3() {
+		
+		final PlaneShape plane = new PlaneShape();
+		
+		Ray ray = new Ray(new Point3D(3, -3, 0), new Vector3D(-1, -1, 0).normalize());
+		assertFalse(plane.isIntersectableWith(ray));
+	}
+	
+	@Test
+	public void testGetIntersection1() {
 		
 		final PlaneShape plane = new PlaneShape();
 		
@@ -81,6 +100,30 @@ public class PlaneShapeTest {
 		
 		assertEquals("Nearby surface normal-X not as expected!", 0, surfaceNormal.getX(), 0.00001);
 		assertEquals("Nearby surface normal-Y not as expected!", 1, surfaceNormal.getY(), 0.00001);
+		assertEquals("Nearby surface normal-Z not as expected!", 0, surfaceNormal.getZ(), 0.00001);
+		
+		assertEquals("Nearby surface param-X not as expected!", 0, surfaceParam.getX(), 0.00001);
+		assertEquals("Nearby surface param-Y not as expected!", 2, surfaceParam.getY(), 0.00001);
+	}
+	
+	@Test
+	public void testGetIntersection2() {
+		
+		final PlaneShape plane = new PlaneShape();
+		
+		Ray localRay = new Ray(new Point3D(3, -3, 2), new Vector3D(-1, +1, 0).normalize());
+		SurfaceDescriptor<Shape> surfaceDescriptor = plane.getSurface(localRay);
+		
+		Point3D surfacePoint = surfaceDescriptor.getPoint();
+		Normal3D surfaceNormal = surfaceDescriptor.getNormal();
+		Point2D surfaceParam = surfaceDescriptor.getParam();
+		
+		assertEquals("Nearby surface point-X not as expected!", 0, surfacePoint.getX(), 0.00001);
+		assertEquals("Nearby surface point-Y not as expected!", 0, surfacePoint.getY(), 0.00001);
+		assertEquals("Nearby surface point-Z not as expected!", 2, surfacePoint.getZ(), 0.00001);
+		
+		assertEquals("Nearby surface normal-X not as expected!", 0, surfaceNormal.getX(), 0.00001);
+		assertEquals("Nearby surface normal-Y not as expected!", -1, surfaceNormal.getY(), 0.00001);
 		assertEquals("Nearby surface normal-Z not as expected!", 0, surfaceNormal.getZ(), 0.00001);
 		
 		assertEquals("Nearby surface param-X not as expected!", 0, surfaceParam.getX(), 0.00001);

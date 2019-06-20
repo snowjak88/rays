@@ -61,8 +61,9 @@ public class PlaneShape extends Shape {
 		final double rayOriginY = localRay.getOrigin().getY();
 		final double rayDirectionY = localRay.getDirection().getY();
 		
-		return !(Settings.getInstance().nearlyEqual(signum(rayOriginY), rayDirectionY))
-				&& !(Settings.getInstance().nearlyEqual(rayDirectionY, 0d));
+		final boolean isNonIntersecting = ( Settings.getInstance().nearlyEqual(signum(rayOriginY), signum(rayDirectionY)) )
+					|| ( Settings.getInstance().nearlyEqual(rayDirectionY, 0d) );
+		return !(isNonIntersecting);
 	}
 	
 	@Override
@@ -79,7 +80,18 @@ public class PlaneShape extends Shape {
 		Point3D intersectionPoint = intersectingRay.getPointAlong();
 		Point2D surfaceParam = getParamFromLocalSurface(intersectionPoint);
 		
-		return localToWorld(new SurfaceDescriptor<>(this, intersectionPoint, LOCAL_NORMAL, surfaceParam));
+		//
+		// The reported normal should point back toward the observer -- i.e.,
+		// if the incident ray is coming from the "bottom" (-Y) side of the plane,
+		// we should report this plane's normal as pointing toward -Y.
+		final Normal3D reportedNormal;
+		
+		if ( localRay.getDirection().getY() > 0d )
+			reportedNormal = LOCAL_NORMAL.negate();
+		else
+			reportedNormal = LOCAL_NORMAL;
+		
+		return localToWorld(new SurfaceDescriptor<>(this, intersectionPoint, reportedNormal, surfaceParam));
 	}
 	
 	@Override
