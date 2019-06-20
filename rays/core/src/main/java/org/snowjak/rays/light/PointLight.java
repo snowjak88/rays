@@ -1,8 +1,8 @@
 package org.snowjak.rays.light;
 
 import org.snowjak.rays.Scene;
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
@@ -74,9 +74,18 @@ public class PointLight implements Light {
 		// any interactions along that Ray.
 		//
 		final var iPoint = interaction.getPoint();
+		final var dirInteractionToLight = Vector3D.from(surface).subtract(iPoint);
+		
+		final var lightDistance = dirInteractionToLight.getMagnitude();
 		final var lightRay = new Ray(iPoint, Vector3D.from(surface).subtract(iPoint).normalize());
 		
-		if (scene.getInteraction(lightRay) != null)
+		final var lightInteraction = scene.getInteraction(lightRay);
+		//
+		// If there was an interaction along that ray,
+		// and the distance to the interaction is less than the distance to the light,
+		// then the interaction is occluding the light.
+		//
+		if (lightInteraction != null && lightDistance > lightInteraction.getInteractingRay().getT())
 			return false;
 		
 		return true;
