@@ -93,7 +93,7 @@ public class RotationTransformTest {
 		
 		final var transform = (RotationTransform) transformAboutJ;
 		
-		final var expected = "{\"type\":\"rotate\",\"axis\":{\"x\":0.0,\"y\":1.0,\"z\":0.0},\"degreesOfRotation\":-90.0}";
+		final var expected = "{\"type\":\"rotate\",\"axis\":{\"x\":0.0,\"y\":1.0,\"z\":0.0},\"degrees\":-90.0}";
 		
 		final var result = Settings.getInstance().getGson().toJson(transform);
 		
@@ -103,7 +103,7 @@ public class RotationTransformTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "{\"type\":\"rotate\",\"axis\":{\"x\":0.0,\"y\":1.0,\"z\":0.0},\"degreesOfRotation\":-90.0}";
+		final var json = "{\"type\":\"rotate\",\"axis\":{\"x\":0.0,\"y\":1.0,\"z\":0.0},\"degrees\":-90.0}";
 		final var expected = (RotationTransform) transformAboutJ;
 		
 		final var result = Settings.getInstance().getGson().fromJson(json, Transform.class);
