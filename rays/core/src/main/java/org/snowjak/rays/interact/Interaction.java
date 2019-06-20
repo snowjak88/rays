@@ -47,7 +47,10 @@ public class Interaction<T extends Interactable<T>> extends SurfaceDescriptor<T>
 		
 		super(interacted, point, normal, param);
 		
-		this.interactingRay = interactingRay;
+		final var distance = Vector3D.from(point).subtract(interactingRay.getOrigin()).getMagnitude();
+		final var interactingT = distance / interactingRay.getDirection().getMagnitude();
+		
+		this.interactingRay = interactingRay.forT(interactingT);
 		this.w_e = interactingRay.getDirection().negate().normalize();
 	}
 	

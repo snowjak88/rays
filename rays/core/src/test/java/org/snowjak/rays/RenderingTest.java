@@ -29,7 +29,7 @@ import org.snowjak.rays.transform.TranslationTransform;
 public class RenderingTest {
 	
 	@Test
-	public void test() {
+	public void test1() {
 		
 		final var falloff = pow(3d - sin(45d * PI / 180d), 2);
 		
