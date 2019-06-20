@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.stream.Collectors;
 
 import org.snowjak.rays.Primitive;
+import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.boundingvolume.AABB;
 import org.snowjak.rays.interact.Interaction;
@@ -80,6 +81,7 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 				.filter(p -> p.isIntersectableWith(ray))
 				.map(p -> p.getInteraction(ray))
 				.filter(i -> i != null)
+				.filter(i -> i.getInteractingRay().getT() > Settings.getInstance().getDoubleEqualityEpsilon())
 				.sorted((i1, i2) -> Double.compare(i1.getInteractingRay().getT(), i2.getInteractingRay().getT()))
 				.findFirst().orElse(null);
 		//@formatter:on
@@ -101,16 +103,21 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 		if (branchNode.getBranch2().getAABB().isIntersecting(ray))
 			result2 = getHeldPrimitiveInteraction(branchNode.getBranch2(), ray);
 		
-		if (result1 != null && result2 != null)
+		final var isResult1Good = (result1 != null
+				&& result1.getInteractingRay().getT() > Settings.getInstance().getDoubleEqualityEpsilon());
+		final var isResult2Good = (result2 != null
+				&& result2.getInteractingRay().getT() > Settings.getInstance().getDoubleEqualityEpsilon());
+		
+		if (isResult1Good && isResult2Good)
 			if (result1.getInteractingRay().getT() < result2.getInteractingRay().getT())
 				return result1;
 			else
 				return result2;
 			
-		if (result1 != null)
+		if (isResult1Good)
 			return result1;
 		
-		if (result2 != null)
+		if (isResult2Good)
 			return result2;
 		
 		return null;
