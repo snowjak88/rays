@@ -2,7 +2,7 @@
 org:
   snowjak:
     rays:
-      decomposition-size: 32
+      decomposition-size: 128
       security:
         # When the UI is generated, use these form-parameter names for username and password
         username-parameter: username
