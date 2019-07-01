@@ -1,5 +1,5 @@
 #
-FROM openjdk:10-jre
+FROM openjdk:13-alpine
 ARG JAR_FILE
 ARG DATA_DIR
 #

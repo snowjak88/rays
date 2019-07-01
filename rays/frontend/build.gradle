@@ -35,6 +35,10 @@ querydsl {
 	jpa = true
 }
 
+compileQuerydsl {
+    options.annotationProcessorPath = configurations.querydsl
+}
+
 generateSchema {
 	vendor = 'hibernate+spring'
 	packageToScan = [ 'org.snowjak.rays.frontend.model.entity' ]

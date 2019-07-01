@@ -26,7 +26,7 @@
 //
 
 buildscript {
-	ext { springBootVersion = '2.0.5.RELEASE' }
+	ext { springBootVersion = '2.1.6.RELEASE' }
 	repositories { mavenCentral() }
 	dependencies { classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}") }
 }
@@ -37,7 +37,7 @@ plugins {
 }
 
 group = 'org.snowjak'
-version = '0.2.13'
+version = '0.2.14'
 wrapper { gradleVersion = 4.8 }
 
 
@@ -52,7 +52,7 @@ allprojects {
 		maven { url "http://maven.vaadin.com/vaadin-addons" }
 	}
 	
-	sourceCompatibility = 10
+	sourceCompatibility = 12
 	
 	tasks.withType(JavaCompile) { options.compilerArgs << '-parameters' }
 }
