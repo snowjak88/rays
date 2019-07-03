@@ -1,6 +1,8 @@
 package org.snowjak.rays.film;
 
 import static org.apache.commons.math3.util.FastMath.floor;
+import static org.apache.commons.math3.util.FastMath.max;
+import static org.apache.commons.math3.util.FastMath.pow;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
@@ -21,6 +23,7 @@ import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sampler.Sampler;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.colorspace.RGB;
+import org.snowjak.rays.spectrum.colorspace.XYZ;
 
 /**
  * A film object is responsible for accepting a series of
@@ -36,33 +39,51 @@ import org.snowjak.rays.spectrum.colorspace.RGB;
  */
 @UIType(fields = { @UIField(name = "width", type = Integer.class, defaultValue = "400"),
 		@UIField(name = "height", type = Integer.class, defaultValue = "300"),
+		@UIField(name = "aperture", type = Double.class, defaultValue = "16.0"),
+		@UIField(name = "exposureTime", type = Double.class, defaultValue = "0.0333"),
+		@UIField(name = "isoSensitivity", type = Double.class, defaultValue = "100"),
+		@UIField(name = "calibrationConstant", type = Double.class, defaultValue = "815"),
 		@UIField(name = "filter", type = Filter.class) })
 public class Film {
 	
 	private int width, height;
+	private double aperture;
+	private double exposureTime;
+	private double isoSensitivity;
+	private double calibrationConstant;
 	private Filter filter;
 	
 	private transient boolean initialized = false;
-	private transient Spectrum[][] receivedSpectra;
-	private transient int[][] receivedSpectraCounts;
+	private transient XYZ[][] receivedLuminance;
+	private transient double[][] filterWeights;
 	
-	public Film(int width, int height, Filter filter) {
+	public Film(int width, int height, double aperture, double exposureTime, double isoSensitivity,
+			double calibrationConstant, Filter filter) {
 		
 		this.width = width;
 		this.height = height;
+		this.aperture = aperture;
+		this.exposureTime = exposureTime;
+		this.isoSensitivity = isoSensitivity;
+		this.calibrationConstant = calibrationConstant;
 		this.filter = filter;
 	}
 	
 	private void initialize() {
 		
-		this.receivedSpectra = new Spectrum[width + filter.getExtentX() * 2][height + filter.getExtentY() * 2];
-		this.receivedSpectraCounts = new int[width + filter.getExtentX() * 2][height + filter.getExtentY() * 2];
+		this.receivedLuminance = new XYZ[width + filter.getExtentX() * 2][height + filter.getExtentY() * 2];
+		this.filterWeights = new double[width + filter.getExtentX() * 2][height + filter.getExtentY() * 2];
 		
-		for (int x = 0; x < receivedSpectra.length; x++)
-			for (int y = 0; y < receivedSpectra[x].length; y++) {
-				receivedSpectra[x][y] = null;
-				receivedSpectraCounts[x][y] = 0;
+		for (int x = 0; x < receivedLuminance.length; x++)
+			for (int y = 0; y < receivedLuminance[x].length; y++) {
+				receivedLuminance[x][y] = null;
+				filterWeights[x][y] = 0;
 			}
+		
+		this.aperture = max(aperture, 0d);
+		this.exposureTime = max(exposureTime, 0d);
+		this.isoSensitivity = max(isoSensitivity, 0d);
+		this.calibrationConstant = max(calibrationConstant, 0d);
 		
 		this.initialized = true;
 	}
@@ -92,31 +113,59 @@ public class Film {
 			for (int pixelY = filmY - filter.getExtentY(); pixelY <= filmY + filter.getExtentY(); pixelY++)
 				if (filter.isContributing(estimate.getSample(), pixelX, pixelY)) {
 					
-					final Spectrum sampleRadiance = estimate.getRadiance()
-							.multiply(filter.getContribution(estimate.getSample(), pixelX, pixelY));
+					final Spectrum sampleRadiance = estimate.getRadiance();
 					
 					synchronized (this) {
 						
 						final var indexX = pixelX + filter.getExtentX();
 						final var indexY = pixelY + filter.getExtentY();
 						
-						if (indexX < 0 || indexX >= receivedSpectra.length)
+						if (indexX < 0 || indexX >= receivedLuminance.length)
 							continue;
 						
-						if (indexY < 0 || indexY >= receivedSpectra[indexX].length)
+						if (indexY < 0 || indexY >= receivedLuminance[indexX].length)
 							continue;
 						
-						if (receivedSpectra[indexX][indexY] == null) {
-							receivedSpectra[indexX][indexY] = sampleRadiance;
-							receivedSpectraCounts[indexX][indexY] = 1;
-						} else {
-							receivedSpectra[indexX][indexY] = receivedSpectra[indexX][indexY].add(sampleRadiance);
-							receivedSpectraCounts[indexX][indexY]++;
-						}
+						final var filterContribution = filter.getContribution(estimate.getSample(), pixelX, pixelY);
+						final var newXyz = new XYZ(
+								XYZ.fromSpectrum(sampleRadiance, true).get().multiply(filterContribution));
+						
+						filterWeights[indexX][indexY] += filterContribution;
+						
+						if (receivedLuminance[indexX][indexY] == null)
+							receivedLuminance[indexX][indexY] = newXyz;
+						else
+							receivedLuminance[indexX][indexY] = new XYZ(
+									receivedLuminance[indexX][indexY].get().add(newXyz.get()));
 						
 					}
 					
 				}
+	}
+	
+	/**
+	 * Get the luminance received so far at the given film (pixel) location.
+	 * 
+	 * @param x
+	 * @param y
+	 * @return
+	 */
+	public XYZ getReceivedLuminance(int x, int y) {
+		
+		final var indexX = x + filter.getExtentX();
+		final var indexY = y + filter.getExtentY();
+		
+		if (indexX < 0 || indexX >= receivedLuminance.length)
+			return new XYZ(0, 0, 0);
+		
+		if (indexY < 0 || indexY >= receivedLuminance[indexX].length)
+			return new XYZ(0, 0, 0);
+		
+		if (receivedLuminance[indexX][indexY] == null || filterWeights[indexX][indexY] == 0d)
+			return new XYZ(0, 0, 0);
+		
+		final var filterWeight = filterWeights[indexX][indexY];
+		return new XYZ(receivedLuminance[indexX][indexY].get().multiply(1d / filterWeight));
 	}
 	
 	/**
@@ -167,13 +216,12 @@ public class Film {
 					final var indexX = x + filter.getExtentX();
 					final var indexY = y + filter.getExtentY();
 					
-					if ((x < xStart || x > xEnd) || (y < yStart || y > yEnd) || receivedSpectra[indexX][indexY] == null
-							|| receivedSpectraCounts[indexX][indexY] < 1)
+					if ((x < xStart || x > xEnd) || (y < yStart || y > yEnd)
+							|| receivedLuminance[indexX][indexY] == null || filterWeights[indexX][indexY] == 0d)
 						image.setRGB(x, y, RGB.toPacked(RGB.BLACK, 0d));
 					
 					else {
-						final var rgb = receivedSpectra[indexX][indexY]
-								.multiply(1d / (double) receivedSpectraCounts[indexX][indexY]).toRGB();
+						final var rgb = getExposureRGB(getReceivedLuminance(x, y));
 						image.setRGB(x, y, rgb.toPacked());
 					}
 				}
@@ -182,6 +230,22 @@ public class Film {
 		
 		return new Image(image, uuid);
 		
+	}
+	
+	/**
+	 * Calculate the RGB triplet resulting from exposing this Film to a given XYZ
+	 * triplet (assumed to express absolute luminance -- see
+	 * {@link XYZ#fromSpectrum(Spectrum, boolean)}).
+	 * 
+	 * @param exposure
+	 * @return
+	 */
+	private RGB getExposureRGB(XYZ exposure) {
+		
+		final var v = new XYZ(
+				exposure.get().multiply(calibrationConstant * (exposureTime * isoSensitivity) / (pow(aperture, 2))));
+		
+		return v.to(RGB.class);
 	}
 	
 	public int getWidth() {

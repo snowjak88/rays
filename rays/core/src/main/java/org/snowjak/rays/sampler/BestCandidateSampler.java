@@ -126,7 +126,7 @@ public class BestCandidateSampler extends Sampler {
 		this.block = new Point2D[blockSize][blockSize][getSamplesPerPixel()];
 		generateNewBlock();
 		
-		this.lensSamples = generateSamples(getAdditional2DSamples(),
+		this.lensSamples = generateSamples(blockSize * blockSize * getSamplesPerPixel(),
 				() -> new Point2D(Settings.RND.nextDouble(), Settings.RND.nextDouble()),
 				(p1, p2) -> pow(p1.getX() - p2.getX(), 2) + pow(p1.getY() - p2.getY(), 2), (p) -> true, (p) -> {
 				}).toArray(new Point2D[0]);

@@ -1,5 +1,9 @@
 package org.snowjak.rays.spectrum.distribution;
 
+import static org.apache.commons.math3.util.FastMath.E;
+import static org.apache.commons.math3.util.FastMath.PI;
+import static org.apache.commons.math3.util.FastMath.pow;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -7,6 +11,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.BiFunction;
+import java.util.function.DoubleFunction;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -39,6 +44,116 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	
 	private static final long serialVersionUID = -1097611220827388034L;
 	private static final Pattern __surrounding_doublequotes_pattern = Pattern.compile("\"(.*)\"");
+	
+	/**
+	 * Velocity of light ({@code m / s})
+	 */
+	private static final double c = 2.99792458e8;
+	
+	/**
+	 * Planck constant ({@code J * s})
+	 */
+	private static final double h = 6.626176e-34;
+	
+	/**
+	 * Boltzmann constant ({@code J / K})
+	 */
+	private static final double k = 1.380662e-23;
+	
+	/**
+	 * Stefan-Boltzmann constant ({@code W / m^2 * K^4)
+	 */
+	private static final double sigma = 5.670374419e-8;
+	
+	/**
+	 * Produce a SpectralPowerDistribution which models the results of evaluating
+	 * Planck's Law for blackbody radiation, for a body of the given temperature.
+	 * 
+	 * @param kelvin
+	 * @return
+	 */
+	public static SpectralPowerDistribution fromBlackbody(double kelvin) {
+		
+		return SpectralPowerDistribution.fromBlackbody(kelvin, -1.0);
+	}
+	
+	/**
+	 * Produce a SpectralPowerDistribution which models the results of evaluating
+	 * Planck's Law for blackbody radiation, for a body of the given temperature.
+	 *
+	 * <p>
+	 * This SPD's power is scaled so that, when it is integrated across the entire
+	 * waveband ({@link Settings#getSpectrumRange()}), its total power is equal to
+	 * {@code power} (assuming emission from a unit sphere).
+	 * </p>
+	 * 
+	 * @param kelvin
+	 * @param power
+	 *            if < 0, then no scaling is applied
+	 * @return
+	 */
+	public static SpectralPowerDistribution fromBlackbody(double kelvin, double power) {
+		
+		final double wavelengthStepSizeNM = (Settings.getInstance().getSpectrumRangeHigh()
+				- Settings.getInstance().getSpectrumRangeLow())
+				/ (double) (Settings.getInstance().getSpectrumBinCount() - 1);
+		
+		final Point[] values = new Point[Settings.getInstance().getSpectrumBinCount()];
+		
+		//
+		// The current wavelength.
+		double wavelengthNM = Settings.getInstance().getSpectrumRangeLow();
+		
+		//
+		// Planck's Law gives the spectral radiance, Watts per steradian per square
+		// meter, emitted from a body of the specified temperature on the specified
+		// wavelength (m).
+		//
+		
+		final DoubleFunction<Double> planck = (lambda_nm) -> {
+			// convert lambda from nanometers to meters
+			final double lambda = lambda_nm / 1.0e9;
+			
+			return ( (2.0 * h * pow(c,2)) / (pow(lambda,5)) ) * ( 1.0 / (pow(E, (h*c)/(lambda*k*kelvin)) - 1.0) );
+		};
+		
+		for (int i = 0; i < values.length; i++) {
+			
+			final double v = planck.apply(wavelengthNM);
+			
+			values[i] = new Point(v);
+			
+			wavelengthNM += wavelengthStepSizeNM;
+		}
+		
+		final var spd = new SpectralPowerDistribution(values);
+		
+		final double scalingFactor;
+		
+		if (power < 0.0)
+			scalingFactor = 1.0;
+		else {
+			//
+			// To scale this SPD properly, we need to:
+			// 1) assume this SPD is emitted by a blackbody shaped as a unit sphere
+			// 2) calculate the total emitted radiance using the Stefan-Boltzmann law (power per unit area steradian)
+			// 3) calculate the total power emitted by the blackbody (power per steradian)
+			// 4) calculate a scaling factor from the total Stefan-Boltzmann power to the desired power
+			//
+			// The Stefan-Boltzmann law gives a measure of power per square-meter steradian.
+			//
+			// The target power is emitted from a unit sphere -- i.e., from a surface-area of
+			// 4*PI m^2, per steradian.
+			//
+			final var sbRadiance = sigma * pow(kelvin, 4) / PI;
+			
+			final var sbPower = sbRadiance * 4.0 * PI;
+			
+			scalingFactor = power / sbPower;
+		}
+		
+		return (SpectralPowerDistribution) spd.multiply(scalingFactor);
+	}
 	
 	/**
 	 * Given an {@link RGB} triplet, select a SpectralPowerDistribution that can
@@ -398,26 +513,54 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 			
 			final var obj = json.getAsJsonObject();
 			
-			if (!obj.has("low"))
-				throw new JsonParseException("Cannot parse SpectralPowerDistribution: missing [low]!");
-			if (!obj.has("high"))
-				throw new JsonParseException("Cannot parse SpectralPowerDistribution: missing [high]!");
-			if (!obj.has("data"))
-				throw new JsonParseException("Cannot parse SpectralPowerDistribution: missing [data]!");
+			if (!obj.has("type"))
+				throw new JsonParseException("Cannot parse SpectralPowerDistribution: missing [type]!");
 			
-			final var low = obj.get("low").getAsDouble();
-			final var high = obj.get("high").getAsDouble();
+			final SpectralPowerDistribution result;
 			
-			if (!obj.get("data").isJsonArray())
-				throw new JsonParseException("Cannot parse SpectralPowerDistribution: [data] is not an array!");
+			switch (obj.get("type").getAsString()) {
+			case "data":
+				if (!obj.has("low"))
+					throw new JsonParseException("Cannot parse valued SpectralPowerDistribution: missing [low]!");
+				if (!obj.has("high"))
+					throw new JsonParseException("Cannot parse valued SpectralPowerDistribution: missing [high]!");
+				if (!obj.has("data"))
+					throw new JsonParseException("Cannot parse valued SpectralPowerDistribution: missing [data]!");
+				
+				final var low = obj.get("low").getAsDouble();
+				final var high = obj.get("high").getAsDouble();
+				
+				if (!obj.get("data").isJsonArray())
+					throw new JsonParseException("Cannot parse SpectralPowerDistribution: [data] is not an array!");
+				
+				final var data = obj.get("data").getAsJsonArray();
+				
+				final var values = new ArrayList<Point>();
+				for (int i = 0; i < data.size(); i++)
+					values.add(new Point(data.get(i).getAsDouble()));
+				
+				result = new SpectralPowerDistribution(low, high, values.toArray(new Point[0]));
+				break;
 			
-			final var data = obj.get("data").getAsJsonArray();
+			case "blackbody":
+				if (!obj.has("kelvin"))
+					throw new JsonParseException("Cannot parse blackbody SpectralPowerDistribution: missing [kelvin]!");
+				
+				final double kelvin = obj.get("kelvin").getAsDouble();
+				final double power;
+				if (obj.has("power"))
+					power = obj.get("power").getAsDouble();
+				else
+					power = -1.0;
+				
+				result = SpectralPowerDistribution.fromBlackbody(kelvin, power);
+				break;
 			
-			final var values = new ArrayList<Point>();
-			for (int i = 0; i < data.size(); i++)
-				values.add(new Point(data.get(i).getAsDouble()));
+			default:
+				throw new JsonParseException("Cannot parse SpectralPowerDistribution: unknown [type]!");
+			}
 			
-			return new SpectralPowerDistribution(low, high, values.toArray(new Point[0]));
+			return result;
 		}
 		
 		@Override
@@ -425,6 +568,7 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 			
 			final var obj = new JsonObject();
 			
+			obj.addProperty("type", "data");
 			obj.addProperty("low", src.getBounds().get().getFirst());
 			obj.addProperty("high", src.getBounds().get().getSecond());
 			

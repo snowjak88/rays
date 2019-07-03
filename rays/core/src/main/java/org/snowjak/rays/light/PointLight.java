@@ -18,11 +18,11 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  *
  */
 @UIType(type = "point", fields = { @UIField(name = "position", type = Point3D.class),
-		@UIField(name = "rgb", type = RGB.class) })
+		@UIField(name = "rgb", type = RGB.class), @UIField(name = "power", type = SpectralPowerDistribution.class) })
 public class PointLight implements Light {
 	
 	private Point3D position;
-	private Spectrum energy = null;
+	private SpectralPowerDistribution power = null;
 	private RGB rgb = null;
 	
 	public PointLight(Point3D position, RGB rgb) {
@@ -31,10 +31,10 @@ public class PointLight implements Light {
 		this.rgb = rgb;
 	}
 	
-	public PointLight(Point3D position, Spectrum energy) {
+	public PointLight(Point3D position, SpectralPowerDistribution power) {
 		
 		this.position = position;
-		this.energy = energy;
+		this.power = power;
 	}
 	
 	public Point3D getPosition() {
@@ -42,22 +42,22 @@ public class PointLight implements Light {
 		return position;
 	}
 	
-	public Spectrum getEnergy() {
+	public SpectralPowerDistribution getPower() {
 		
-		if (energy == null)
+		if (power == null)
 			if (rgb == null)
 				throw new RuntimeException(
-						"Trying to get energy from a PointLight that has no configured spectrum or RGB!");
+						"Trying to get power from a PointLight that has no configured spectrum or RGB!");
 			else
-				energy = SpectralPowerDistribution.fromRGB(rgb);
+				power = SpectralPowerDistribution.fromRGB(rgb);
 			
-		return energy;
+		return power;
 	}
 	
 	public RGB getRgb() {
 		
 		if (rgb == null)
-			rgb = energy.toRGB(true);
+			rgb = power.toRGB(true);
 		
 		return rgb;
 	}
@@ -71,7 +71,7 @@ public class PointLight implements Light {
 	@Override
 	public <T extends Interactable<T>> Spectrum getRadiance(Point3D surface, Interaction<T> interaction) {
 		
-		return getEnergy();
+		return getPower();
 	}
 	
 }

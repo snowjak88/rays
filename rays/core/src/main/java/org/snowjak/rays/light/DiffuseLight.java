@@ -23,14 +23,14 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  *
  */
 @UIType(type = "diffuse", fields = { @UIField(name = "shape", type = Shape.class),
-		@UIField(name = "rgb", type = RGB.class) })
+		@UIField(name = "rgb", type = RGB.class), @UIField(name = "power", type = SpectralPowerDistribution.class) })
 public class DiffuseLight implements Light {
 	
 	private Shape shape;
 	private RGB rgb = null;
-	private Spectrum power = null;
+	private SpectralPowerDistribution power = null;
 	
-	private transient Spectrum specificPower = null;
+	private transient SpectralPowerDistribution specificPower = null;
 	
 	public DiffuseLight(Shape shape, RGB rgb) {
 		
@@ -44,7 +44,7 @@ public class DiffuseLight implements Light {
 	 * @param shape
 	 * @param power
 	 */
-	public DiffuseLight(Shape shape, Spectrum power) {
+	public DiffuseLight(Shape shape, SpectralPowerDistribution power) {
 		
 		if (shape.getSurfaceArea() < 0d)
 			throw new IllegalArgumentException(
@@ -60,7 +60,7 @@ public class DiffuseLight implements Light {
 		return shape.sampleSurfaceFacing(interaction.getPoint(), sample).getPoint();
 	}
 	
-	private Spectrum getPower() {
+	private SpectralPowerDistribution getPower() {
 		
 		if (power == null)
 			if (rgb == null)
@@ -72,10 +72,10 @@ public class DiffuseLight implements Light {
 		return power;
 	}
 	
-	private Spectrum getSpecificPower() {
+	private SpectralPowerDistribution getSpecificPower() {
 		
 		if (specificPower == null)
-			specificPower = getPower().multiply(1d / shape.getSurfaceArea());
+			specificPower = (SpectralPowerDistribution) getPower().multiply(1d / shape.getSurfaceArea());
 		
 		return specificPower;
 	}

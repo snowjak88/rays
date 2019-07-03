@@ -263,6 +263,25 @@ public class SpectralPowerDistributionTest {
 	}
 	
 	@Test
+	public void testFromBlackbody() {
+		
+		final var spd = SpectralPowerDistribution.fromBlackbody(2400, 1.0);
+		final var xyz = XYZ.fromSpectrum(spd).normalize();
+		final var rgb = xyz.to(RGB.class);
+		
+		//
+		// Note that we normalize the resulting RGB value -- we don't care about
+		// absolute units, only relative colors.
+		final var nrgb = new RGB(rgb.get().multiply(1d / rgb.getRed()));
+		
+		final var expected = new RGB(1.0, (155.0 / 255.0), (62.0 / 255.0));
+		
+		assertEquals("RGB(R) not as expected.", expected.getRed(), nrgb.getRed(), 0.05);
+		assertEquals("RGB(G) not as expected.", expected.getGreen(), nrgb.getGreen(), 0.05);
+		assertEquals("RGB(B) not as expected.", expected.getBlue(), nrgb.getBlue(), 0.05);
+	}
+	
+	@Test
 	public void testAverageOver() {
 		
 		final var spd = new SpectralPowerDistribution(1.0, 8.0, new Point[] { new Point(1.0), new Point(1.0),
@@ -278,7 +297,7 @@ public class SpectralPowerDistributionTest {
 		
 		final var spd = new SpectralPowerDistribution(1.0, 8.0, new Point[] { new Point(1.0), new Point(1.0),
 				new Point(0.0), new Point(4.0), new Point(3.0), new Point(2.0), new Point(4.0), new Point(0.0) });
-		final var expected = "{\"low\":1.0,\"high\":8.0,\"data\":[1.0,1.0,0.0,4.0,3.0,2.0,4.0,0.0]}";
+		final var expected = "{\"type\":\"data\",\"low\":1.0,\"high\":8.0,\"data\":[1.0,1.0,0.0,4.0,3.0,2.0,4.0,0.0]}";
 		
 		final var result = Settings.getInstance().getGson().toJson(spd);
 		
@@ -288,9 +307,29 @@ public class SpectralPowerDistributionTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "{\"low\":1.0,\"high\":8.0,\"data\":[1.0,1.0,0.0,4.0,3.0,2.0,4.0,0.0]}";
+		final var json = "{\"type\": \"data\", \"low\":1.0,\"high\":8.0,\"data\":[1.0,1.0,0.0,4.0,3.0,2.0,4.0,0.0]}";
 		final var expected = new SpectralPowerDistribution(1.0, 8.0, new Point[] { new Point(1.0), new Point(1.0),
 				new Point(0.0), new Point(4.0), new Point(3.0), new Point(2.0), new Point(4.0), new Point(0.0) });
+		
+		final var result = Settings.getInstance().getGson().fromJson(json, SpectralPowerDistribution.class);
+		
+		assertNotNull(result);
+		assertTrue(result.getBounds().isPresent());
+		assertEquals(expected.getBounds().get().getFirst(), result.getBounds().get().getFirst(), 0.00001);
+		assertEquals(expected.getBounds().get().getSecond(), result.getBounds().get().getSecond(), 0.00001);
+		
+		assertNotNull(result.getEntries());
+		assertEquals(expected.getEntries().length, result.getEntries().length);
+		
+		for (int i = 0; i < expected.getEntries().length; i++)
+			assertEquals(expected.getEntries()[i].get(0), result.getEntries()[i].get(0), 0.00001);
+	}
+	
+	@Test
+	public void testDeserializeBlackbody() {
+		
+		final var json = "{\"type\": \"blackbody\", \"kelvin\":2500}";
+		final var expected = SpectralPowerDistribution.fromBlackbody(2500, -1.0);
 		
 		final var result = Settings.getInstance().getGson().fromJson(json, SpectralPowerDistribution.class);
 		

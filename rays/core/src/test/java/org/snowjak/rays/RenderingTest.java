@@ -23,6 +23,7 @@ import org.snowjak.rays.renderer.PathTracingRenderer;
 import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.shape.SphereShape;
 import org.snowjak.rays.spectrum.colorspace.RGB;
+import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.texture.ConstantTexture;
 import org.snowjak.rays.transform.TranslationTransform;
 
@@ -36,8 +37,9 @@ public class RenderingTest {
 		final var primitives = Arrays.asList(new Primitive(new SphereShape(1.0, new TranslationTransform(0, 0, 4)),
 				new LambertianMaterial(new ConstantTexture(RGB.RED))));
 		final var camera = new OrthographicCamera(200, 200, 2, 2);
-		final Collection<Light> lights = Arrays.asList(new PointLight(new Point3D(0, 3, 3d + sin(45d * PI / 180d)),
-				Settings.getInstance().getIlluminatorSpectralPowerDistribution().multiply(falloff)));
+		final Collection<Light> lights = Arrays.asList(
+				new PointLight(new Point3D(0, 3, 3d + sin(45d * PI / 180d)), (SpectralPowerDistribution) Settings
+						.getInstance().getIlluminatorSpectralPowerDistribution().multiply(falloff)));
 		
 		final var scene = new Scene(primitives, camera, lights);
 		

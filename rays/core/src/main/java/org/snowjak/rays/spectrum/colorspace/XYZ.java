@@ -9,6 +9,7 @@ import org.snowjak.rays.Util;
 import org.snowjak.rays.geometry.util.Matrix;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.serialization.IsLoadable;
+import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 import com.google.gson.JsonArray;
@@ -45,13 +46,13 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 	 * non-emissive energy-distribution.
 	 * </p>
 	 * 
-	 * @param spd
+	 * @param spectrum
 	 * @return
-	 * @see #fromSpectrum(SpectralPowerDistribution, boolean)
+	 * @see #fromSpectrum(Spectrum, boolean)
 	 */
-	public static XYZ fromSpectrum(SpectralPowerDistribution spd) {
+	public static XYZ fromSpectrum(Spectrum spectrum) {
 		
-		return fromSpectrum(spd, false);
+		return fromSpectrum(spectrum, false);
 	}
 	
 	/**
@@ -59,14 +60,30 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 	 * power-distribution (given as a mapping of wavelengths (nm) to spectral
 	 * radiance (W/sr*m^2)).
 	 * 
-	 * @param spd
+	 * <p>
+	 * If {@code isEmissive = true}, then the returned XYZ triplet expresses
+	 * <em>absolute</em> luminance -- i.e., its {@code Y} component will report
+	 * luminance in terms of candela per square meter.
+	 * </p>
+	 * <p>
+	 * If {@code isEmissive = false}, then the returned XYZ triplet expresses
+	 * <em>relative</em> luminance.
+	 * </p>
+	 * 
+	 * @param spectrum
 	 * @param isEmissive
 	 * @return
 	 */
-	public static XYZ fromSpectrum(SpectralPowerDistribution spd, boolean isEmissive) {
+	public static XYZ fromSpectrum(Spectrum spectrum, boolean isEmissive) {
 		
 		final var cmf = Settings.getInstance().getColorMappingFunctions();
 		final var illuminant = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
+		
+		if (!(spectrum instanceof SpectralPowerDistribution))
+			throw new IllegalArgumentException(
+					"Cannot create an XYZ triplet from the given Spectrum -- cannot handle Spectrum implementation.");
+		
+		final var spd = (SpectralPowerDistribution) spectrum;
 		
 		final double lowLambda = spd.getBounds().get().getFirst();
 		final double highLambda = spd.getBounds().get().getSecond();
