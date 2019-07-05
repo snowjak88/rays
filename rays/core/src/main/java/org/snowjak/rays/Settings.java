@@ -30,6 +30,7 @@ import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sampler.BestCandidateSampler;
 import org.snowjak.rays.sampler.PseudorandomSampler;
 import org.snowjak.rays.sampler.Sampler;
+import org.snowjak.rays.sampler.StratifiedSampler;
 import org.snowjak.rays.serialization.IsLoadable;
 import org.snowjak.rays.shape.PlaneShape;
 import org.snowjak.rays.shape.Shape;
@@ -256,6 +257,7 @@ public class Settings {
 				RuntimeTypeAdapterFactory
 						.of(Sampler.class, "type")
 						.registerSubtype(PseudorandomSampler.class, "pseudorandom")
+						.registerSubtype(StratifiedSampler.class, "stratified")
 						.registerSubtype(BestCandidateSampler.class, "best-candidate"));
 			//@formatter:on
 			
