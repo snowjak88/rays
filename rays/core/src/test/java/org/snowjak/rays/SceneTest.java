@@ -93,12 +93,9 @@ public class SceneTest {
 		assertEquals("Interaction 1: ray-T was not as expected!", sqrt(pow(2.0, 2) + pow(2.0, 2)),
 				interact1.getInteractingRay().getT(), 0.01);
 		
-		assertEquals("Interaction 1: interacted point(X) not as expected!", 0.0, interact1.getPoint().getX(),
-				0.00001);
-		assertEquals("Interaction 1: interacted point(Y) not as expected!", 0.0, interact1.getPoint().getY(),
-				0.00001);
-		assertEquals("Interaction 1: interacted point(Z) not as expected!", 0.0, interact1.getPoint().getZ(),
-				0.00001);
+		assertEquals("Interaction 1: interacted point(X) not as expected!", 0.0, interact1.getPoint().getX(), 0.00001);
+		assertEquals("Interaction 1: interacted point(Y) not as expected!", 0.0, interact1.getPoint().getY(), 0.00001);
+		assertEquals("Interaction 1: interacted point(Z) not as expected!", 0.0, interact1.getPoint().getZ(), 0.00001);
 		
 		assertEquals("Interaction 1: interacted normal(X) not as expected!", 0.0, interact1.getNormal().getX(),
 				0.00001);
@@ -118,12 +115,9 @@ public class SceneTest {
 		assertEquals("Interaction 2: ray-T was not as expected!", sqrt(pow(2.0, 2) + pow(2.0, 2)),
 				interact2.getInteractingRay().getT(), 0.01);
 		
-		assertEquals("Interaction 2: interacted point(X) not as expected!", 0.0, interact2.getPoint().getX(),
-				0.00001);
-		assertEquals("Interaction 2: interacted point(Y) not as expected!", 2.0, interact2.getPoint().getY(),
-				0.00001);
-		assertEquals("Interaction 2: interacted point(Z) not as expected!", 2.0, interact2.getPoint().getZ(),
-				0.00001);
+		assertEquals("Interaction 2: interacted point(X) not as expected!", 0.0, interact2.getPoint().getX(), 0.00001);
+		assertEquals("Interaction 2: interacted point(Y) not as expected!", 2.0, interact2.getPoint().getY(), 0.00001);
+		assertEquals("Interaction 2: interacted point(Z) not as expected!", 2.0, interact2.getPoint().getZ(), 0.00001);
 		
 		assertEquals("Interaction 2: interacted normal(X) not as expected!", 0.0, interact2.getNormal().getX(),
 				0.00001);
@@ -131,7 +125,7 @@ public class SceneTest {
 				0.00001);
 		assertEquals("Interaction 2: interacted normal(Z) not as expected!", -1.0, interact2.getNormal().getZ(),
 				0.00001);
-	
+		
 		//
 		
 		final var ray3 = new Ray(new Point3D(0, 2, -4), new Vector3D(0, -1, +1).normalize());
@@ -143,12 +137,9 @@ public class SceneTest {
 		assertEquals("Interaction 3: ray-T was not as expected!", sqrt(pow(2.0, 2) + pow(2.0, 2)),
 				interact3.getInteractingRay().getT(), 0.01);
 		
-		assertEquals("Interaction 3: interacted point(X) not as expected!", 0.0, interact3.getPoint().getX(),
-				0.00001);
-		assertEquals("Interaction 3: interacted point(Y) not as expected!", 0.0, interact3.getPoint().getY(),
-				0.00001);
-		assertEquals("Interaction 3: interacted point(Z) not as expected!", -2.0, interact3.getPoint().getZ(),
-				0.00001);
+		assertEquals("Interaction 3: interacted point(X) not as expected!", 0.0, interact3.getPoint().getX(), 0.00001);
+		assertEquals("Interaction 3: interacted point(Y) not as expected!", 0.0, interact3.getPoint().getY(), 0.00001);
+		assertEquals("Interaction 3: interacted point(Z) not as expected!", -2.0, interact3.getPoint().getZ(), 0.00001);
 		
 		assertEquals("Interaction 3: interacted normal(X) not as expected!", 0.0, interact3.getNormal().getX(),
 				0.00001);

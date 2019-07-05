@@ -45,10 +45,9 @@ public class Util {
 		
 		//@formatter:off
 		return DoubleStream
-						.iterate(start + intervalStep / 2d, d -> d <= end - intervalStep / 2d, d -> d + intervalStep)
-						.map(d -> f.applyAsDouble(d))
-						.reduce(0d, (d1, d2) -> d1 + d2)
-					* intervalStep;
+						.iterate(start, d -> d <= end - intervalStep, d -> d + intervalStep)
+						.map(d -> intervalStep * f.applyAsDouble(d + intervalStep / 2))
+						.reduce(0d, (d1, d2) -> d1 + d2);
 		//@formatter:on
 	}
 	

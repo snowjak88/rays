@@ -25,7 +25,6 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 	public HierarchicalBoundingBox(Collection<Primitive> primitives) {
 		
 		assert (primitives != null);
-		assert (!primitives.isEmpty());
 		
 		final LinkedList<TreeNode> nodes = primitives.stream().filter(p -> p.getShape().getBoundingVolume() != null)
 				.map(p -> new LeafNode(p)).collect(Collectors.toCollection(LinkedList::new));

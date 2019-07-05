@@ -1,6 +1,9 @@
 package org.snowjak.rays.spectrum.distribution;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.stream.IntStream;
@@ -10,7 +13,6 @@ import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
-import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 public class SpectralPowerDistributionTest {
 	
@@ -279,6 +281,34 @@ public class SpectralPowerDistributionTest {
 		assertEquals("RGB(R) not as expected.", expected.getRed(), nrgb.getRed(), 0.05);
 		assertEquals("RGB(G) not as expected.", expected.getGreen(), nrgb.getGreen(), 0.05);
 		assertEquals("RGB(B) not as expected.", expected.getBlue(), nrgb.getBlue(), 0.05);
+	}
+	
+	@Test
+	public void testPlancksLaw() {
+		
+		final var kelvin = 2400;
+		
+		assertEquals(3.485e10, SpectralPowerDistribution.getPlancksLaw(kelvin, 530.0), 1e7);
+	}
+	
+	@Test
+	public void testStefanBoltzmannsLaw() {
+		
+		final var kelvin = 2400;
+		
+		assertEquals(598834.4, SpectralPowerDistribution.getStefanBoltzmannsLaw(kelvin), 1.0);
+	}
+	
+	@Test
+	public void testFromBlackbody2() {
+		
+		final var kelvin = 2400;
+		final var intensity = 1600;
+		
+		final var spd = SpectralPowerDistribution.fromBlackbody(kelvin, intensity);
+		final var spdIntensity = XYZ.fromSpectrum(spd, true).getY();
+		
+		assertEquals(intensity, spdIntensity, 1.0);
 	}
 	
 	@Test

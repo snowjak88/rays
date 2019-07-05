@@ -19,7 +19,7 @@ public class PointLightTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "{\"type\":\"point\", \"position\":{\"x\":0.0,\"y\":1.0,\"z\":2.0}, \"power\":{\"type\":\"blackbody\",\"kelvin\":2500,\"power\":100}}";
+		final var json = "{\"type\":\"point\", \"position\":{\"x\":0.0,\"y\":1.0,\"z\":2.0}, \"power\":{\"type\":\"blackbody\",\"kelvin\":2500,\"intensity\":100}}";
 		final var expected = new PointLight(new Point3D(0.0, 1.0, 2.0),
 				SpectralPowerDistribution.fromBlackbody(2500, 100));
 		

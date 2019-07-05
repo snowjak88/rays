@@ -2,14 +2,16 @@ package org.snowjak.rays;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.stream.Collectors;
 
 import org.snowjak.rays.acceleration.AccelerationStructure;
 import org.snowjak.rays.acceleration.HierarchicalBoundingBox;
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.camera.Camera;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.interact.Interaction;
+import org.snowjak.rays.light.DiffuseLight;
 import org.snowjak.rays.light.Light;
 
 /**
@@ -30,6 +32,7 @@ public class Scene {
 	
 	private Collection<Primitive> primitives = null;
 	private transient AccelerationStructure accelerationStructure = null;
+	private transient AccelerationStructure physicalLightAccelerationStructure = null;
 	private Camera camera;
 	private Collection<Light> lights = null;
 	
@@ -43,6 +46,7 @@ public class Scene {
 		this.primitives = primitives;
 		this.camera = camera;
 		this.lights = lights;
+		
 	}
 	
 	public Scene(AccelerationStructure accelerationStructure, Camera camera) {
@@ -63,6 +67,21 @@ public class Scene {
 			accelerationStructure = new HierarchicalBoundingBox(primitives);
 		
 		return accelerationStructure;
+	}
+	
+	private AccelerationStructure getPhysicalLightAccelerationStructure() {
+		
+		if (physicalLightAccelerationStructure == null)
+			physicalLightAccelerationStructure = new HierarchicalBoundingBox(
+					getLights().parallelStream()
+							.filter(l -> l instanceof DiffuseLight)
+							.map(l -> (DiffuseLight) l)
+							.filter(l -> l.isVisible())
+							.map(l -> l.getPrimitive())
+							.collect(Collectors.toList())
+					);
+		
+		return physicalLightAccelerationStructure;
 	}
 	
 	public Camera getCamera() {
@@ -87,6 +106,18 @@ public class Scene {
 	 */
 	public Interaction<Primitive> getInteraction(Ray ray) {
 		
-		return getAccelerationStructure().getInteraction(ray);
+		final var primitiveInteraction = getAccelerationStructure().getInteraction(ray);
+		final var lightInteraction = getPhysicalLightAccelerationStructure().getInteraction(ray);
+		
+		if (primitiveInteraction == null)
+			return lightInteraction;
+		
+		if (lightInteraction == null)
+			return primitiveInteraction;
+		
+		if (primitiveInteraction.getInteractingRay().getT() < lightInteraction.getInteractingRay().getT())
+			return primitiveInteraction;
+		else
+			return lightInteraction;
 	}
 }

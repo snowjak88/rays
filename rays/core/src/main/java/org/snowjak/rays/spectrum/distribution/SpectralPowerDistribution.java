@@ -11,7 +11,6 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.BiFunction;
-import java.util.function.DoubleFunction;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -33,8 +32,7 @@ import com.google.gson.JsonSerializationContext;
 
 /**
  * A {@link SpectralPowerDistribution} ("SPD") is a distribution of power-levels
- * (usually given in Watts per square-meter per steradian,
- * <code>W * m^-2 * sr^-1</code>) across a range of wavelengths.
+ * across a range of wavelengths.
  * 
  * @author snowjak88
  *
@@ -53,17 +51,22 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	/**
 	 * Planck constant ({@code J * s})
 	 */
-	private static final double h = 6.626176e-34;
+	private static final double h = 6.62607015e-34;
 	
 	/**
 	 * Boltzmann constant ({@code J / K})
 	 */
-	private static final double k = 1.380662e-23;
+	private static final double k = 1.380649e-23;
 	
 	/**
 	 * Stefan-Boltzmann constant ({@code W / m^2 * K^4)
 	 */
 	private static final double sigma = 5.670374419e-8;
+	
+	/**
+	 * A 0-energy SPD.
+	 */
+	public static final SpectralPowerDistribution BLACK = new SpectralPowerDistribution();
 	
 	/**
 	 * Produce a SpectralPowerDistribution which models the results of evaluating
@@ -83,16 +86,17 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	 *
 	 * <p>
 	 * This SPD's power is scaled so that, when it is integrated across the entire
-	 * waveband ({@link Settings#getSpectrumRange()}), its total power is equal to
-	 * {@code power} (assuming emission from a unit sphere).
+	 * waveband ({@link Settings#getSpectrumRange()}) and converted to luminous
+	 * intensity (candela) its total intensity is equal to {@code intensity}
+	 * (assuming emission from a unit sphere).
 	 * </p>
 	 * 
 	 * @param kelvin
-	 * @param power
+	 * @param intensity
 	 *            if < 0, then no scaling is applied
 	 * @return
 	 */
-	public static SpectralPowerDistribution fromBlackbody(double kelvin, double power) {
+	public static SpectralPowerDistribution fromBlackbody(double kelvin, double intensity) {
 		
 		final double wavelengthStepSizeNM = (Settings.getInstance().getSpectrumRangeHigh()
 				- Settings.getInstance().getSpectrumRangeLow())
@@ -104,22 +108,9 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 		// The current wavelength.
 		double wavelengthNM = Settings.getInstance().getSpectrumRangeLow();
 		
-		//
-		// Planck's Law gives the spectral radiance, Watts per steradian per square
-		// meter, emitted from a body of the specified temperature on the specified
-		// wavelength (m).
-		//
-		
-		final DoubleFunction<Double> planck = (lambda_nm) -> {
-			// convert lambda from nanometers to meters
-			final double lambda = lambda_nm / 1.0e9;
-			
-			return ( (2.0 * h * pow(c,2)) / (pow(lambda,5)) ) * ( 1.0 / (pow(E, (h*c)/(lambda*k*kelvin)) - 1.0) );
-		};
-		
 		for (int i = 0; i < values.length; i++) {
 			
-			final double v = planck.apply(wavelengthNM);
+			final double v = getPlancksLaw(kelvin, wavelengthNM);
 			
 			values[i] = new Point(v);
 			
@@ -130,29 +121,67 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 		
 		final double scalingFactor;
 		
-		if (power < 0.0)
+		if (intensity < 0.0)
 			scalingFactor = 1.0;
 		else {
+			
+			// final var spdSpecificPower =
+			// Util.integrate(Settings.getInstance().getSpectrumRangeLow() / 1e9,
+			// Settings.getInstance().getSpectrumRangeHigh() / 1e9,
+			// Settings.getInstance().getSpectrumBinCount() * 10,
+			// (l) -> spd.get(l * 1e9).get(0));
+			
+			// final var spdTotalPower = spdSpecificPower * 4.0 * PI;
+			
 			//
 			// To scale this SPD properly, we need to:
-			// 1) assume this SPD is emitted by a blackbody shaped as a unit sphere
-			// 2) calculate the total emitted radiance using the Stefan-Boltzmann law (power per unit area steradian)
-			// 3) calculate the total power emitted by the blackbody (power per steradian)
-			// 4) calculate a scaling factor from the total Stefan-Boltzmann power to the desired power
+			// 1) calculate the total emitted radiance using the Stefan-Boltzmann law (power
+			// per unit area steradian)
+			// 3) calculate the total power emitted by the blackbody in all directions
+			// 4) calculate a scaling factor from the total Stefan-Boltzmann power to the
+			// desired power
 			//
 			// The Stefan-Boltzmann law gives a measure of power per square-meter steradian.
 			//
-			// The target power is emitted from a unit sphere -- i.e., from a surface-area of
-			// 4*PI m^2, per steradian.
+			// The target power is emitted from a unit sphere -- i.e., from a surface-area
+			// of 4*PI m^2.
 			//
-			final var sbRadiance = sigma * pow(kelvin, 4) / PI;
+			// final var sbRadiance = getStefanBoltzmannsLaw(kelvin);
 			
-			final var sbPower = sbRadiance * 4.0 * PI;
+			// final var sbPower = sbRadiance * 4.0 * PI;
 			
-			scalingFactor = power / sbPower;
+			final var rawIntensity = XYZ.fromSpectrum(spd, true).getY();
+			
+			scalingFactor = intensity / rawIntensity;
 		}
 		
 		return (SpectralPowerDistribution) spd.multiply(scalingFactor);
+	}
+	
+	/**
+	 * Given a temperature in Kelvin and a wavelength in nanometers, evaluate
+	 * Planck's Law for blackbody radiation on this wavelength.
+	 * 
+	 * @param wavelength
+	 * @return
+	 */
+	public static double getPlancksLaw(double kelvin, double wavelength) {
+		
+		final double lambda = wavelength / 1.0e9;
+		
+		return ((2.0 * h * pow(c, 2)) / (pow(lambda, 5))) * (1.0 / (pow(E, (h * c) / (lambda * k * kelvin)) - 1.0));
+	}
+	
+	/**
+	 * Given a temperature in Kelvin, evaluate Stefan-Boltzmann's Law for blackbody
+	 * radiation.
+	 * 
+	 * @param kelvin
+	 * @return
+	 */
+	public static double getStefanBoltzmannsLaw(double kelvin) {
+		
+		return sigma * pow(kelvin, 4) / PI;
 	}
 	
 	/**
@@ -547,13 +576,13 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 					throw new JsonParseException("Cannot parse blackbody SpectralPowerDistribution: missing [kelvin]!");
 				
 				final double kelvin = obj.get("kelvin").getAsDouble();
-				final double power;
-				if (obj.has("power"))
-					power = obj.get("power").getAsDouble();
+				final double intensity;
+				if (obj.has("intensity"))
+					intensity = obj.get("intensity").getAsDouble();
 				else
-					power = -1.0;
+					intensity = -1.0;
 				
-				result = SpectralPowerDistribution.fromBlackbody(kelvin, power);
+				result = SpectralPowerDistribution.fromBlackbody(kelvin, intensity);
 				break;
 			
 			default:

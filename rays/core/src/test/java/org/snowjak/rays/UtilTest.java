@@ -13,13 +13,25 @@ public class UtilTest {
 	@Test
 	public void test_integrateSine() {
 		
-		assertEquals(1d, Util.integrate(0d, FastMath.PI / 2d, 1024, (x) -> FastMath.sin(x)), 0.00001);
+		assertEquals(1d, Util.integrate(0d, FastMath.PI / 2d, 1000, (x) -> FastMath.sin(x)), FastMath.PI / 2000d);
+	}
+	
+	@Test
+	public void test_integrateSine2() {
+		
+		assertEquals(0d, Util.integrate(-FastMath.PI / 2d, FastMath.PI / 2d, 1000, (x) -> FastMath.sin(x)), FastMath.PI / 1000d);
 	}
 	
 	@Test
 	public void test_integrateLinear() {
 		
-		assertEquals(0.5d, Util.integrate(0d, 1d, 1024, (x) -> x), 0.00001);
+		assertEquals(0.5d, Util.integrate(0d, 1d, 1000, (x) -> x), 0.001);
+	}
+	
+	@Test
+	public void test_integrateLinear2() {
+		
+		assertEquals(1d, Util.integrate(-1d, 1d, 1000, (x) -> FastMath.abs(x)), 0.002);
 	}
 	
 	@Test

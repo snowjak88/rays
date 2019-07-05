@@ -205,7 +205,7 @@ public abstract class TabulatedDistribution<D extends TabulatedDistribution<D, Y
 			throw new IndexOutOfBoundsException();
 		
 		final double index = getIndex(x);
-		final double fraction = index - (int) index;
+		final double fraction = index - floor(index);
 		
 		if (Settings.getInstance().nearlyEqual(fraction, 0d))
 			return entries[(int) floor(index)];
