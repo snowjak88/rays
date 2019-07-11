@@ -27,6 +27,7 @@ import org.snowjak.rays.material.PerfectMirrorMaterial;
 import org.snowjak.rays.renderer.MonteCarloRenderer;
 import org.snowjak.rays.renderer.PathTracingRenderer;
 import org.snowjak.rays.renderer.Renderer;
+import org.snowjak.rays.sampler.AdaptiveSampler;
 import org.snowjak.rays.sampler.BestCandidateSampler;
 import org.snowjak.rays.sampler.PseudorandomSampler;
 import org.snowjak.rays.sampler.Sampler;
@@ -258,6 +259,7 @@ public class Settings {
 						.of(Sampler.class, "type")
 						.registerSubtype(PseudorandomSampler.class, "pseudorandom")
 						.registerSubtype(StratifiedSampler.class, "stratified")
+						.registerSubtype(AdaptiveSampler.class, "adaptive")
 						.registerSubtype(BestCandidateSampler.class, "best-candidate"));
 			//@formatter:on
 			
