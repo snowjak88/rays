@@ -12,8 +12,9 @@
 //
 // TO BUILD DOCKER IMAGES:
 //
-// gradle :worker:docker
-// gradle :frontend:docker
+// ./gradlew docker dockerTag
+//     OR
+// ./gradlew :worker:docker :worker:dockerTag :frontend:docker :frontend:dockerTag
 //
 //
 // TO GENERATE docker-compose.yml FILE FROM ITS TEMPLATE
@@ -21,8 +22,7 @@
 //
 //
 // TO START docker-compose.yml CONFIGURATION
-// docker-compose up --no-start
-// docker-compose start
+// docker-compose up --d --scale worker=[WORKER-COUNT]
 //
 
 buildscript {
@@ -38,20 +38,14 @@ plugins {
 }
 
 group = 'org.snowjak'
-version = '0.2.21'
+version = '0.3'
 wrapper { gradleVersion = 4.8 }
 
 
-project.ext.dockerFileName = "Dockerfile"
 project.ext.dockerComposeTemplateName = "docker-compose.yml.template"
 
-
-if ( osdetector.arch == "arm_32" ) {
-	println "Building on ARM32v7 ..."
-
-	dockerFileName = "Dockerfile.arm32v7"
-	dockerComposeTemplateName = "docker-compose.yml.template.arm32v7"
-}
+if ( file( dockerComposeTemplateName + "." + osdetector.arch ).exists() )
+	dockerComposeTemplateName = dockerComposeTemplateName + "." + osdetector.arch
 
 
 allprojects {
@@ -82,6 +76,13 @@ subprojects { p ->
 		
 		if(p.name != "spectrum-generator") {
 			apply plugin: 'com.palantir.docker'
+			
+			
+			p.ext.dockerFileName = "Dockerfile"
+			
+			if ( file( dockerFileName + "." + osdetector.arch ).exists() )
+				dockerFileName = dockerFileName + "." + osdetector.arch
+			
 			
 			task copyDataToDockerBuildDir(type: Copy) {
 				from 'data/'
