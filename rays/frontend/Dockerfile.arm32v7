@@ -1,5 +1,6 @@
 #
-FROM openjdk:13-alpine
+# FROM openjdk:13-alpine
+FROM arm32v7/openjdk:latest
 ARG JAR_FILE
 ARG DATA_DIR
 #

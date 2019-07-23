@@ -18,6 +18,8 @@ services:
   
   frontend:
     image: ${group}/frontend:${version}
+    ports:
+      - "8080:8080"
     depends_on:
       - proxy
       - frontend-db
@@ -31,7 +33,7 @@ services:
       - SPRING_JPA_DATABASE=mysql
   
   frontend-db:
-    image: mysql/mysql-server:latest
+    image: biarms/mysql:latest
     environment:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_ROOT_HOST=%
