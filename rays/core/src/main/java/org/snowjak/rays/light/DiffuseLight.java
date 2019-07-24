@@ -3,10 +3,12 @@
  */
 package org.snowjak.rays.light;
 
+import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.Primitive;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point3D;
+import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.material.EmissionMaterial;
@@ -74,9 +76,10 @@ public class DiffuseLight implements Light {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Point3D sampleSurface(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> LightSample sampleSurface(Interaction<T> interaction, Sample sample) {
 		
-		return shape.sampleSurfaceFacing(interaction.getPoint(), sample).getPoint();
+		final var p = shape.sampleSurfaceFacing(interaction.getPoint(), sample).getPoint();
+		return new LightSample(p, Vector3D.from(p, interaction.getPoint()).normalize(), 1d / (4d * FastMath.PI));
 	}
 	
 	/**
@@ -95,7 +98,8 @@ public class DiffuseLight implements Light {
 	
 	/**
 	 * Whether this DiffuseLight is configured to be visible -- i.e., if its
-	 * Primitive ({@link #getPrimitive()}) is directly visible to the Scene's Camera.
+	 * Primitive ({@link #getPrimitive()}) is directly visible to the Scene's
+	 * Camera.
 	 *
 	 */
 	public boolean isVisible() {

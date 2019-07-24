@@ -18,13 +18,24 @@ import org.snowjak.rays.spectrum.Spectrum;
 public interface Light {
 	
 	/**
+	 * Indicates whether this Light has no size, and can practically be sampled only
+	 * once.
+	 * 
+	 * @return
+	 */
+	public default boolean isDelta() {
+		
+		return false;
+	}
+	
+	/**
 	 * Given an {@link Interaction} somewhere in the {@link Scene}, sample a point
 	 * on this Light that may possibly illuminate that Interaction.
 	 * 
 	 * @param interaction
 	 * @return
 	 */
-	public <T extends Interactable<T>> Point3D sampleSurface(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> LightSample sampleSurface(Interaction<T> interaction, Sample sample);
 	
 	/**
 	 * Determines if the given {@code surface} point on this Light is visible from
@@ -43,10 +54,10 @@ public interface Light {
 		// any interactions along that Ray.
 		//
 		final var iPoint = interaction.getPoint();
-		final var dirInteractionToLight = Vector3D.from(surface).subtract(iPoint);
+		final var dirInteractionToLight = Vector3D.from(iPoint, surface);
 		
 		final var lightDistance = dirInteractionToLight.getMagnitude();
-		final var lightRay = new Ray(iPoint, Vector3D.from(surface).subtract(iPoint).normalize());
+		final var lightRay = new Ray(iPoint, dirInteractionToLight.normalize());
 		
 		final var lightInteraction = scene.getInteraction(lightRay);
 		//
@@ -71,4 +82,55 @@ public interface Light {
 	 */
 	public <T extends Interactable<T>> Spectrum getRadiance(Point3D surface, Interaction<T> interaction);
 	
+	/**
+	 * Data bean holding a sampled point, direction, and their accompanying PDF.
+	 * 
+	 * @author snowjak88
+	 *
+	 */
+	public static class LightSample {
+		
+		private final Point3D point;
+		private final Vector3D direction;
+		private final double pdf;
+		
+		public LightSample(Point3D point, Vector3D direction, double pdf) {
+			
+			this.point = point;
+			this.direction = direction.normalize();
+			this.pdf = pdf;
+		}
+		
+		/**
+		 * The sampled point on the Light's surface.
+		 * 
+		 * @return
+		 */
+		public Point3D getPoint() {
+			
+			return point;
+		}
+		
+		/**
+		 * The normalized direction extending away from the Light's surface, toward the
+		 * given neighboring point.
+		 * 
+		 * @return
+		 */
+		public Vector3D getDirection() {
+			
+			return direction;
+		}
+		
+		/**
+		 * The PDF accompanying this point and direction.
+		 * 
+		 * @return
+		 */
+		public double getPdf() {
+			
+			return pdf;
+		}
+		
+	}
 }

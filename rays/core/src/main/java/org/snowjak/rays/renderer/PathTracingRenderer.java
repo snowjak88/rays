@@ -1,5 +1,6 @@
 package org.snowjak.rays.renderer;
 
+import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.Primitive;
 import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
@@ -21,14 +22,17 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  * @author snowjak88
  *
  */
-@UIType(type = "path-tracing", fields = { @UIField(name = "maxDepth", type = Integer.class, defaultValue = "4") })
+@UIType(type = "path-tracing", fields = { @UIField(name = "maxDepth", type = Integer.class, defaultValue = "4"),
+		@UIField(name = "lightSamples", type = Integer.class, defaultValue = "1") })
 public class PathTracingRenderer extends Renderer {
 	
 	private int maxDepth;
+	private int lightSamples;
 	
-	public PathTracingRenderer(int maxDepth) {
+	public PathTracingRenderer(int maxDepth, int lightSamples) {
 		
 		this.maxDepth = maxDepth;
+		this.lightSamples = lightSamples;
 	}
 	
 	@Override
@@ -83,27 +87,60 @@ public class PathTracingRenderer extends Renderer {
 			
 			for (Light light : scene.getLights()) {
 				
-				final var lightP = light.sampleSurface(interaction, sample.getSample());
-				final var lightV = Vector3D.from(lightP.subtract(interaction.getPoint()));
+				//
+				// If this is a delta (i.e., dimensionless) light, then we'll only
+				// bother doing 1 sample.
+				//
+				final var lightSampleCount = (light.isDelta() ? 1 : lightSamples);
 				
-				//
-				// If the direction to the light is on the other side of the surface from the
-				// normal, then we won't be able to see it and it doesn't count.
-				final var cos_i = lightV.normalize().dotProduct(Vector3D.from(interaction.getNormal()));
-				if (cos_i < 0d)
-					continue;
-					
-				//
-				// Determine if we can see the light-source at all.
-				if (!light.isVisible(lightP, interaction, scene))
-					continue;
-					
-				//
-				// Calculate the total energy available after falloff.
-				final var falloff = 1d / lightV.getMagnitudeSq();
-				final var lightIrradiance = light.getRadiance(lightP, interaction).multiply(falloff).multiply(cos_i);
+				Spectrum totalLightIrradiance = SpectralPowerDistribution.BLACK;
 				
-				result = result.add(lightIrradiance);
+				for (int n = 0; n < lightSampleCount; n++) {
+					
+					final var lightSample = light.sampleSurface(interaction, sample.getSample());
+					final var lightP = lightSample.getPoint();
+					final var lightV = lightSample.getDirection();
+					final var lightPDF = lightSample.getPdf();
+					
+					final var scatteringPDF = mat.getReflectionP(interaction, lightV);
+					
+					//
+					// If the direction to the light is on the other side of the surface from the
+					// normal, then we won't be able to see it and it doesn't count.
+					final var cos_i = lightV.normalize().negate().dotProduct(Vector3D.from(interaction.getNormal()));
+					if (cos_i < 0d)
+						continue;
+						
+					//
+					// Determine if we can see the light-source at all.
+					if (!light.isVisible(lightP, interaction, scene))
+						continue;
+						
+					//
+					// If the light has no probability of being sampled, then we won't get any
+					// illumination from it.
+					if (lightPDF <= 0d)
+						continue;
+					
+					final var falloff = 1d / Vector3D.from(interaction.getPoint(), lightP).getMagnitudeSq();
+					
+					final var weight = getPowerHeuristic(lightSampleCount, lightPDF, 1, scatteringPDF);
+					
+					//
+					// Calculate the total energy available after falloff.
+					final Spectrum lightIrradiance;
+					if (light.isDelta())
+						lightIrradiance = light.getRadiance(lightP, interaction).multiply(falloff).multiply(cos_i);
+					else
+						lightIrradiance = light.getRadiance(lightP, interaction).multiply(falloff).multiply(cos_i)
+								.multiply(weight / scatteringPDF);
+					
+					totalLightIrradiance = totalLightIrradiance.add(lightIrradiance);
+					
+				}
+				
+				totalLightIrradiance = totalLightIrradiance.multiply(1d / (double) lightSampleCount);
+				result = result.add(totalLightIrradiance);
 			}
 			
 		}
@@ -129,14 +166,15 @@ public class PathTracingRenderer extends Renderer {
 		
 		if (mat.isReflective()) {
 			
-			final var reflectiveV = mat.getReflectionV(interaction, sample.getSample());
+			final var reflection = mat.getReflectionSample(interaction, sample.getSample());
+			final var reflectiveV = reflection.getDirection();
+			final var cos_i = FastMath.abs(reflectiveV.dotProduct(Vector3D.from(interaction.getNormal())));
 			
 			final var reflectiveRay = new Ray(interaction.getPoint(), reflectiveV, 0,
 					interaction.getInteractingRay().getDepth() + 1);
 			final var reflectiveIncident = this.estimate(new TracedSample(sample.getSample(), reflectiveRay), scene);
 			
-			return mat.getReflection(interaction, reflectiveV, reflectiveIncident.getRadiance())
-					.multiply(1d / mat.getReflectionP(interaction, reflectiveV));
+			return mat.getReflection(interaction, reflectiveV, reflectiveIncident.getRadiance()).multiply(cos_i);
 		}
 		
 		return new SpectralPowerDistribution();
@@ -147,17 +185,25 @@ public class PathTracingRenderer extends Renderer {
 		final var mat = interaction.getInteracted().getMaterial();
 		
 		if (mat.isTransmissive()) {
-			final var transmissiveV = mat.getTransmissionV(interaction, sample.getSample());
+			final var transmission = mat.getTransmissionSample(interaction, sample.getSample());
+			final var transmissiveV = transmission.getDirection();
+			final var cos_i = FastMath.abs(transmissiveV.dotProduct(Vector3D.from(interaction.getNormal())));
 			
 			final var transmissiveRay = new Ray(interaction.getPoint(), transmissiveV, 0,
 					interaction.getInteractingRay().getDepth() + 1);
 			final var transmissiveIncident = this.estimate(new TracedSample(sample.getSample(), transmissiveRay),
 					scene);
 			
-			return mat.getTransmission(interaction, transmissiveV, transmissiveIncident.getRadiance())
-					.multiply(1d / mat.getTransmissionP(interaction, transmissiveV));
+			return mat.getTransmission(interaction, transmissiveV, transmissiveIncident.getRadiance()).multiply(cos_i);
 		}
 		
 		return new SpectralPowerDistribution();
+	}
+	
+	protected double getPowerHeuristic(int nf, double pf, int ng, double pg) {
+		
+		final var f = nf * pf;
+		final var g = ng * pg;
+		return (f * f) / (f * f + g * g);
 	}
 }

@@ -3,6 +3,7 @@ package org.snowjak.rays.renderer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.Primitive;
 import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
@@ -10,6 +11,7 @@ import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interaction;
+import org.snowjak.rays.material.Material.MaterialSample;
 import org.snowjak.rays.sample.TracedSample;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
@@ -21,7 +23,8 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  *
  */
 @UIType(type = "monte-carlo", fields = { @UIField(name = "maxDepth", type = Integer.class, defaultValue = "4"),
-		@UIField(name = "n", type = Integer.class, defaultValue = "8") })
+		@UIField(name = "n", type = Integer.class, defaultValue = "8"),
+		@UIField(name = "lightSamples", type = Integer.class, defaultValue = "1") })
 public class MonteCarloRenderer extends PathTracingRenderer {
 	
 	private int n;
@@ -31,10 +34,13 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 	 * 
 	 * @param n
 	 *            the number of sample-points to use for each radiance estimate
+	 * @param lightSamples
+	 *            the number of sample-points to use for each direct-lighting
+	 *            estimate
 	 */
-	public MonteCarloRenderer(int maxDepth, int n) {
+	public MonteCarloRenderer(int maxDepth, int n, int lightSamples) {
 		
-		super(maxDepth);
+		super(maxDepth, lightSamples);
 		this.n = n;
 	}
 	
@@ -44,8 +50,8 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 		final var material = interaction.getInteracted().getMaterial();
 		
 		if (material.isEmissive())
-			return estimate(() -> material.getEmissionV(interaction, sample.getSample()),
-					(v) -> material.getEmission(interaction, v), (v) -> material.getEmissionP(interaction, v));
+			return estimate(() -> material.getEmissionSample(interaction, sample.getSample()),
+					(s) -> material.getEmission(interaction, s.getDirection()));
 		else
 			return new SpectralPowerDistribution();
 	}
@@ -55,11 +61,14 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 		
 		final var material = interaction.getInteracted().getMaterial();
 		
-		return estimate(() -> material.getReflectionV(interaction, sample.getSample()), (v) -> material.getReflection(
-				interaction, v,
-				estimate(new TracedSample(sample.getSample(),
-						new Ray(interaction.getPoint(), v, sample.getRay().getDepth() + 1)), scene).getRadiance()),
-				(v) -> material.getReflectionP(interaction, v));
+		return estimate(() -> material.getReflectionSample(interaction, sample.getSample()),
+				(s) -> material
+						.getReflection(interaction, s.getDirection(),
+								estimate(new TracedSample(sample.getSample(),
+										new Ray(interaction.getPoint(), s.getDirection(),
+												sample.getRay().getDepth() + 1)),
+										scene).getRadiance())
+						.multiply(Vector3D.from(interaction.getNormal()).dotProduct(s.getDirection())));
 	}
 	
 	@Override
@@ -68,27 +77,29 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 		final var material = interaction.getInteracted().getMaterial();
 		
 		if (material.isTransmissive())
-			return estimate(() -> material.getTransmissionV(interaction, sample.getSample()),
-					(v) -> material.getTransmission(interaction, v,
-							estimate(new TracedSample(sample.getSample(),
-									new Ray(interaction.getPoint(), v, sample.getRay().getDepth() + 1)), scene)
-											.getRadiance()),
-					(v) -> material.getTransmissionP(interaction, v));
+			return estimate(() -> material.getTransmissionSample(interaction, sample.getSample()),
+					(s) -> material
+							.getTransmission(interaction, s.getDirection(),
+									estimate(new TracedSample(sample.getSample(),
+											new Ray(interaction.getPoint(), s.getDirection(),
+													sample.getRay().getDepth() + 1)),
+											scene).getRadiance())
+							.multiply(
+									FastMath.abs(Vector3D.from(interaction.getNormal()).dotProduct(s.getDirection()))));
 		
 		else
 			return new SpectralPowerDistribution();
 	}
 	
-	private Spectrum estimate(Supplier<Vector3D> sampler, Function<Vector3D, Spectrum> function,
-			Function<Vector3D, Double> probability) {
+	private Spectrum estimate(Supplier<MaterialSample> sampler, Function<MaterialSample, Spectrum> function) {
 		
 		Spectrum energy = new SpectralPowerDistribution();
 		
 		if (n > 0) {
 			for (int i = 0; i < n; i++) {
 				
-				final var direction = sampler.get();
-				final var addend = function.apply(direction).multiply(1d / probability.apply(direction));
+				final var sample = sampler.get();
+				final var addend = function.apply(sample).multiply(1d / sample.getPdf());
 				
 				energy = energy.add(addend);
 				

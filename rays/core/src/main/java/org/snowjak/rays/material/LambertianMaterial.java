@@ -1,9 +1,13 @@
 package org.snowjak.rays.material;
 
-import static org.apache.commons.math3.util.FastMath.*;
+import static org.apache.commons.math3.util.FastMath.PI;
+import static org.apache.commons.math3.util.FastMath.cos;
+import static org.apache.commons.math3.util.FastMath.sin;
+import static org.apache.commons.math3.util.FastMath.sqrt;
 
-import org.snowjak.rays.annotations.UIType;
+import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
@@ -49,7 +53,7 @@ public class LambertianMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Vector3D getReflectionV(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Sample sample) {
 		
 		final var sphericalPoint = sample.getAdditional2DSample();
 		
@@ -76,13 +80,14 @@ public class LambertianMaterial implements Material {
 		//
 		// Convert the Cartesian coordinates to a Vector in the constructed
 		// coordinate system.
-		return i.multiply(x).add(j.multiply(y)).add(k.multiply(z)).normalize();
+		return new MaterialSample(i.multiply(x).add(j.multiply(y)).add(k.multiply(z)).normalize(),
+				1d / (2d * FastMath.PI));
 	}
 	
 	@Override
 	public <T extends Interactable<T>> double getReflectionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 1d / (2d * PI);
+		return 1d / (2d * FastMath.PI);
 	}
 	
 	@Override
@@ -92,9 +97,7 @@ public class LambertianMaterial implements Material {
 		final var cos_i = Vector3D.from(interaction.getNormal()).normalize().dotProduct(direction.normalize());
 		
 		return incident.multiply(
-				SpectralPowerDistribution.fromRGB(texture.getRGB(interaction))
-					.multiply(1d / PI)
-					.multiply(cos_i));
+				SpectralPowerDistribution.fromRGB(texture.getRGB(interaction)).multiply(1d / PI).multiply(cos_i));
 	}
 	
 	@Override
@@ -104,7 +107,7 @@ public class LambertianMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Vector3D getTransmissionV(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> MaterialSample getTransmissionSample(Interaction<T> interaction, Sample sample) {
 		
 		return null;
 	}
@@ -129,7 +132,7 @@ public class LambertianMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Vector3D getEmissionV(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> MaterialSample getEmissionSample(Interaction<T> interaction, Sample sample) {
 		
 		return null;
 	}

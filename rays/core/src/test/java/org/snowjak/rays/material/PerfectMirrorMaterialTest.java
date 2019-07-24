@@ -24,7 +24,7 @@ public class PerfectMirrorMaterialTest {
 		final var expectedReflection = new Vector3D(0, +1, 0);
 		
 		final var result = new PerfectMirrorMaterial(new ConstantTexture(RGB.WHITE))
-				.getReflectionV(interaction, new FixedSample()).normalize();
+				.getReflectionSample(interaction, new FixedSample()).getDirection().normalize();
 		
 		assertEquals(expectedReflection.getX(), result.getX(), 0.00001);
 		assertEquals(expectedReflection.getY(), result.getY(), 0.00001);

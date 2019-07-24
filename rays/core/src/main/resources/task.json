@@ -2,7 +2,8 @@
 	"uuid": "20f58c43-a87e-43c2-8355-9aa343779fe6",
 	"renderer": {
 		"type": "path-tracing",
-		"maxDepth": 4
+		"maxDepth": 4,
+		"lightSamples": 4
 	},
 	"film": {
 		"filter": {
@@ -11,14 +12,18 @@
 			"b": 0.33333,
 			"c": 0.33333
 		},
+		"aperture": 16.0,
+		"exposureTime": 0.04,
+		"isoSensitivity": 100,
+		"calibrationConstant": 12.4,
 		"width": 400,
 		"height": 300
 	},
 	"sampler": {
-		"type": "best-candidate",
-		"samplesPerPixel": 1,
-		"additional1DSamples": 16,
-		"additional2DSamples": 16,
+		"type": "stratified",
+		"samplesPerPixel": 4,
+		"additional1DSamples": 9,
+		"additional2DSamples": 9,
 		"xStart": 0.0,
 		"xEnd": 399.0,
 		"yStart": 0.0,
@@ -178,10 +183,10 @@
 						}
 					]
 				},
-				"rgb": {
-					"red": 30.0,
-					"green": 30.0,
-					"blue": 30.0
+				"power": {
+					"type": "blackbody",
+					"kelvin": 2800,
+					"intensity": 250
 				}
 			}
 		]

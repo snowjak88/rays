@@ -1,8 +1,8 @@
 package org.snowjak.rays.material;
 
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
@@ -45,6 +45,12 @@ public class PerfectMirrorMaterial implements Material {
 	}
 	
 	@Override
+	public boolean isDelta() {
+		
+		return true;
+	}
+	
+	@Override
 	public boolean isDirectLightable() {
 		
 		return false;
@@ -64,9 +70,9 @@ public class PerfectMirrorMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Vector3D getReflectionV(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Sample sample) {
 		
-		return getReflection(interaction.getW_e(), interaction.getNormal());
+		return new MaterialSample(getReflection(interaction.getW_e(), interaction.getNormal()), 1d);
 	}
 	
 	@Override
@@ -120,7 +126,7 @@ public class PerfectMirrorMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Vector3D getTransmissionV(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> MaterialSample getTransmissionSample(Interaction<T> interaction, Sample sample) {
 		
 		return null;
 	}
@@ -145,7 +151,7 @@ public class PerfectMirrorMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Vector3D getEmissionV(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> MaterialSample getEmissionSample(Interaction<T> interaction, Sample sample) {
 		
 		return null;
 	}

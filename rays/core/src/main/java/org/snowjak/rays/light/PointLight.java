@@ -1,8 +1,10 @@
 package org.snowjak.rays.light;
 
+import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point3D;
+import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
@@ -63,9 +65,10 @@ public class PointLight implements Light {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Point3D sampleSurface(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> LightSample sampleSurface(Interaction<T> interaction, Sample sample) {
 		
-		return position;
+		return new LightSample(position, Vector3D.from(position, interaction.getPoint()).normalize(),
+				1d / (4d * FastMath.PI));
 	}
 	
 	@Override

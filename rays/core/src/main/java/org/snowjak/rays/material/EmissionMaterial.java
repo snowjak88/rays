@@ -3,6 +3,7 @@
  */
 package org.snowjak.rays.material;
 
+import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
@@ -53,15 +54,15 @@ public class EmissionMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Vector3D getReflectionV(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Sample sample) {
 		
-		return interaction.getW_e();
+		return null;
 	}
 	
 	@Override
 	public <T extends Interactable<T>> double getReflectionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 1d;
+		return 0;
 	}
 	
 	@Override
@@ -78,15 +79,15 @@ public class EmissionMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Vector3D getTransmissionV(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> MaterialSample getTransmissionSample(Interaction<T> interaction, Sample sample) {
 		
-		return interaction.getW_e();
+		return null;
 	}
 	
 	@Override
 	public <T extends Interactable<T>> double getTransmissionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 1d;
+		return 0;
 	}
 	
 	@Override
@@ -103,15 +104,15 @@ public class EmissionMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Vector3D getEmissionV(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> MaterialSample getEmissionSample(Interaction<T> interaction, Sample sample) {
 		
-		return interaction.getW_e();
+		return new MaterialSample(interaction.getW_e(), 1d / (2d * FastMath.PI));
 	}
 	
 	@Override
 	public <T extends Interactable<T>> double getEmissionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 1d;
+		return 1d / (2d * FastMath.PI);
 	}
 	
 	@Override

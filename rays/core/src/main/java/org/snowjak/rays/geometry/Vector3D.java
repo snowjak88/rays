@@ -63,6 +63,19 @@ public class Vector3D extends Triplet implements Serializable {
 		return new Vector3D(t.get(0), t.get(1), t.get(2));
 	}
 	
+	/**
+	 * Create a Vector3D pointing from one Point3D to another. This Vector3D is
+	 * <strong>not</strong> normalized.
+	 * 
+	 * @param from
+	 * @param to
+	 * @return
+	 */
+	public static Vector3D from(Point3D from, Point3D to) {
+		
+		return new Vector3D(to.get(0) - from.get(0), to.get(1) - from.get(1), to.get(2) - from.get(2));
+	}
+	
 	public Vector3D(double x, double y, double z) {
 		
 		super(x, y, z);

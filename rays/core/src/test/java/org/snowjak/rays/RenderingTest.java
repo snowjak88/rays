@@ -43,7 +43,7 @@ public class RenderingTest {
 		
 		final var scene = new Scene(primitives, camera, lights);
 		
-		final var renderer = new PathTracingRenderer(3);
+		final var renderer = new PathTracingRenderer(3, 1);
 		
 		final var sample = new FixedSample(new Point2D(100d, 100d - 100d * cos(45d * PI / 180d)), new Point2D(0.5, 0.5),
 				0, Arrays.asList(0.5, 0.5, 0.5, 0.5), Arrays.asList(new Point2D(0.5, 0.5), new Point2D(0.5, 0.5),
@@ -70,7 +70,8 @@ public class RenderingTest {
 		
 		final var l = scene.getLights().iterator().next();
 		
-		final var lp = l.sampleSurface(interaction, sample);
+		final var ls = l.sampleSurface(interaction, sample);
+		final var lp = ls.getPoint();
 		assertEquals(0, lp.getX(), 0.00001);
 		assertEquals(3, lp.getY(), 0.00001);
 		assertEquals(3d + sin(45d * PI / 180d), lp.getZ(), 0.00001);

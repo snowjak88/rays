@@ -35,6 +35,18 @@ public interface Material {
 			Spectrum irradiance);
 	
 	/**
+	 * Indicates whether this Material has only 1 reflection and 1 transmission
+	 * vector -- i.e., if the renderer should only bother doing 1 sample each for
+	 * reflection and transmission.
+	 * 
+	 * @return
+	 */
+	public default boolean isDelta() {
+		
+		return false;
+	}
+	
+	/**
 	 * Indicates whether this Material should be queried for reflection.
 	 * 
 	 * @return
@@ -51,7 +63,7 @@ public interface Material {
 	 * @param sample
 	 * @return <code>null</code> if no reflection is possible
 	 */
-	public <T extends Interactable<T>> Vector3D getReflectionV(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Sample sample);
 	
 	/**
 	 * For the given {@link Interaction} and previously-selected
@@ -96,7 +108,7 @@ public interface Material {
 	 * @param sample
 	 * @return <code>null</code> if no transmission is possible
 	 */
-	public <T extends Interactable<T>> Vector3D getTransmissionV(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> MaterialSample getTransmissionSample(Interaction<T> interaction, Sample sample);
 	
 	/**
 	 * For the given {@link Interaction} and previously-selected
@@ -141,7 +153,7 @@ public interface Material {
 	 * @param sample
 	 * @return <code>null</code> if no emission is possible
 	 */
-	public <T extends Interactable<T>> Vector3D getEmissionV(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> MaterialSample getEmissionSample(Interaction<T> interaction, Sample sample);
 	
 	/**
 	 * For the given {@link Interaction} and previously-selected emission-direction,
@@ -165,4 +177,44 @@ public interface Material {
 	 */
 	public <T extends Interactable<T>> Spectrum getEmission(Interaction<T> interaction, Vector3D direction);
 	
+	/**
+	 * Data bean holding a sampled direction and its associated PDF for this
+	 * Material.
+	 * 
+	 * @author snowjak88
+	 *
+	 */
+	public static class MaterialSample {
+		
+		private final Vector3D direction;
+		private final double pdf;
+		
+		public MaterialSample(Vector3D direction, double pdf) {
+			
+			this.direction = direction.normalize();
+			this.pdf = pdf;
+		}
+		
+		/**
+		 * Get the normalized direction, extending away from the Material at the sampled
+		 * point.
+		 * 
+		 * @return
+		 */
+		public Vector3D getDirection() {
+			
+			return direction;
+		}
+		
+		/**
+		 * Get the PDF that this particular direction would have been chosen.
+		 * 
+		 * @return
+		 */
+		public double getPdf() {
+			
+			return pdf;
+		}
+		
+	}
 }
