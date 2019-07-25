@@ -19,22 +19,34 @@ import com.google.common.util.concurrent.MoreExecutors;
 public class App extends SpringApplication {
 	
 	@Value("${rays.worker.threads}")
-	private int parallelism = max(1, Runtime.getRuntime().availableProcessors() - 1);
+	private int parallelism;
 	
 	@Value("${rays.worker.queueSize}")
-	private int queueSize = 1;
+	private int queueSize;
 	
 	public static void main(String[] args) {
 		
 		SpringApplication.run(App.class, args);
 	}
 	
+	private int getParallelism() {
+		if (parallelism < 1)
+			parallelism = max(1, Runtime.getRuntime().availableProcessors() - 1);
+		return parallelism;
+	}
+	
+	private int getQueueSize() {
+		if (queueSize < 1)
+			queueSize = 1;
+		return queueSize;
+	}
+	
 	@Bean("renderTaskExecutor")
 	public ListeningExecutorService renderTaskExecutor() {
 		
 		final var executor = MoreExecutors
-				.listeningDecorator(new ThreadPoolExecutor(parallelism, parallelism, 30, TimeUnit.SECONDS,
-						new LinkedBlockingQueue<>(queueSize), new BlocksUntilReadyRejectedExecutionHandler()));
+				.listeningDecorator(new ThreadPoolExecutor(getParallelism(), getParallelism(), 30, TimeUnit.SECONDS,
+						new LinkedBlockingQueue<>(getQueueSize()), new BlocksUntilReadyRejectedExecutionHandler()));
 		
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> executor.shutdownNow()));
 		return executor;
@@ -44,8 +56,8 @@ public class App extends SpringApplication {
 	public ListeningExecutorService renderResultExecutor() {
 		
 		final var executor = MoreExecutors
-				.listeningDecorator(new ThreadPoolExecutor(parallelism, parallelism, 30, TimeUnit.SECONDS,
-						new LinkedBlockingQueue<>(queueSize), new BlocksUntilReadyRejectedExecutionHandler()));
+				.listeningDecorator(new ThreadPoolExecutor(getParallelism(), getParallelism(), 30, TimeUnit.SECONDS,
+						new LinkedBlockingQueue<>(getQueueSize()), new BlocksUntilReadyRejectedExecutionHandler()));
 		
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> executor.shutdownNow()));
 		return executor;
