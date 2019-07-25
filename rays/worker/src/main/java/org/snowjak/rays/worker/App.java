@@ -1,5 +1,7 @@
 package org.snowjak.rays.worker;
 
+import static org.apache.commons.math3.util.FastMath.max;
+
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -17,10 +19,10 @@ import com.google.common.util.concurrent.MoreExecutors;
 public class App extends SpringApplication {
 	
 	@Value("${rays.worker.threads}")
-	private int parallelism = 1;
+	private int parallelism = max(1, Runtime.getRuntime().availableProcessors() - 1);
 	
 	@Value("${rays.worker.queueSize}")
-	private int queueSize = 4;
+	private int queueSize = 1;
 	
 	public static void main(String[] args) {
 		
