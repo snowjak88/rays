@@ -15,6 +15,7 @@ services:
       - SERVER1CERTIFICATE_DNAME=/CN=snowjak88/OU=rays/O=snowjak88.org
       - SERVER1HTTPS_ENABLED=true
       - SERVER1HTTP_ENABLED=false
+    restart: always
   
   frontend:
     image: ${group}/frontend:${version}
@@ -31,6 +32,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=rays
       - SPRING_DATASOURCE_PASSWORD=rays
       - SPRING_JPA_DATABASE=mysql
+    restart: always
   
   frontend-db:
     image: biarms/mysql:latest
@@ -40,11 +42,13 @@ services:
       - MYSQL_DATABASE=rays
       - MYSQL_USER=rays
       - MYSQL_PASSWORD=rays
+    restart: always
   
   rays-mq:
     build:
       context: ./rays-mq
     image: rays-mq:latest
+    restart: always
   
   worker:
     image: ${group}/worker:${version}
@@ -54,4 +58,5 @@ services:
     environment:
       - SPRING_RABBITMQ_HOST=rays-mq
       - RAYS_WORKER_THREADS=1
+    restart: always
 
