@@ -4,22 +4,20 @@ plugins {
 }
 
 dependencies {
-	compile('org.springframework.boot:spring-boot-starter-amqp')
-	compile('org.springframework.boot:spring-boot-starter-data-jpa')
-	compile('org.springframework.boot:spring-boot-starter-security')
+	compile('org.springframework.data:spring-data-jpa')
+	compile('javax.persistence:javax.persistence-api')
+	compile('javax.annotation:javax.annotation-api')
+	compile('org.hibernate:hibernate-jpamodelgen')
+	compile('org.springframework.security:spring-security-acl')
 
 		
 	compile('com.querydsl:querydsl-jpa:4.1.4')
 	
 	
-	compile('com.vaadin:vaadin-spring-boot-starter')
+	compile('com.vaadin:vaadin-server')
 
 	
 	compile('javax.xml.bind:jaxb-api:2.3.0')
-	
-	
-	testCompile('org.springframework.boot:spring-boot-starter-test')
-	testCompile('org.springframework.security:spring-security-test')
 }
 
 querydsl {
