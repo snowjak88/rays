@@ -38,7 +38,7 @@ plugins {
 }
 
 group = 'org.snowjak'
-version = '0.3.3'
+version = '0.3.4'
 wrapper { gradleVersion = 5.5 }
 
 
@@ -76,8 +76,13 @@ project.ext.bootableProjects = [
 project.ext.coreableProjects = [
 	"frontend",
 	"spectrum-generator",
+	"support",
 	"worker"
 ]
+
+//
+// All projects which have :support as a dependency
+project.ext.supportableProjects = ["frontend", "worker"]
 
 //
 // All projects which will produce a Docker image
@@ -90,6 +95,17 @@ subprojects { p ->
 	p.version = rootProject.version
 	
 	apply plugin: 'io.spring.dependency-management'
+	
+	
+	ext { vaadinVersion = '8.+' }
+	
+	dependencyManagement {
+		imports {
+			mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+			mavenBom "com.vaadin:vaadin-bom:${vaadinVersion}"
+		}
+	}
+	
 	
 	
 	//
@@ -110,6 +126,18 @@ subprojects { p ->
 			duplicatesStrategy = 'include'
 		}
 		processResources.dependsOn( copyDataFromCore )
+	}
+	
+	
+	//
+	// If this project depends on :support ...
+	//
+	if ( supportableProjects.contains( p.name ) ) {
+		
+		dependencies { compile project(":support") }
+		
+		clean.dependsOn( project(":support").clean )
+		test.dependsOn( project(":support").test )
 	}
 	
 	

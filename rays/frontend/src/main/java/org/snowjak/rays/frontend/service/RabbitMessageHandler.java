@@ -13,7 +13,7 @@ import org.snowjak.rays.frontend.messages.backend.ReceivedRenderProgressUpdate;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestMultipleRenderTaskSubmission;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestRenderDeletion;
 import org.snowjak.rays.frontend.messages.backend.commands.RequestSingleRenderTaskSubmission;
-import org.snowjak.rays.frontend.model.repository.RenderRepository;
+import org.snowjak.rays.support.model.repository.RenderRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -3,9 +3,9 @@ package org.snowjak.rays.frontend.ui.dataproviders;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.snowjak.rays.frontend.model.entity.QRender;
-import org.snowjak.rays.frontend.model.entity.Render;
-import org.snowjak.rays.frontend.model.repository.RenderRepository;
+import org.snowjak.rays.support.model.entity.QRender;
+import org.snowjak.rays.support.model.entity.Render;
+import org.snowjak.rays.support.model.repository.RenderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

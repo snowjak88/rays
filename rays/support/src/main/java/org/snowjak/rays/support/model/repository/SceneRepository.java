@@ -1,6 +1,6 @@
-package org.snowjak.rays.frontend.model.repository;
+package org.snowjak.rays.support.model.repository;
 
-import org.snowjak.rays.frontend.model.entity.Scene;
+import org.snowjak.rays.support.model.entity.Scene;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,4 +1,4 @@
-package org.snowjak.rays.frontend.model.entity;
+package org.snowjak.rays.support.model.entity;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;

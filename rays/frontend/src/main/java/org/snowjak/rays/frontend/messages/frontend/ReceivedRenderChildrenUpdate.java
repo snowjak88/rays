@@ -1,6 +1,6 @@
 package org.snowjak.rays.frontend.messages.frontend;
 
-import org.snowjak.rays.frontend.model.entity.Render;
+import org.snowjak.rays.support.model.entity.Render;
 
 public class ReceivedRenderChildrenUpdate {
 	

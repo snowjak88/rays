@@ -11,8 +11,10 @@ import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -23,6 +25,8 @@ import com.google.common.eventbus.EventBus;
 @SpringBootApplication(scanBasePackages = "org.snowjak.rays.frontend")
 @EnableRabbit
 @EnableTransactionManagement
+@EnableJpaRepositories(basePackages = "org.snowjak.rays.support.model.repository")
+@EntityScan(basePackages = "org.snowjak.rays.support.model.entity")
 @EnableJpaAuditing
 public class App {
 	

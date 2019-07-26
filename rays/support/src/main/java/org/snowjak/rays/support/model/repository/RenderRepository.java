@@ -1,8 +1,8 @@
-package org.snowjak.rays.frontend.model.repository;
+package org.snowjak.rays.support.model.repository;
 
 import java.util.stream.Stream;
 
-import org.snowjak.rays.frontend.model.entity.Render;
+import org.snowjak.rays.support.model.entity.Render;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.PagingAndSortingRepository;

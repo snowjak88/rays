@@ -1,4 +1,4 @@
-package org.snowjak.rays.frontend.model.entity;
+package org.snowjak.rays.support.model.entity;
 
 import javax.persistence.Basic;
 import javax.persistence.Column;
@@ -77,9 +77,9 @@ public class Scene {
 		this.json = json;
 	}
 	
-	public org.snowjak.rays.Scene inflate() throws JsonParseException {
+	public org.snowjak.rays.support.model.entity.Scene inflate() throws JsonParseException {
 		
-		return Settings.getInstance().getGson().fromJson(getJson(), org.snowjak.rays.Scene.class);
+		return Settings.getInstance().getGson().fromJson(getJson(), org.snowjak.rays.support.model.entity.Scene.class);
 	}
 	
 }

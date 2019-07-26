@@ -34,11 +34,11 @@ import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderChildrenUpdate;
 import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderCreation;
 import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderDeletion;
 import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderUpdate;
-import org.snowjak.rays.frontend.model.entity.Render;
-import org.snowjak.rays.frontend.model.repository.RenderRepository;
-import org.snowjak.rays.frontend.model.repository.SceneRepository;
 import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sampler.Sampler;
+import org.snowjak.rays.support.model.entity.Render;
+import org.snowjak.rays.support.model.repository.RenderRepository;
+import org.snowjak.rays.support.model.repository.SceneRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -161,7 +161,7 @@ public class RenderUpdateService {
 		final var filmJson = Settings.getInstance().getGson().toJson(renderTask.getFilm());
 		final var sceneJson = Settings.getInstance().getGson().toJson(renderTask.getScene());
 		
-		var sceneEntity = new org.snowjak.rays.frontend.model.entity.Scene();
+		var sceneEntity = new org.snowjak.rays.support.model.entity.Scene();
 		sceneEntity.setJson(sceneJson);
 		LOG.debug("Saving bundled scene as a new Scene entry (ID={})", sceneEntity.getId());
 		sceneEntity = sceneRepository.save(sceneEntity);
