@@ -62,13 +62,11 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 		final var material = interaction.getInteracted().getMaterial();
 		
 		return estimate(() -> material.getReflectionSample(interaction, sample.getSample()),
-				(s) -> material
-						.getReflection(interaction, s.getDirection(),
-								estimate(new TracedSample(sample.getSample(),
-										new Ray(interaction.getPoint(), s.getDirection(),
-												sample.getRay().getDepth() + 1)),
-										scene).getRadiance())
-						.multiply(Vector3D.from(interaction.getNormal()).dotProduct(s.getDirection())));
+				(s) -> material.getReflection(interaction, s.getDirection(),
+						estimate(new TracedSample(sample.getSample(),
+								new Ray(interaction.getPoint(), s.getDirection(), sample.getRay().getDepth() + 1)),
+								scene).getRadiance().multiply(
+										Vector3D.from(interaction.getNormal()).dotProduct(s.getDirection()))));
 	}
 	
 	@Override
@@ -77,15 +75,15 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 		final var material = interaction.getInteracted().getMaterial();
 		
 		if (material.isTransmissive())
-			return estimate(() -> material.getTransmissionSample(interaction, sample.getSample()),
-					(s) -> material
-							.getTransmission(interaction, s.getDirection(),
-									estimate(new TracedSample(sample.getSample(),
-											new Ray(interaction.getPoint(), s.getDirection(),
-													sample.getRay().getDepth() + 1)),
-											scene).getRadiance())
-							.multiply(
-									FastMath.abs(Vector3D.from(interaction.getNormal()).dotProduct(s.getDirection()))));
+			return estimate(
+					() -> material.getTransmissionSample(interaction, sample
+							.getSample()),
+					(s) -> material.getTransmission(interaction, s.getDirection(),
+							estimate(new TracedSample(sample.getSample(),
+									new Ray(interaction.getPoint(), s.getDirection(), sample.getRay().getDepth() + 1)),
+									scene).getRadiance()
+											.multiply(FastMath.abs(Vector3D.from(interaction.getNormal())
+													.dotProduct(s.getDirection())))));
 		
 		else
 			return new SpectralPowerDistribution();
