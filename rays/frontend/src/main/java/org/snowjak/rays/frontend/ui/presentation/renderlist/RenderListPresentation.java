@@ -87,7 +87,7 @@ public class RenderListPresentation
 		ID("id", (r, p) -> r.getUuid()),
 		/**
 		 */
-		PROGRESS("progress", (r, p) -> Float.toString(r.getPercentCompleteFloat())),
+		PROGRESS("progress", (r, p) -> r.getPercentCompleteFloat() == null ? "0" : Float.toString(r.getPercentCompleteFloat())),
 		/**
 		 */
 		SIZE("size", (r, p) -> r.getSize()),

@@ -73,9 +73,8 @@ public class V0_0_1__SetupSampleSceneAndRender extends BaseJavaMigration {
 		}
 		
 		try (PreparedStatement insertRender = context.getConnection().prepareStatement(
-				"insert into render ( uuid, version, scene_id, decomposed, width, height, spp, offsetx, offsety, sampler_json, renderer_json, film_json ) "
-						+ "select ?, s.id, ?, ?, ?, ?, ?, 0, 0, ?, ?, ? "
-						+ "from scene s where s.nickname = 'Sample Scene'")) {
+				"insert into render ( uuid, version, scene_id, decomposed, width, height, spp, offsetx, offsety, percent_complete, sampler_json, renderer_json, film_json ) "
+						+ "values ( ?, 1, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?, ? )")) {
 			
 			final String samplerJson = Settings.getInstance().getGson().toJson(rt.getSampler()),
 					rendererJson = Settings.getInstance().getGson().toJson(rt.getRenderer()),

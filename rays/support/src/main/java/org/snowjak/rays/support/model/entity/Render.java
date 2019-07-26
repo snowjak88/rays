@@ -101,7 +101,7 @@ public class Render {
 	
 	@Basic(optional = true)
 	@Column(name = "percent_complete")
-	private int percentComplete = 0;
+	private Integer percentComplete = 0;
 	
 	@Lob
 	@Basic(optional = true, fetch = FetchType.LAZY)
@@ -339,6 +339,8 @@ public class Render {
 	
 	public Float getPercentCompleteFloat() {
 		
+		if (percentComplete == null)
+			return null;
 		return ((float) percentComplete) / 100f;
 	}
 	
