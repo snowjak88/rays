@@ -1,9 +1,14 @@
 .gradle/
 /build/
 !gradle/wrapper/gradle-wrapper.jar
-frontend/src/querydsl/
+
+docker-compose.yml
+
+support/src/querydsl/
+
 frontend/data/
 spectrum-generator/data/
+support/data/
 worker/data/
 
 ### STS ###
