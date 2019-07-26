@@ -41,7 +41,7 @@ public class RenderingTest {
 				new PointLight(new Point3D(0, 3, 3d + sin(45d * PI / 180d)), (SpectralPowerDistribution) Settings
 						.getInstance().getIlluminatorSpectralPowerDistribution().multiply(falloff)));
 		
-		final var scene = new Scene(primitives, camera, lights);
+		final var scene = new Scene(primitives, lights);
 		
 		final var renderer = new PathTracingRenderer(3, 1);
 		

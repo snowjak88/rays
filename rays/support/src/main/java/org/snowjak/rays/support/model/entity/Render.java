@@ -23,6 +23,7 @@ import javax.persistence.Table;
 import javax.persistence.Version;
 
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.camera.Camera;
 import org.snowjak.rays.film.Film;
 import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sampler.Sampler;
@@ -94,9 +95,13 @@ public class Render {
 	@Column(name = "film_json")
 	private String filmJson = "";
 	
-	@Basic
+	@Basic(optional = false)
+	@Column(name = "camera_json")
+	private String cameraJson = "";
+	
+	@Basic(optional = true)
 	@Column(name = "percent_complete")
-	private int percentComplete = 0;
+	private Integer percentComplete = 0;
 	
 	@Lob
 	@Basic(optional = true, fetch = FetchType.LAZY)
@@ -106,6 +111,7 @@ public class Render {
 	private transient Sampler sampler = null;
 	private transient Renderer renderer = null;
 	private transient Film film = null;
+	private transient Camera camera = null;
 	private transient Resource result = null;
 	
 	public String getUuid() {
@@ -315,17 +321,30 @@ public class Render {
 		this.film = null;
 	}
 	
-	public int getPercentComplete() {
+	public String getCameraJson() {
+		
+		return cameraJson;
+	}
+	
+	public void setCameraJson(String cameraJson) {
+		
+		this.cameraJson = cameraJson;
+		this.camera = null;
+	}
+	
+	public Integer getPercentComplete() {
 		
 		return percentComplete;
 	}
 	
 	public Float getPercentCompleteFloat() {
 		
+		if (percentComplete == null)
+			return null;
 		return ((float) percentComplete) / 100f;
 	}
 	
-	public void setPercentComplete(int percentComplete) {
+	public void setPercentComplete(Integer percentComplete) {
 		
 		this.percentComplete = percentComplete;
 	}
@@ -360,6 +379,13 @@ public class Render {
 		if (film == null)
 			film = Settings.getInstance().getGson().fromJson(getFilmJson(), Film.class);
 		return film;
+	}
+	
+	public Camera inflateCamera() throws JsonParseException {
+		
+		if (camera == null)
+			camera = Settings.getInstance().getGson().fromJson(getCameraJson(), Camera.class);
+		return camera;
 	}
 	
 	public Resource inflateResultAsResource() {

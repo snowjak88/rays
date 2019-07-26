@@ -1,0 +1,1 @@
+alter table render drop column temp_camera_json;

@@ -1,6 +1,8 @@
 plugins {
 	id 'org.springframework.boot' apply false
 	id 'com.ewerk.gradle.plugins.querydsl' version '1.0.9'
+	
+	id 'io.github.divinespear.jpa-schema-generate' version '0.3.5.1'
 }
 
 dependencies {
@@ -12,6 +14,8 @@ dependencies {
 
 		
 	compile('com.querydsl:querydsl-jpa:4.1.4')
+	
+	compile('org.flywaydb:flyway-core:5+')
 	
 	
 	compile('com.vaadin:vaadin-server')
@@ -27,4 +31,30 @@ querydsl {
 
 compileQuerydsl {
     options.annotationProcessorPath = configurations.querydsl
+}
+
+generateSchema {
+	vendor = 'hibernate+spring'
+	packageToScan = [ 'org.snowjak.rays.support.model.entity' ]
+	scriptAction = 'create'
+	createOutputFileName = 'V0.0__Initial schema.sql'
+	targets {
+		generateMySQLSchema {
+			outputDirectory = file("$projectDir/src/main/resources/db/migration/mysql")
+			databaseProductName = 'org.hibernate.dialect.MySQL5Dialect'
+			databaseMajorVersion = 5
+			properties = [
+				'hibernate.dialect': 'org.hibernate.dialect.MySQL5Dialect',
+				'hibernate.dialect.storage_engine': 'innodb'
+				]
+		}
+		generateHSQLDBSchema {
+			outputDirectory = file("$projectDir/src/main/resources/db/migration/hsqldb")
+			databaseProductName = 'HSQL Database Engine'
+			properties = [
+				'hibernate.dialect': 'org.hibernate.dialect.HSQLDialect'
+				]
+		}
+	}
+	
 }

@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.snowjak.rays.RenderTask;
 import org.snowjak.rays.Scene;
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.camera.Camera;
 import org.snowjak.rays.film.Film;
 import org.snowjak.rays.film.Film.Image;
 import org.snowjak.rays.frontend.messages.backend.ReceivedNewRenderResult;
@@ -159,6 +160,7 @@ public class RenderUpdateService {
 		final var samplerJson = Settings.getInstance().getGson().toJson(renderTask.getSampler());
 		final var rendererJson = Settings.getInstance().getGson().toJson(renderTask.getRenderer());
 		final var filmJson = Settings.getInstance().getGson().toJson(renderTask.getFilm());
+		final var cameraJson = Settings.getInstance().getGson().toJson(renderTask.getCamera());
 		final var sceneJson = Settings.getInstance().getGson().toJson(renderTask.getScene());
 		
 		var sceneEntity = new org.snowjak.rays.support.model.entity.Scene();
@@ -166,7 +168,8 @@ public class RenderUpdateService {
 		LOG.debug("Saving bundled scene as a new Scene entry (ID={})", sceneEntity.getId());
 		sceneEntity = sceneRepository.save(sceneEntity);
 		
-		final var renderID = saveNewRender(samplerJson, rendererJson, filmJson, sceneEntity.getId(), null, 0, 0);
+		final var renderID = saveNewRender(samplerJson, rendererJson, filmJson, cameraJson, sceneEntity.getId(), null,
+				0, 0);
 		
 		LOG.info("Saved JSON as new Render+Scene.");
 		return renderID;
@@ -225,7 +228,8 @@ public class RenderUpdateService {
 				final var childSamplerJson = Settings.getInstance().getGson().toJson(childSampler);
 				
 				final var childRenderId = saveNewRender(childSamplerJson, parentRender.getRendererJson(),
-						parentRender.getFilmJson(), parentRender.getScene().getId(), parentRender.getUuid(), x1, y1);
+						parentRender.getFilmJson(), parentRender.getCameraJson(), parentRender.getScene().getId(),
+						parentRender.getUuid(), x1, y1);
 				LOG.debug("Created child render (UUID={})", childRenderId.toString());
 				
 				final var childRender = renderRepository.findById(childRenderId.toString()).get();
@@ -242,15 +246,15 @@ public class RenderUpdateService {
 	}
 	
 	@Transactional
-	private UUID saveNewRender(String samplerJson, String rendererJson, String filmJson, long sceneId,
-			String parentID) {
+	private UUID saveNewRender(String samplerJson, String rendererJson, String filmJson, String cameraJson,
+			long sceneId, String parentID) {
 		
-		return saveNewRender(samplerJson, rendererJson, filmJson, sceneId, parentID, 0, 0);
+		return saveNewRender(samplerJson, rendererJson, filmJson, cameraJson, sceneId, parentID, 0, 0);
 	}
 	
 	@Transactional
-	private UUID saveNewRender(String samplerJson, String rendererJson, String filmJson, long sceneId, String parentID,
-			int offsetX, int offsetY) {
+	private UUID saveNewRender(String samplerJson, String rendererJson, String filmJson, String cameraJson,
+			long sceneId, String parentID, int offsetX, int offsetY) {
 		
 		final var foundScene = sceneRepository.findById(sceneId);
 		if (!foundScene.isPresent())
@@ -265,6 +269,7 @@ public class RenderUpdateService {
 		render.setSamplerJson(samplerJson);
 		render.setRendererJson(rendererJson);
 		render.setFilmJson(filmJson);
+		render.setCameraJson(cameraJson);
 		render.setScene(scene);
 		render.setParent(parentRender);
 		
@@ -338,8 +343,17 @@ public class RenderUpdateService {
 			throw new JsonParseException("Cannot inflate Scene (ID = " + sceneEntity.getId() + ")", e);
 		}
 		
-		final var renderTask = new RenderTask(uuid, sampler, renderer, film, scene, renderEntity.get().getOffsetX(),
-				renderEntity.get().getOffsetY());
+		LOG.trace("UUID={}: Inflating Camera from JSON ...", uuid.toString());
+		Camera camera = null;
+		try {
+			camera = Settings.getInstance().getGson().fromJson(renderEntity.get().getCameraJson(), Camera.class);
+		} catch (JsonParseException e) {
+			throw new JsonParseException("Cannot inflate Camera settings from Render(UUID = " + uuid.toString() + ")",
+					e);
+		}
+		
+		final var renderTask = new RenderTask(uuid, sampler, renderer, film, scene, camera,
+				renderEntity.get().getOffsetX(), renderEntity.get().getOffsetY());
 		
 		LOG.debug("UUID={}: Created RenderTask from database.");
 		return renderTask;

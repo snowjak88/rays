@@ -88,16 +88,18 @@ public class NodeTest {
 		
 		final var bean = new BeanNode(RenderTask.class);
 		
-		assertEquals(4, bean.getFieldNames().size());
+		assertEquals(5, bean.getFieldNames().size());
 		
 		assertNotNull(bean.getField("sampler"));
 		assertNotNull(bean.getField("renderer"));
 		assertNotNull(bean.getField("film"));
+		assertNotNull(bean.getField("camera"));
 		assertNotNull(bean.getField("scene"));
 		
 		assertTrue(bean.getField("sampler") instanceof BeanNode);
 		assertTrue(bean.getField("renderer") instanceof BeanNode);
 		assertTrue(bean.getField("film") instanceof BeanNode);
+		assertTrue(bean.getField("camera") instanceof BeanNode);
 	}
 	
 }

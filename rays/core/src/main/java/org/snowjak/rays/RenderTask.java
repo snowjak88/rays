@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.camera.Camera;
 import org.snowjak.rays.film.Film;
 import org.snowjak.rays.film.Film.Image;
 import org.snowjak.rays.renderer.Renderer;
@@ -28,7 +29,8 @@ import org.snowjak.rays.sampler.Sampler;
  *
  */
 @UIType(fields = { @UIField(name = "sampler", type = Sampler.class), @UIField(name = "renderer", type = Renderer.class),
-		@UIField(name = "film", type = Film.class), @UIField(name = "scene", type = Scene.class) })
+		@UIField(name = "film", type = Film.class), @UIField(name = "scene", type = Scene.class),
+		@UIField(name = "camera", type = Camera.class) })
 public class RenderTask implements Callable<Image> {
 	
 	private static final Logger LOG = System.getLogger(RenderTask.class.getName());
@@ -37,29 +39,32 @@ public class RenderTask implements Callable<Image> {
 	private Sampler sampler = null;
 	private Renderer renderer = null;
 	private Scene scene = null;
+	private Camera camera = null;
 	private Film film = null;
 	
 	private int offsetX = 0, offsetY = 0;
 	
 	private transient Consumer<ProgressInfo> progressConsumer = null;
 	
-	public RenderTask(Sampler sampler, Renderer renderer, Film film, Scene scene) {
+	public RenderTask(Sampler sampler, Renderer renderer, Film film, Scene scene, Camera camera) {
 		
-		this(UUID.randomUUID(), sampler, renderer, film, scene, 0, 0);
+		this(UUID.randomUUID(), sampler, renderer, film, scene, camera, 0, 0);
 	}
 	
-	public RenderTask(UUID uuid, Sampler sampler, Renderer renderer, Film film, Scene scene) {
+	public RenderTask(UUID uuid, Sampler sampler, Renderer renderer, Film film, Scene scene, Camera camera) {
 		
-		this(uuid, sampler, renderer, film, scene, 0, 0);
+		this(uuid, sampler, renderer, film, scene, camera, 0, 0);
 	}
 	
-	public RenderTask(UUID uuid, Sampler sampler, Renderer renderer, Film film, Scene scene, int offsetX, int offsetY) {
+	public RenderTask(UUID uuid, Sampler sampler, Renderer renderer, Film film, Scene scene, Camera camera, int offsetX,
+			int offsetY) {
 		
 		this.uuid = uuid;
 		this.sampler = sampler;
 		this.renderer = renderer;
 		this.film = film;
 		this.scene = scene;
+		this.camera = camera;
 		this.offsetX = offsetX;
 		this.offsetY = offsetY;
 	}
@@ -99,6 +104,11 @@ public class RenderTask implements Callable<Image> {
 		return scene;
 	}
 	
+	public Camera getCamera() {
+		
+		return camera;
+	}
+	
 	public int getOffsetX() {
 		
 		return offsetX;
@@ -128,7 +138,7 @@ public class RenderTask implements Callable<Image> {
 		LOG.log(Level.INFO, "Film = {0}", getFilm().getClass().getSimpleName());
 		LOG.log(Level.INFO, "Scene: {0} primitives, {1} lights",
 				getScene().getAccelerationStructure().getPrimitives().size(), getScene().getLights().size());
-		LOG.log(Level.INFO, "Camera: {0}", getScene().getCamera().getClass().getSimpleName());
+		LOG.log(Level.INFO, "Camera: {0}", getCamera().getClass().getSimpleName());
 		LOG.log(Level.INFO, "Reporting progress? == {0}", (consumer != null));
 		
 		final var samplerPlusFilterExtents = sampler.partition(sampler.getXStart() - film.getFilter().getExtentX() * 2,
@@ -136,7 +146,7 @@ public class RenderTask implements Callable<Image> {
 				sampler.getXEnd() + film.getFilter().getExtentX() * 2,
 				sampler.getYEnd() + film.getFilter().getExtentY() * 2);
 		
-		renderer.render(samplerPlusFilterExtents, film, scene, consumer);
+		renderer.render(samplerPlusFilterExtents, film, scene, camera, consumer);
 		
 		LOG.log(Level.INFO, "RenderTask complete! UUID={0}", getUuid());
 		return film.getImage(getUuid(), sampler.getXStart(), sampler.getYStart(), sampler.getXEnd(), sampler.getYEnd());

@@ -4,6 +4,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.function.Consumer;
 
 import org.snowjak.rays.Scene;
+import org.snowjak.rays.camera.Camera;
 import org.snowjak.rays.film.Film;
 import org.snowjak.rays.sample.EstimatedSample;
 import org.snowjak.rays.sample.Sample;
@@ -48,7 +49,7 @@ public abstract class Renderer {
 	}
 	
 	/**
-	 * Given a {@link Sampler}, {@link Film}, and {@link Scene}:
+	 * Given a {@link Sampler}, {@link Film}, {@link Scene}, and {@link Camera}:
 	 * <ol>
 	 * <li>Grab all available {@link Sample}s from the Sampler</li>
 	 * <li>Call this Renderer's {@link #estimate(TracedSample)} method to compute an
@@ -66,14 +67,15 @@ public abstract class Renderer {
 	 * @param sampler
 	 * @param film
 	 * @param scene
+	 * @param camera
 	 */
-	public void render(Sampler sampler, Film film, Scene scene) {
+	public void render(Sampler sampler, Film film, Scene scene, Camera camera) {
 		
-		render(sampler, film, scene, null);
+		render(sampler, film, scene, camera, null);
 	}
 	
 	/**
-	 * Given a {@link Sampler}, {@link Film}, and {@link Scene}:
+	 * Given a {@link Sampler}, {@link Film}, {@link Scene}, and {@link Camera}:
 	 * <ol>
 	 * <li>Grab all available {@link Sample}s from the Sampler</li>
 	 * <li>Call this Renderer's {@link #estimate(TracedSample)} method to compute an
@@ -96,9 +98,10 @@ public abstract class Renderer {
 	 * @param sampler
 	 * @param film
 	 * @param scene
+	 * @param camera
 	 * @param progressConsumer
 	 */
-	public void render(Sampler sampler, Film film, Scene scene, Consumer<Integer> progressConsumer) {
+	public void render(Sampler sampler, Film film, Scene scene, Camera camera, Consumer<Integer> progressConsumer) {
 		
 		int lastPercentage = -1;
 		
@@ -123,7 +126,7 @@ public abstract class Renderer {
 				
 			}
 			
-			final var estimated = this.estimate(scene.getCamera().trace(sample), scene);
+			final var estimated = this.estimate(camera.trace(sample), scene);
 			
 			if (sampler.reportSampleResult(estimated))
 				film.addSample(estimated);

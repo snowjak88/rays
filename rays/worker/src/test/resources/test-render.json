@@ -22,6 +22,20 @@
 			"extent": 0
 		}
 	},
+	"camera": {
+		"type": "pinhole",
+		"pixelWidth": 4,
+		"pixelHeight": 3,
+		"worldWidth": 4,
+		"worldHeight": 3,
+		"focalLength": 6,
+		"worldToLocal": [
+			{
+				"type": "translate",
+				"dz": -8
+			}
+		]
+	},
 	"scene": {
 		"primitives": [
 			{

@@ -11,8 +11,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 
 import org.junit.Test;
-import org.snowjak.rays.camera.OrthographicCamera;
-import org.snowjak.rays.camera.PinholeCamera;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
@@ -28,9 +26,8 @@ public class SceneTest {
 	@Test
 	public void testSerialize() {
 		
-		final var scene = new Scene(Arrays.asList(new Primitive(new SphereShape(0.5), (Material) null)),
-				new OrthographicCamera(300, 400, 3, 4));
-		final var expected = "{\"primitives\":[{\"shape\":{\"type\":\"sphere\",\"radius\":0.5,\"worldToLocal\":[]}}],\"camera\":{\"type\":\"orthographic\",\"pixelWidth\":300.0,\"pixelHeight\":400.0,\"worldWidth\":3.0,\"worldHeight\":4.0,\"worldToLocal\":[]}}";
+		final var scene = new Scene(Arrays.asList(new Primitive(new SphereShape(0.5), (Material) null)));
+		final var expected = "{\"primitives\":[{\"shape\":{\"type\":\"sphere\",\"radius\":0.5,\"worldToLocal\":[]}}]}";
 		
 		final var result = Settings.getInstance().getGson().toJson(scene);
 		
@@ -41,7 +38,7 @@ public class SceneTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "{\"primitives\":[{\"shape\":{\"type\":\"sphere\",\"radius\":0.5,\"worldToLocal\":[{\"type\":\"translate\",\"dx\":0},{\"type\":\"rotate\",\"axis\":{\"x\":1,\"y\":0,\"z\":0},\"degrees\":90}]}}],\"camera\":{\"type\":\"orthographic\",\"pixelWidth\":300.0,\"pixelHeight\":400.0,\"worldWidth\":3.0,\"worldHeight\":4.0,\"worldToLocal\":[]}}";
+		final var json = "{\"primitives\":[{\"shape\":{\"type\":\"sphere\",\"radius\":0.5,\"worldToLocal\":[{\"type\":\"translate\",\"dx\":0},{\"type\":\"rotate\",\"axis\":{\"x\":1,\"y\":0,\"z\":0},\"degrees\":90}]}}]}";
 		
 		final var result = Settings.getInstance().getGson().fromJson(json, Scene.class);
 		
@@ -62,13 +59,6 @@ public class SceneTest {
 		assertTrue(primitive.getShape().getWorldToLocalTransforms().get(1) instanceof RotationTransform);
 		
 		assertNull(primitive.getMaterial());
-		
-		assertNotNull(result.getCamera());
-		assertTrue(result.getCamera() instanceof OrthographicCamera);
-		assertEquals(300.0, result.getCamera().getPixelWidth(), 0.00001);
-		assertEquals(400.0, result.getCamera().getPixelHeight(), 0.00001);
-		assertEquals(3.0, result.getCamera().getWorldWidth(), 0.00001);
-		assertEquals(4.0, result.getCamera().getWorldHeight(), 0.00001);
 	}
 	
 	@Test
@@ -79,8 +69,7 @@ public class SceneTest {
 				new PlaneShape(new TranslationTransform(0, 0, +2), new RotationTransform(Vector3D.I, 90)),
 				new PerfectMirrorMaterial());
 		
-		final var scene = new Scene(Arrays.asList(horizontalPlane, verticalPlane),
-				new PinholeCamera(100, 100, 2, 2, 4));
+		final var scene = new Scene(Arrays.asList(horizontalPlane, verticalPlane));
 		
 		//
 		

@@ -36,28 +36,26 @@ public class Scene {
 	private Camera camera;
 	private Collection<Light> lights = null;
 	
-	public Scene(Collection<Primitive> primitives, Camera camera) {
+	public Scene(Collection<Primitive> primitives) {
 		
-		this(primitives, camera, null);
+		this(primitives, null);
 	}
 	
-	public Scene(Collection<Primitive> primitives, Camera camera, Collection<Light> lights) {
+	public Scene(Collection<Primitive> primitives, Collection<Light> lights) {
 		
 		this.primitives = primitives;
-		this.camera = camera;
 		this.lights = lights;
 		
 	}
 	
-	public Scene(AccelerationStructure accelerationStructure, Camera camera) {
+	public Scene(AccelerationStructure accelerationStructure) {
 		
-		this(accelerationStructure, camera, null);
+		this(accelerationStructure, null);
 	}
 	
-	public Scene(AccelerationStructure accelerationStructure, Camera camera, Collection<Light> lights) {
+	public Scene(AccelerationStructure accelerationStructure, Collection<Light> lights) {
 		
 		this.accelerationStructure = accelerationStructure;
-		this.camera = camera;
 		this.lights = lights;
 	}
 	
@@ -73,13 +71,8 @@ public class Scene {
 		
 		if (physicalLightAccelerationStructure == null)
 			physicalLightAccelerationStructure = new HierarchicalBoundingBox(
-					getLights().parallelStream()
-							.filter(l -> l instanceof DiffuseLight)
-							.map(l -> (DiffuseLight) l)
-							.filter(l -> l.isVisible())
-							.map(l -> l.getPrimitive())
-							.collect(Collectors.toList())
-					);
+					getLights().parallelStream().filter(l -> l instanceof DiffuseLight).map(l -> (DiffuseLight) l)
+							.filter(l -> l.isVisible()).map(l -> l.getPrimitive()).collect(Collectors.toList()));
 		
 		return physicalLightAccelerationStructure;
 	}
