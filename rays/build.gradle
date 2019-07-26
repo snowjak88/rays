@@ -38,8 +38,8 @@ plugins {
 }
 
 group = 'org.snowjak'
-version = '0.3.2'
-wrapper { gradleVersion = 4.8 }
+version = '0.3.3'
+wrapper { gradleVersion = 5.5 }
 
 
 project.ext.dockerComposeTemplateName = "docker-compose.yml.template"
@@ -51,7 +51,6 @@ if ( file( dockerComposeTemplateName + "." + osdetector.arch ).exists() )
 allprojects {
 	apply plugin: 'eclipse'
 	apply plugin: 'java'
-	apply plugin: 'io.spring.dependency-management'
 	
 	repositories {
 		mavenCentral()
@@ -64,49 +63,44 @@ allprojects {
 	tasks.withType(JavaCompile) { options.compilerArgs << '-parameters' }
 }
 
+//
+// All projects which will execute as Spring Boot applications
+project.ext.bootableProjects = [
+	"frontend",
+	"spectrum-generator",
+	"worker"
+]
+
+//
+// All projects which have :core as a dependency
+project.ext.coreableProjects = [
+	"frontend",
+	"spectrum-generator",
+	"worker"
+]
+
+//
+// All projects which will produce a Docker image
+project.ext.dockerableProjects = ["frontend", "worker"]
+
+
 subprojects { p ->
 	
 	p.group = rootProject.group
 	p.version = rootProject.version
 	
-	if( p.name != "core" ) {
+	apply plugin: 'io.spring.dependency-management'
+	
+	
+	//
+	// If this project depends on :core ...
+	//
+	if ( coreableProjects.contains( p.name ) ) {
 		
-		apply plugin: 'io.spring.dependency-management'
-		apply plugin: 'org.springframework.boot'
+		dependencies { compile project(":core") }
 		
-		if(p.name != "spectrum-generator") {
-			apply plugin: 'com.palantir.docker'
-			
-			
-			p.ext.dockerFileName = "Dockerfile"
-			
-			if ( file( dockerFileName + "." + osdetector.arch ).exists() )
-				dockerFileName = dockerFileName + "." + osdetector.arch
-			
-			
-			task copyDataToDockerBuildDir(type: Copy) {
-				from 'data/'
-				into "$buildDir/docker/data"
-				duplicatesStrategy = 'include'
-				
-				dependsOn 'copyDataFromCore'
-				dependsOn 'dockerPrepare'
-			}
-			
-			docker {
-				name = "${p.group}/${p.name}:${p.version}"
-				dockerfile p.file( dockerFileName )
-				tags "latest"
-				files p.jar.archivePath
-				buildArgs([ JAR_FILE: p.jar.archiveName, DATA_DIR: 'data' ])
-				pull true
-			}
-			
-			p.tasks.docker.dependsOn { 'copyDataToDockerBuildDir' }
-			
-			p.tasks.docker.dependsOn {'bootJar' }
-			p.tasks.dockerPush.dependsOn { 'dockerTag' }
-		}
+		clean.dependsOn( project(":core").clean )
+		test.dependsOn( project(":core").test )
 		
 		clean.delete << file('data/')
 		
@@ -116,12 +110,53 @@ subprojects { p ->
 			duplicatesStrategy = 'include'
 		}
 		processResources.dependsOn( copyDataFromCore )
-		
-		dependencies { compile project(":core") }
-		
-		clean.dependsOn( project(":core").clean )
-		test.dependsOn( project(":core").test )
 	}
+	
+	
+	//
+	// If this project will execute as a Spring Boot application ...
+	//
+	if ( bootableProjects.contains ( p.name ) ) {
+		apply plugin: 'org.springframework.boot'
+	}
+	
+	
+	//
+	// If this project will produce a Docker image ...
+	//
+	if ( dockerableProjects.contains( p.name ) ) {
+		apply plugin: 'com.palantir.docker'
+		
+		p.ext.dockerFileName = "Dockerfile"
+		
+		if ( file( dockerFileName + "." + osdetector.arch ).exists() )
+			dockerFileName = dockerFileName + "." + osdetector.arch
+		
+		
+		task copyDataToDockerBuildDir(type: Copy) {
+			from 'data/'
+			into "$buildDir/docker/data"
+			duplicatesStrategy = 'include'
+			
+			dependsOn 'copyDataFromCore'
+			dependsOn 'dockerPrepare'
+		}
+		
+		docker {
+			name = "${p.group}/${p.name}:${p.version}"
+			dockerfile p.file( dockerFileName )
+			tags "latest"
+			files p.jar.archivePath
+			buildArgs([ JAR_FILE: p.jar.archiveName, DATA_DIR: 'data' ])
+			pull true
+		}
+		
+		p.tasks.docker.dependsOn { 'copyDataToDockerBuildDir' }
+		
+		p.tasks.docker.dependsOn {'bootJar' }
+		p.tasks.dockerPush.dependsOn { 'dockerTag' }
+	}
+	
 	
 	test.ignoreFailures = true
 }
