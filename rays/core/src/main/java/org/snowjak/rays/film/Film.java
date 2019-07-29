@@ -47,6 +47,7 @@ import org.snowjak.rays.spectrum.colorspace.XYZ;
 public class Film {
 	
 	private int width, height;
+	private int offsetX, offsetY;
 	private double aperture;
 	private double exposureTime;
 	private double isoSensitivity;
@@ -57,11 +58,93 @@ public class Film {
 	private transient XYZ[][] receivedLuminance;
 	private transient double[][] filterWeights;
 	
+	/**
+	 * Construct a new Film instance with the given properties.
+	 * <dl>
+	 * <dt>width, height</dt>
+	 * <dd>The dimensions in pixels of the film. This should match the associated
+	 * {@link Sampler}'s defined {@code [xStart, yStart] - [xEnd, yEnd]} range.
+	 * <dt>aperture</dt>
+	 * <dd>Defines the camera's aperture (expressed as an f-stop #)</dd>
+	 * <dt>exposureTime</dt>
+	 * <dd>Expressed in seconds</dt>
+	 * <dt>isoSensitivity</dt>
+	 * <dd>i.e., the ISO speed rating of this film</dd>
+	 * <dt>calibrationConstant</dt>
+	 * <dd>A scaling factor used to modify the behavior of this Film to match the
+	 * real-world performance of any digital camera you please</dd>
+	 * <dt>filter</dt>
+	 * <dd>A method to weigh each incoming {@link EstimatedSample}'s contribution to
+	 * this Film's pixels. Most Filters will probably only affect the sample's
+	 * actual pixel and its immediate neighbors.
+	 * </dl>
+	 * <p>
+	 * <strong>Note</strong> that this Film assumes that the
+	 * {@link EstimatedSample}s it receives will all have film-points in the range
+	 * {@code [0, 0] - [width-1, height-1]}.
+	 * </p>
+	 * 
+	 * @param width
+	 * @param height
+	 * @param aperture
+	 * @param exposureTime
+	 * @param isoSensitivity
+	 * @param calibrationConstant
+	 * @param filter
+	 */
 	public Film(int width, int height, double aperture, double exposureTime, double isoSensitivity,
 			double calibrationConstant, Filter filter) {
 		
+		this(width, height, 0, 0, aperture, exposureTime, isoSensitivity, calibrationConstant, filter);
+	}
+	
+	/**
+	 * Construct a new Film instance with the given properties.
+	 * <dl>
+	 * <dt>width, height</dt>
+	 * <dd>The dimensions in pixels of the film. This should match the associated
+	 * {@link Sampler}'s defined {@code [xStart, yStart] - [xEnd, yEnd]} range.
+	 * <dt>offsetX, offsetY</dt>
+	 * <dd>You should set this to be equal to
+	 * <code> [ {@link Sampler#getXStart()}, {@link
+	 * Sampler#getYStart()} ]</code>.
+	 * <dt>aperture</dt>
+	 * <dd>Defines the camera's aperture (expressed as an f-stop #)</dd>
+	 * <dt>exposureTime</dt>
+	 * <dd>Expressed in seconds</dt>
+	 * <dt>isoSensitivity</dt>
+	 * <dd>i.e., the ISO speed rating of this film</dd>
+	 * <dt>calibrationConstant</dt>
+	 * <dd>A scaling factor used to modify the behavior of this Film to match the
+	 * real-world performance of any digital camera you please</dd>
+	 * <dt>filter</dt>
+	 * <dd>A method to weigh each incoming {@link EstimatedSample}'s contribution to
+	 * this Film's pixels. Most Filters will probably only affect the sample's
+	 * actual pixel and its immediate neighbors.
+	 * </dl>
+	 * <p>
+	 * <strong>Note</strong> that this Film assumes that the
+	 * {@link EstimatedSample}s it receives will all have film-points in the range
+	 * {@code [0, 0] - [width-1, height-1]}.
+	 * </p>
+	 * 
+	 * @param width
+	 * @param height
+	 * @param offsetX
+	 * @param offsetY
+	 * @param aperture
+	 * @param exposureTime
+	 * @param isoSensitivity
+	 * @param calibrationConstant
+	 * @param filter
+	 */
+	public Film(int width, int height, int offsetX, int offsetY, double aperture, double exposureTime,
+			double isoSensitivity, double calibrationConstant, Filter filter) {
+		
 		this.width = width;
 		this.height = height;
+		this.offsetX = offsetX;
+		this.offsetY = offsetY;
 		this.aperture = aperture;
 		this.exposureTime = exposureTime;
 		this.isoSensitivity = isoSensitivity;
@@ -117,8 +200,11 @@ public class Film {
 					
 					synchronized (this) {
 						
-						final var indexX = pixelX + filter.getExtentX();
-						final var indexY = pixelY + filter.getExtentY();
+						final var offsetPixelX = pixelX - offsetX;
+						final var offsetPixelY = pixelY - offsetY;
+						
+						final var indexX = offsetPixelX + filter.getExtentX();
+						final var indexY = offsetPixelY + filter.getExtentY();
 						
 						if (indexX < 0 || indexX >= receivedLuminance.length)
 							continue;
@@ -150,7 +236,7 @@ public class Film {
 	 * @param y
 	 * @return
 	 */
-	public XYZ getReceivedLuminance(int x, int y) {
+	private XYZ getReceivedLuminance(int x, int y) {
 		
 		final var indexX = x + filter.getExtentX();
 		final var indexY = y + filter.getExtentY();
@@ -216,7 +302,10 @@ public class Film {
 					final var indexX = x + filter.getExtentX();
 					final var indexY = y + filter.getExtentY();
 					
-					if ((x < xStart || x > xEnd) || (y < yStart || y > yEnd)
+					final var offsetX = x + this.offsetX;
+					final var offsetY = y + this.offsetY;
+					
+					if ((offsetX < xStart || offsetX > xEnd) || (offsetY < yStart || offsetY > yEnd)
 							|| receivedLuminance[indexX][indexY] == null || filterWeights[indexX][indexY] == 0d)
 						image.setRGB(x, y, RGB.toPacked(RGB.BLACK, 0d));
 					
@@ -261,6 +350,20 @@ public class Film {
 	public Filter getFilter() {
 		
 		return filter;
+	}
+	
+	/**
+	 * Return a variant of this Film, with modified dimensions and offset to the
+	 * given sample-window.
+	 * 
+	 * @return
+	 */
+	public Film partition(int xStart, int yStart, int xEnd, int yEnd) {
+		
+		final var newWidth = xEnd - xStart + 1;
+		final var newHeight = yEnd - yStart + 1;
+		return new Film(newWidth, newHeight, xStart, yStart, aperture, exposureTime, isoSensitivity,
+				calibrationConstant, filter);
 	}
 	
 	/**

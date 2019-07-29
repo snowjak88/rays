@@ -38,7 +38,9 @@ import org.snowjak.rays.frontend.messages.frontend.ReceivedRenderUpdate;
 import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sampler.Sampler;
 import org.snowjak.rays.support.model.entity.Render;
+import org.snowjak.rays.support.model.entity.RenderSetup;
 import org.snowjak.rays.support.model.repository.RenderRepository;
+import org.snowjak.rays.support.model.repository.RenderSetupRepository;
 import org.snowjak.rays.support.model.repository.SceneRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -58,6 +60,9 @@ public class RenderUpdateService {
 	
 	@Autowired
 	private RenderRepository renderRepository;
+	
+	@Autowired
+	private RenderSetupRepository renderSetupRepository;
 	
 	@Autowired
 	private SceneRepository sceneRepository;
@@ -102,7 +107,6 @@ public class RenderUpdateService {
 			return;
 		}
 		
-		render.setDecomposed(true);
 		renderRepository.save(render);
 		bus.post(new ReceivedRenderUpdate(render));
 		
@@ -144,37 +148,6 @@ public class RenderUpdateService {
 		}
 	}
 	
-	@Transactional
-	private UUID saveNewRender(String renderJson) throws JsonParseException {
-		
-		LOG.info("Saving a new Render+Scene from a JSON descriptor.");
-		
-		LOG.trace("Inflating RenderTask from JSON ...");
-		RenderTask renderTask = null;
-		try {
-			renderTask = Settings.getInstance().getGson().fromJson(renderJson, RenderTask.class);
-		} catch (JsonParseException e) {
-			throw new JsonParseException("Cannot inflate RenderTask from JSON.", e);
-		}
-		
-		final var samplerJson = Settings.getInstance().getGson().toJson(renderTask.getSampler());
-		final var rendererJson = Settings.getInstance().getGson().toJson(renderTask.getRenderer());
-		final var filmJson = Settings.getInstance().getGson().toJson(renderTask.getFilm());
-		final var cameraJson = Settings.getInstance().getGson().toJson(renderTask.getCamera());
-		final var sceneJson = Settings.getInstance().getGson().toJson(renderTask.getScene());
-		
-		var sceneEntity = new org.snowjak.rays.support.model.entity.Scene();
-		sceneEntity.setJson(sceneJson);
-		LOG.debug("Saving bundled scene as a new Scene entry (ID={})", sceneEntity.getId());
-		sceneEntity = sceneRepository.save(sceneEntity);
-		
-		final var renderID = saveNewRender(samplerJson, rendererJson, filmJson, cameraJson, sceneEntity.getId(), null,
-				0, 0);
-		
-		LOG.info("Saved JSON as new Render+Scene.");
-		return renderID;
-	}
-	
 	/**
 	 * Decompose the given Render (specified by its UUID) into child Renders, each
 	 * covering a fraction of the total sampling-space.
@@ -205,7 +178,7 @@ public class RenderUpdateService {
 			return Collections.emptyList();
 		}
 		
-		if (parentRender.isDecomposed() && parentRender.getChildren().size() > 0) {
+		if (parentRender.getChildren().size() > 0) {
 			LOG.warn("Cannot decompose Render (UUID={}) -- render has already been decomposed!", uuid.toString());
 			return parentRender.getChildren().stream().map(Render::getUuid).map(UUID::fromString)
 					.collect(Collectors.toList());
@@ -213,23 +186,30 @@ public class RenderUpdateService {
 		
 		final var childIdList = new LinkedList<UUID>();
 		
-		LOG.trace("Inflating Sampler from database ...");
-		final var sampler = Settings.getInstance().getGson().fromJson(parentRender.getSamplerJson(), Sampler.class);
+		LOG.trace("Retrieving Render setup ...");
+		final var renderSetup = parentRender.getSetup();
 		
-		for (int x1 = sampler.getXStart(); x1 <= sampler.getXEnd(); x1 += regionSize)
-			for (int y1 = sampler.getYStart(); y1 <= sampler.getYEnd(); y1 += regionSize) {
+		LOG.trace("Inflating Sampler from database ...");
+		final var sampler = Settings.getInstance().getGson().fromJson(renderSetup.getSamplerJson(), Sampler.class);
+		
+		final var regionStartX = sampler.getXStart() + parentRender.getOffsetX();
+		final var regionStartY = sampler.getYStart() + parentRender.getOffsetY();
+		final var regionEndX = regionStartX + parentRender.getWidth() - 1;
+		final var regionEndY = regionStartY + parentRender.getHeight() - 1;
+		
+		for (int x1 = regionStartX; x1 <= regionEndX; x1 += regionSize)
+			for (int y1 = regionStartY; y1 <= regionEndY; y1 += regionSize) {
 				
 				final var x2 = min(x1 + regionSize - 1, sampler.getXEnd());
 				final var y2 = min(y1 + regionSize - 1, sampler.getYEnd());
 				
+				final var subregionWidth = (x2 - x1) + 1;
+				final var subregionHeight = (y2 - y1) + 1;
+				
 				LOG.trace("Decomposing (UUID={}) -- child render at [{},{}]-[{},{}]", uuid.toString(), x1, y1, x2, y2);
 				
-				final var childSampler = sampler.partition(x1, y1, x2, y2);
-				final var childSamplerJson = Settings.getInstance().getGson().toJson(childSampler);
-				
-				final var childRenderId = saveNewRender(childSamplerJson, parentRender.getRendererJson(),
-						parentRender.getFilmJson(), parentRender.getCameraJson(), parentRender.getScene().getId(),
-						parentRender.getUuid(), x1, y1);
+				final var childRenderId = saveNewRender(renderSetup.getId(), parentRender.getUuid(), x1, y1,
+						subregionWidth, subregionHeight);
 				LOG.debug("Created child render (UUID={})", childRenderId.toString());
 				
 				final var childRender = renderRepository.findById(childRenderId.toString()).get();
@@ -239,22 +219,14 @@ public class RenderUpdateService {
 				childIdList.add(childRenderId);
 			}
 		
-		parentRender.setDecomposed(true);
 		parentRender = renderRepository.save(parentRender);
 		
 		return childIdList;
 	}
 	
 	@Transactional
-	private UUID saveNewRender(String samplerJson, String rendererJson, String filmJson, String cameraJson,
-			long sceneId, String parentID) {
-		
-		return saveNewRender(samplerJson, rendererJson, filmJson, cameraJson, sceneId, parentID, 0, 0);
-	}
-	
-	@Transactional
-	private UUID saveNewRender(String samplerJson, String rendererJson, String filmJson, String cameraJson,
-			long sceneId, String parentID, int offsetX, int offsetY) {
+	private Long saveNewRenderSetup(String samplerJson, String rendererJson, String filmJson, String cameraJson,
+			long sceneId) {
 		
 		final var foundScene = sceneRepository.findById(sceneId);
 		if (!foundScene.isPresent())
@@ -262,24 +234,82 @@ public class RenderUpdateService {
 		
 		final var scene = foundScene.get();
 		
+		var renderSetup = new RenderSetup();
+		
+		renderSetup.setSamplerJson(samplerJson);
+		renderSetup.setRendererJson(rendererJson);
+		renderSetup.setFilmJson(filmJson);
+		renderSetup.setCameraJson(cameraJson);
+		renderSetup.setScene(scene);
+		
+		renderSetup = renderSetupRepository.save(renderSetup);
+		
+		return renderSetup.getId();
+	}
+	
+	@Transactional
+	private UUID saveNewRender(String renderJson) throws JsonParseException {
+		
+		LOG.info("Saving a new Render+Scene from a JSON descriptor.");
+		
+		LOG.trace("Inflating RenderTask from JSON ...");
+		RenderTask renderTask = null;
+		try {
+			renderTask = Settings.getInstance().getGson().fromJson(renderJson, RenderTask.class);
+		} catch (JsonParseException e) {
+			throw new JsonParseException("Cannot inflate RenderTask from JSON.", e);
+		}
+		
+		final var samplerJson = Settings.getInstance().getGson().toJson(renderTask.getSampler());
+		final var rendererJson = Settings.getInstance().getGson().toJson(renderTask.getRenderer());
+		final var filmJson = Settings.getInstance().getGson().toJson(renderTask.getFilm());
+		final var cameraJson = Settings.getInstance().getGson().toJson(renderTask.getCamera());
+		final var sceneJson = Settings.getInstance().getGson().toJson(renderTask.getScene());
+		
+		var sceneEntity = new org.snowjak.rays.support.model.entity.Scene();
+		sceneEntity.setJson(sceneJson);
+		sceneEntity = sceneRepository.save(sceneEntity);
+		LOG.debug("Saving bundled scene as a new Scene entry (ID={})", sceneEntity.getId());
+		
+		final var setupID = saveNewRenderSetup(samplerJson, rendererJson, filmJson, cameraJson, sceneEntity.getId());
+		LOG.debug("Saving render configuration as a new RenderSetup (ID={})", setupID);
+		
+		final var renderSetup = renderSetupRepository.findById(setupID).get();
+		
+		final var renderWidth = renderSetup.inflateFilm().getWidth();
+		final var renderHeight = renderSetup.inflateFilm().getHeight();
+		
+		LOG.debug("Saving render entry (offset = ({},{}), image = {}x{})", renderTask.getOffsetX(),
+				renderTask.getOffsetY(), renderWidth, renderHeight);
+		final var renderID = saveNewRender(setupID, null, renderTask.getOffsetX(), renderTask.getOffsetY(), renderWidth,
+				renderHeight);
+		
+		LOG.info("Saved JSON as new Render+Scene.");
+		return renderID;
+	}
+	
+	@Transactional
+	private UUID saveNewRender(long renderSetupId, String parentID, int offsetX, int offsetY, int width, int height) {
+		
+		final var foundSetup = renderSetupRepository.findById(renderSetupId);
+		if (!foundSetup.isPresent())
+			return null;
+		
+		final var setup = foundSetup.get();
+		
 		final var parentRender = (parentID == null) ? null : renderRepository.findById(parentID).orElse(null);
 		
 		var render = new Render();
-		LOG.debug("Saving new Render entry (UUID={})", render.getUuid());
-		render.setSamplerJson(samplerJson);
-		render.setRendererJson(rendererJson);
-		render.setFilmJson(filmJson);
-		render.setCameraJson(cameraJson);
-		render.setScene(scene);
+		
 		render.setParent(parentRender);
-		
-		final var sampler = render.inflateSampler();
-		
-		render.setWidth(sampler.getXEnd() - sampler.getXStart() + 1);
-		render.setHeight(sampler.getYEnd() - sampler.getYStart() + 1);
-		render.setSpp(sampler.getSamplesPerPixel());
+		render.setSetup(setup);
 		render.setOffsetX(offsetX);
 		render.setOffsetY(offsetY);
+		render.setWidth(width);
+		render.setHeight(height);
+		
+		LOG.trace("Saving new render with setup-ID {}, offset by ({},{}), and a {}x{} image", renderSetupId, offsetX,
+				offsetY, width, height);
 		
 		render = renderRepository.save(render);
 		
@@ -306,10 +336,12 @@ public class RenderUpdateService {
 			return null;
 		}
 		
+		final var renderSetup = renderEntity.get().getSetup();
+		
 		LOG.trace("UUID={}: Inflating Sampler settings from JSON ...", uuid.toString());
 		Sampler sampler = null;
 		try {
-			sampler = Settings.getInstance().getGson().fromJson(renderEntity.get().getSamplerJson(), Sampler.class);
+			sampler = Settings.getInstance().getGson().fromJson(renderSetup.getSamplerJson(), Sampler.class);
 		} catch (JsonParseException e) {
 			throw new JsonParseException("Cannot inflate Sampler settings from Render(UUID = " + uuid.toString() + ")",
 					e);
@@ -318,7 +350,7 @@ public class RenderUpdateService {
 		LOG.trace("UUID={}: Inflating Renderer settings from JSON ...", uuid.toString());
 		Renderer renderer = null;
 		try {
-			renderer = Settings.getInstance().getGson().fromJson(renderEntity.get().getRendererJson(), Renderer.class);
+			renderer = Settings.getInstance().getGson().fromJson(renderSetup.getRendererJson(), Renderer.class);
 		} catch (JsonParseException e) {
 			throw new JsonParseException("Cannot inflate Renderer settings from Render(UUID = " + uuid.toString() + ")",
 					e);
@@ -327,13 +359,13 @@ public class RenderUpdateService {
 		LOG.trace("UUID={}: Inflating Film settings from JSON ...", uuid.toString());
 		Film film = null;
 		try {
-			film = Settings.getInstance().getGson().fromJson(renderEntity.get().getFilmJson(), Film.class);
+			film = Settings.getInstance().getGson().fromJson(renderSetup.getFilmJson(), Film.class);
 		} catch (JsonParseException e) {
 			throw new JsonParseException("Cannot inflate Film settings from Render(UUID = " + uuid.toString() + ")", e);
 		}
 		
 		LOG.trace("UUID={}: Retrieving associated Scene ...", uuid.toString());
-		final var sceneEntity = renderEntity.get().getScene();
+		final var sceneEntity = renderSetup.getScene();
 		
 		LOG.trace("UUID={}: Inflating Scene from JSON ...", uuid.toString());
 		Scene scene = null;
@@ -346,11 +378,23 @@ public class RenderUpdateService {
 		LOG.trace("UUID={}: Inflating Camera from JSON ...", uuid.toString());
 		Camera camera = null;
 		try {
-			camera = Settings.getInstance().getGson().fromJson(renderEntity.get().getCameraJson(), Camera.class);
+			camera = Settings.getInstance().getGson().fromJson(renderSetup.getCameraJson(), Camera.class);
 		} catch (JsonParseException e) {
 			throw new JsonParseException("Cannot inflate Camera settings from Render(UUID = " + uuid.toString() + ")",
 					e);
 		}
+		
+		//
+		// Do we need to modify the Sampler window to fit the Render's specified
+		// width/height and offset-X/offset-Y?
+		//
+		final var offsetX = renderEntity.get().getOffsetX();
+		final var offsetY = renderEntity.get().getOffsetY();
+		final var width = renderEntity.get().getWidth();
+		final var height = renderEntity.get().getHeight();
+		
+		sampler = sampler.partition(offsetX, offsetY, offsetX + width - 1, offsetY + height - 1);
+		film = film.partition(offsetX, offsetY, offsetX + width - 1, offsetY + height - 1);
 		
 		final var renderTask = new RenderTask(uuid, sampler, renderer, film, scene, camera,
 				renderEntity.get().getOffsetX(), renderEntity.get().getOffsetY());
@@ -510,12 +554,27 @@ public class RenderUpdateService {
 		return saveImageToDatabase(image, renderID, 0, 0);
 	}
 	
+	/**
+	 * Save the given image to the Render specified by the given (UU)ID. The given
+	 * image occupies only part of this Render's total image, and is offset from the
+	 * {@code (0,0)} point by {@code [offsetX, offsetY]}.
+	 * 
+	 * @param image
+	 * @param renderID
+	 * @param offsetX
+	 * @param offsetY
+	 * @return
+	 * @throws IOException
+	 */
 	@Transactional
 	public Collection<Render> saveImageToDatabase(Image image, String renderID, int offsetX, int offsetY)
 			throws IOException {
 		
 		var render = renderRepository.findById(renderID).get();
 		final var renderList = new LinkedList<Render>();
+		
+		final BufferedImage sumBufferedImage;
+		final Image sumImage;
 		
 		LOG.debug("UUID={}: Checking if current render has a partial image to add to ...", render.getUuid());
 		if (image != null && render.getPngBase64() != null) {
@@ -530,34 +589,40 @@ public class RenderUpdateService {
 			final var newImage = image.getBufferedImage();
 			
 			LOG.trace("UUID={}: Allocating sum-image buffer ...", render.getUuid());
-			final var sumImage = new BufferedImage(max(existingImage.getWidth(), newImage.getWidth()),
-					max(existingImage.getHeight(), newImage.getHeight()), BufferedImage.TYPE_INT_ARGB);
+			final var contentWidth = max(existingImage.getWidth(), offsetX + newImage.getWidth());
+			final var contentHeight = max(existingImage.getHeight(), offsetY + newImage.getHeight());
+			sumBufferedImage = new BufferedImage(max(contentWidth, render.getWidth()),
+					max(contentHeight, render.getHeight()), BufferedImage.TYPE_INT_ARGB);
 			
 			LOG.trace("UUID={}: Painting existing and new images onto buffer ...", render.getUuid());
-			final var g = sumImage.getGraphics();
+			LOG.trace("UUID={}: New image is offset by ({},{}) ...", render.getUuid(), offsetX - render.getOffsetX(),
+					offsetY - render.getOffsetY());
+			final var g = sumBufferedImage.getGraphics();
 			g.drawImage(existingImage, 0, 0, null);
-			g.drawImage(newImage, 0, 0, null);
+			g.drawImage(newImage, offsetX - render.getOffsetX(), offsetY - render.getOffsetY(), null);
 			
 			LOG.trace("UUID={}: Saving sum-image as PNG ...", render.getUuid());
 			final var sumImageBuffer = new ByteArrayOutputStream();
-			ImageIO.write(sumImage, "png", sumImageBuffer);
+			ImageIO.write(sumBufferedImage, "png", sumImageBuffer);
 			
-			ImageIO.write(sumImage, "png", new File("result.png"));
+			ImageIO.write(sumBufferedImage, "png", new File("result.png"));
 			
 			render.setPngBase64(Base64.getEncoder().encodeToString(sumImageBuffer.toByteArray()));
+			sumImage = new Image(sumBufferedImage, UUID.fromString(render.getUuid()));
 			
 		} else {
 			
 			LOG.info("UUID={}: Saving received image to database.", render.getUuid());
 			
 			render.setPngBase64((image != null) ? image.getPng() : null);
+			sumImage = image;
 			
 		}
 		
 		if (render.isChild()) {
 			LOG.info("Also adding image to parent Render ...");
-			renderList.addAll(
-					saveImageToDatabase(image, render.getParent().getUuid(), render.getOffsetX(), render.getOffsetY()));
+			renderList.addAll(saveImageToDatabase(sumImage, render.getParent().getUuid(), render.getOffsetX(),
+					render.getOffsetY()));
 		}
 		
 		render = renderRepository.save(render);

@@ -1,5 +1,6 @@
 package org.snowjak.rays.frontend.ui.presentation.renderlist;
 
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
@@ -87,7 +88,8 @@ public class RenderListPresentation
 		ID("id", (r, p) -> r.getUuid()),
 		/**
 		 */
-		PROGRESS("progress", (r, p) -> r.getPercentCompleteFloat() == null ? "0" : Float.toString(r.getPercentCompleteFloat())),
+		PROGRESS("progress",
+				(r, p) -> r.getPercentCompleteFloat() == null ? "0" : Float.toString(r.getPercentCompleteFloat())),
 		/**
 		 */
 		SIZE("size", (r, p) -> r.getSize()),
@@ -109,8 +111,8 @@ public class RenderListPresentation
 				(r, p) -> Boolean.toString(p.isOpenable.compute(r.getUuid(), (id, cv) -> r.isParent()))),
 		/**
 		 */
-		IS_DECOMPOSABLE("isDecomposable", (r, p) -> Boolean
-				.toString(p.isDecomposable.compute(r.getUuid(), (id, cv) -> !r.isDecomposed() && !r.isChild()))),
+		IS_DECOMPOSABLE("isDecomposable", (r, p) -> Boolean.toString(p.isDecomposable.compute(r.getUuid(),
+				(id, cv) -> r.getSubmitted() == null || r.getSubmitted().isBefore(Instant.now())))),
 		/**
 		 */
 		IS_SUBMITTABLE("isSubmittable",

@@ -28,7 +28,7 @@ spring:
   datasource:
     url: jdbc:hsqldb:mem:rays
     hikari:
-      initialization-fail-timeout: -1
+      initialization-fail-timeout: 120
     initialization-mode: never
   jpa:
     hibernate:
@@ -36,4 +36,4 @@ spring:
 logging:
   level:
     root: INFO
-    org.snowjak.rays: DEBUG
+    org.snowjak.rays: TRACE

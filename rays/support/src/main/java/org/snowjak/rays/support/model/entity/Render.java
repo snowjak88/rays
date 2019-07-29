@@ -16,21 +16,16 @@ import javax.persistence.Entity;
 import javax.persistence.EntityListeners;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Version;
 
-import org.snowjak.rays.Settings;
-import org.snowjak.rays.camera.Camera;
-import org.snowjak.rays.film.Film;
-import org.snowjak.rays.renderer.Renderer;
-import org.snowjak.rays.sampler.Sampler;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import com.google.gson.JsonParseException;
 import com.vaadin.server.Resource;
 import com.vaadin.server.StreamResource;
 import com.vaadin.server.StreamResource.StreamSource;
@@ -57,7 +52,10 @@ public class Render {
 	private Instant completed;
 	
 	@Basic
-	private boolean decomposed;
+	private int offsetX;
+	
+	@Basic
+	private int offsetY;
 	
 	@Basic
 	private int width;
@@ -68,36 +66,15 @@ public class Render {
 	@Basic
 	private int spp;
 	
-	@Basic
-	private int offsetX;
-	
-	@Basic
-	private int offsetY;
-	
 	@ManyToOne(fetch = FetchType.EAGER, optional = true, cascade = { CascadeType.REFRESH })
 	private Render parent = null;
 	
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "parent", cascade = { CascadeType.ALL })
 	private Collection<Render> children = new LinkedList<>();
 	
-	@ManyToOne(fetch = FetchType.LAZY, optional = false, cascade = { CascadeType.REFRESH })
-	private Scene scene;
-	
-	@Basic(optional = false)
-	@Column(name = "sampler_json")
-	private String samplerJson = "";
-	
-	@Basic(optional = false)
-	@Column(name = "renderer_json")
-	private String rendererJson = "";
-	
-	@Basic(optional = false)
-	@Column(name = "film_json")
-	private String filmJson = "";
-	
-	@Basic(optional = false)
-	@Column(name = "camera_json")
-	private String cameraJson = "";
+	@ManyToOne(fetch = FetchType.EAGER, optional = false, cascade = CascadeType.REFRESH)
+	@JoinColumn(name = "render_setup_id")
+	private RenderSetup setup;
 	
 	@Basic(optional = true)
 	@Column(name = "percent_complete")
@@ -108,10 +85,6 @@ public class Render {
 	@Column(name = "png_base64", length = 4194304)
 	private String pngBase64 = null;
 	
-	private transient Sampler sampler = null;
-	private transient Renderer renderer = null;
-	private transient Film film = null;
-	private transient Camera camera = null;
 	private transient Resource result = null;
 	
 	public String getUuid() {
@@ -162,16 +135,6 @@ public class Render {
 	public void setCompleted(Instant completed) {
 		
 		this.completed = completed;
-	}
-	
-	public boolean isDecomposed() {
-		
-		return decomposed;
-	}
-	
-	public void setDecomposed(boolean decomposed) {
-		
-		this.decomposed = decomposed;
 	}
 	
 	public int getWidth() {
@@ -278,58 +241,14 @@ public class Render {
 		this.parent = parent;
 	}
 	
-	public Scene getScene() {
+	public RenderSetup getSetup() {
 		
-		return scene;
+		return setup;
 	}
 	
-	public void setScene(Scene scene) {
+	public void setSetup(RenderSetup setup) {
 		
-		this.scene = scene;
-	}
-	
-	public String getSamplerJson() {
-		
-		return samplerJson;
-	}
-	
-	public void setSamplerJson(String samplerJson) {
-		
-		this.samplerJson = samplerJson;
-		this.sampler = null;
-	}
-	
-	public String getRendererJson() {
-		
-		return rendererJson;
-	}
-	
-	public void setRendererJson(String rendererJson) {
-		
-		this.rendererJson = rendererJson;
-		this.renderer = null;
-	}
-	
-	public String getFilmJson() {
-		
-		return filmJson;
-	}
-	
-	public void setFilmJson(String filmJson) {
-		
-		this.filmJson = filmJson;
-		this.film = null;
-	}
-	
-	public String getCameraJson() {
-		
-		return cameraJson;
-	}
-	
-	public void setCameraJson(String cameraJson) {
-		
-		this.cameraJson = cameraJson;
-		this.camera = null;
+		this.setup = setup;
 	}
 	
 	public Integer getPercentComplete() {
@@ -358,34 +277,6 @@ public class Render {
 		
 		this.pngBase64 = pngBase64;
 		this.result = null;
-	}
-	
-	public Sampler inflateSampler() throws JsonParseException {
-		
-		if (sampler == null)
-			sampler = Settings.getInstance().getGson().fromJson(getSamplerJson(), Sampler.class);
-		return sampler;
-	}
-	
-	public Renderer inflateRenderer() throws JsonParseException {
-		
-		if (renderer == null)
-			renderer = Settings.getInstance().getGson().fromJson(getRendererJson(), Renderer.class);
-		return renderer;
-	}
-	
-	public Film inflateFilm() throws JsonParseException {
-		
-		if (film == null)
-			film = Settings.getInstance().getGson().fromJson(getFilmJson(), Film.class);
-		return film;
-	}
-	
-	public Camera inflateCamera() throws JsonParseException {
-		
-		if (camera == null)
-			camera = Settings.getInstance().getGson().fromJson(getCameraJson(), Camera.class);
-		return camera;
 	}
 	
 	public Resource inflateResultAsResource() {
