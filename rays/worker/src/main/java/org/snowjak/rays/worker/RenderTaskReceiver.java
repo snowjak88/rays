@@ -31,7 +31,7 @@ import com.google.gson.JsonParseException;
 public class RenderTaskReceiver {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RenderTaskReceiver.class);
-	private final Map<UUID, ListenableFuture<Image>> futures = Collections.synchronizedMap(new HashMap<>());
+	private final Map<UUID, ListenableFuture<Image>> executingFutures = Collections.synchronizedMap(new HashMap<>());
 	private final Set<UUID> deletedUUIDs = Collections.synchronizedSet(new HashSet<>());
 	
 	@Value("${rabbitmq.resultq}")
@@ -54,7 +54,7 @@ public class RenderTaskReceiver {
 	@Autowired
 	private RabbitTemplate rabbit;
 	
-	@RabbitListener(priority = "1", concurrency = "1", queues = "${rabbitmq.taskq}")
+	@RabbitListener(priority = "1", queues = "${rabbitmq.taskq}")
 	public void receive(String taskJson) {
 		
 		try {
@@ -81,10 +81,12 @@ public class RenderTaskReceiver {
 			
 			LOG.debug("UUID={}: Submitting to executor ...", task.getUuid());
 			final var future = taskExecutor.submit(task);
-			futures.put(task.getUuid(), future);
+			executingFutures.put(task.getUuid(), future);
 			
 			future.addListener(() -> {
 				try {
+					executingFutures.remove(task.getUuid());
+					
 					LOG.info("UUID={}: Render complete", task.getUuid());
 					LOG.debug("UUID={}: Retrieving result ...", task.getUuid());
 					
@@ -107,18 +109,18 @@ public class RenderTaskReceiver {
 		
 	}
 	
-	@RabbitListener(priority = "2", concurrency = "1", bindings = @QueueBinding(value = @Queue(""), exchange = @Exchange(name = "${rabbitmq.deleteExchange}", type = "fanout")))
+	@RabbitListener(priority = "2", bindings = @QueueBinding(value = @Queue(""), exchange = @Exchange(name = "${rabbitmq.deleteExchange}", type = "fanout")))
 	public void receiveDelete(UUID uuid) {
 		
 		LOG.info("Received deletion for render UUID={}", uuid);
 		
-		if (!futures.containsKey(uuid)) {
+		if (!executingFutures.containsKey(uuid)) {
 			LOG.info("Received deletion for render UUID={}, but given UUID is not recognized! Saving for later.", uuid);
 			deletedUUIDs.add(uuid);
 			return;
 		}
 		
-		final var future = futures.get(uuid);
+		final var future = executingFutures.get(uuid);
 		if (future.isDone()) {
 			LOG.info("Cannot cancel render UUID={}: already done!", uuid);
 			return;

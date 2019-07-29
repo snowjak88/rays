@@ -1,19 +1,21 @@
 package org.snowjak.rays.frontend.service;
 
-import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
@@ -58,6 +60,11 @@ public class RenderUpdateService {
 	
 	private final EventBus bus;
 	
+	/**
+	 * See {@link #getUpdateLock(UUID)}
+	 */
+	private final Map<UUID, Lock> renderUpdateLocks = Collections.synchronizedMap(new HashMap<>());
+	
 	@Autowired
 	private RenderRepository renderRepository;
 	
@@ -73,6 +80,21 @@ public class RenderUpdateService {
 		this.bus = bus;
 		
 		bus.register(this);
+	}
+	
+	/**
+	 * Get the Render-update lock corresponding to the given Render UUID.
+	 * <p>
+	 * It is suggested that you obtain the lock for the Render you wish to update
+	 * before beginning your update-actions.
+	 * </p>
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	private Lock getUpdateLock(UUID uuid) {
+		
+		return renderUpdateLocks.computeIfAbsent(uuid, (id) -> new ReentrantLock());
 	}
 	
 	@Subscribe
@@ -107,10 +129,14 @@ public class RenderUpdateService {
 			return;
 		}
 		
+		getUpdateLock(request.getUuid()).lock();
+		
 		renderRepository.save(render);
 		bus.post(new ReceivedRenderUpdate(render));
 		
 		final var childIDs = decomposeRender(request.getUuid(), request.getRegionSize());
+		
+		getUpdateLock(request.getUuid()).unlock();
 		
 		childIDs.stream().map(childID -> renderRepository.findById(childID.toString()).orElse(null))
 				.filter(r -> r != null).forEach(childRender -> bus.post(new ReceivedRenderCreation(childRender)));
@@ -138,7 +164,11 @@ public class RenderUpdateService {
 			return;
 		}
 		
+		getUpdateLock(request.getUuid()).lock();
+		
 		renderRepository.delete(render);
+		
+		getUpdateLock(request.getUuid()).unlock();
 		
 		LOG.debug("Deleted render (UUID={}).", request.getUuid().toString());
 		bus.post(new ReceivedRenderDeletion(render.getUuid()));
@@ -212,14 +242,22 @@ public class RenderUpdateService {
 						subregionWidth, subregionHeight);
 				LOG.debug("Created child render (UUID={})", childRenderId.toString());
 				
+				getUpdateLock(UUID.fromString(parentRender.getUuid())).lock();
+				
 				final var childRender = renderRepository.findById(childRenderId.toString()).get();
 				parentRender.getChildren().add(childRender);
 				parentRender = renderRepository.save(parentRender);
 				
+				getUpdateLock(UUID.fromString(parentRender.getUuid())).unlock();
+				
 				childIdList.add(childRenderId);
 			}
 		
+		getUpdateLock(UUID.fromString(parentRender.getUuid())).lock();
+		
 		parentRender = renderRepository.save(parentRender);
+		
+		getUpdateLock(UUID.fromString(parentRender.getUuid())).unlock();
 		
 		return childIdList;
 	}
@@ -328,11 +366,13 @@ public class RenderUpdateService {
 	@Transactional(readOnly = true)
 	public RenderTask getRenderTask(UUID uuid) throws JsonParseException {
 		
+		getUpdateLock(uuid).lock();
 		LOG.debug("UUID={}: Creating RenderTask from database ...", uuid.toString());
 		
 		final var renderEntity = renderRepository.findById(uuid.toString());
 		if (!renderEntity.isPresent()) {
 			LOG.warn("Cannot inflate RenderTask from database -- UUID={} is unrecognied.", uuid.toString());
+			getUpdateLock(uuid).unlock();
 			return null;
 		}
 		
@@ -343,6 +383,7 @@ public class RenderUpdateService {
 		try {
 			sampler = Settings.getInstance().getGson().fromJson(renderSetup.getSamplerJson(), Sampler.class);
 		} catch (JsonParseException e) {
+			getUpdateLock(uuid).unlock();
 			throw new JsonParseException("Cannot inflate Sampler settings from Render(UUID = " + uuid.toString() + ")",
 					e);
 		}
@@ -352,6 +393,7 @@ public class RenderUpdateService {
 		try {
 			renderer = Settings.getInstance().getGson().fromJson(renderSetup.getRendererJson(), Renderer.class);
 		} catch (JsonParseException e) {
+			getUpdateLock(uuid).unlock();
 			throw new JsonParseException("Cannot inflate Renderer settings from Render(UUID = " + uuid.toString() + ")",
 					e);
 		}
@@ -361,6 +403,7 @@ public class RenderUpdateService {
 		try {
 			film = Settings.getInstance().getGson().fromJson(renderSetup.getFilmJson(), Film.class);
 		} catch (JsonParseException e) {
+			getUpdateLock(uuid).unlock();
 			throw new JsonParseException("Cannot inflate Film settings from Render(UUID = " + uuid.toString() + ")", e);
 		}
 		
@@ -372,6 +415,7 @@ public class RenderUpdateService {
 		try {
 			scene = Settings.getInstance().getGson().fromJson(sceneEntity.getJson(), Scene.class);
 		} catch (JsonParseException e) {
+			getUpdateLock(uuid).unlock();
 			throw new JsonParseException("Cannot inflate Scene (ID = " + sceneEntity.getId() + ")", e);
 		}
 		
@@ -380,6 +424,7 @@ public class RenderUpdateService {
 		try {
 			camera = Settings.getInstance().getGson().fromJson(renderSetup.getCameraJson(), Camera.class);
 		} catch (JsonParseException e) {
+			getUpdateLock(uuid).unlock();
 			throw new JsonParseException("Cannot inflate Camera settings from Render(UUID = " + uuid.toString() + ")",
 					e);
 		}
@@ -399,6 +444,7 @@ public class RenderUpdateService {
 		final var renderTask = new RenderTask(uuid, sampler, renderer, film, scene, camera,
 				renderEntity.get().getOffsetX(), renderEntity.get().getOffsetY());
 		
+		getUpdateLock(uuid).unlock();
 		LOG.debug("UUID={}: Created RenderTask from database.");
 		return renderTask;
 		
@@ -458,6 +504,7 @@ public class RenderUpdateService {
 		try {
 			
 			final var updatedRenders = saveImageToDatabase(newRenderResult.getImage(), render.getUuid());
+			
 			for (var r : updatedRenders) {
 				
 				//
@@ -480,11 +527,14 @@ public class RenderUpdateService {
 		final var renderList = new LinkedList<Render>();
 		
 		LOG.trace("UUID={}: Updating progress to {}%.", renderID, percent);
+		
+		getUpdateLock(UUID.fromString(renderID)).lock();
+		
 		var render = renderRepository.findById(renderID).get();
-		
 		render.setPercentComplete(percent);
-		
 		render = renderRepository.save(render);
+		
+		getUpdateLock(UUID.fromString(renderID)).unlock();
 		
 		renderList.add(render);
 		
@@ -505,6 +555,8 @@ public class RenderUpdateService {
 	@Transactional
 	public void markRenderAsSubmitted(String renderID) {
 		
+		getUpdateLock(UUID.fromString(renderID)).lock();
+		
 		final var render = renderRepository.findById(renderID).get();
 		
 		final var now = Instant.now();
@@ -512,6 +564,9 @@ public class RenderUpdateService {
 		render.setSubmitted(now);
 		
 		renderRepository.save(render);
+		
+		getUpdateLock(UUID.fromString(renderID)).unlock();
+		
 		bus.post(new ReceivedRenderUpdate(render));
 		
 		if (render.isChild()) {
@@ -551,7 +606,11 @@ public class RenderUpdateService {
 	@Transactional
 	public Collection<Render> saveImageToDatabase(Image image, String renderID) throws IOException {
 		
-		return saveImageToDatabase(image, renderID, 0, 0);
+		final var render = renderRepository.findById(renderID).orElse(null);
+		if (render == null)
+			return Collections.emptyList();
+		
+		return saveImageToDatabase(image, renderID, render.getOffsetX(), render.getOffsetY());
 	}
 	
 	/**
@@ -570,55 +629,65 @@ public class RenderUpdateService {
 	public Collection<Render> saveImageToDatabase(Image image, String renderID, int offsetX, int offsetY)
 			throws IOException {
 		
-		var render = renderRepository.findById(renderID).get();
 		final var renderList = new LinkedList<Render>();
 		
-		final BufferedImage sumBufferedImage;
-		final Image sumImage;
-		
-		LOG.debug("UUID={}: Checking if current render has a partial image to add to ...", render.getUuid());
-		if (image != null && render.getPngBase64() != null) {
+		if (image == null) {
+			getUpdateLock(UUID.fromString(renderID)).lock();
 			
-			LOG.info("UUID={}: Adding received image to existing image.", render.getUuid());
+			var render = renderRepository.findById(renderID).get();
 			
-			LOG.trace("UUID={}: Decoding existing image as PNG ...", render.getUuid());
-			final var existingImage = ImageIO
-					.read(new ByteArrayInputStream(Base64.getDecoder().decode(render.getPngBase64())));
+			render.setPngBase64(null);
+			render = renderRepository.save(render);
 			
-			LOG.trace("UUID={}: Retrieving new image ...", render.getUuid());
-			final var newImage = image.getBufferedImage();
+			renderList.add(render);
 			
-			LOG.trace("UUID={}: Allocating sum-image buffer ...", render.getUuid());
-			final var contentWidth = max(existingImage.getWidth(), offsetX + newImage.getWidth());
-			final var contentHeight = max(existingImage.getHeight(), offsetY + newImage.getHeight());
-			sumBufferedImage = new BufferedImage(max(contentWidth, render.getWidth()),
-					max(contentHeight, render.getHeight()), BufferedImage.TYPE_INT_ARGB);
+			getUpdateLock(UUID.fromString(renderID)).unlock();
 			
-			LOG.trace("UUID={}: Painting existing and new images onto buffer ...", render.getUuid());
-			LOG.trace("UUID={}: New image is offset by ({},{}) ...", render.getUuid(), offsetX - render.getOffsetX(),
-					offsetY - render.getOffsetY());
-			final var g = sumBufferedImage.getGraphics();
-			g.drawImage(existingImage, 0, 0, null);
-			g.drawImage(newImage, offsetX - render.getOffsetX(), offsetY - render.getOffsetY(), null);
-			
-			LOG.trace("UUID={}: Saving sum-image as PNG ...", render.getUuid());
-			final var sumImageBuffer = new ByteArrayOutputStream();
-			ImageIO.write(sumBufferedImage, "png", sumImageBuffer);
-			
-			ImageIO.write(sumBufferedImage, "png", new File("result.png"));
-			
-			render.setPngBase64(Base64.getEncoder().encodeToString(sumImageBuffer.toByteArray()));
-			sumImage = new Image(sumBufferedImage, UUID.fromString(render.getUuid()));
-			
-		} else {
-			
-			LOG.info("UUID={}: Saving received image to database.", render.getUuid());
-			
-			render.setPngBase64((image != null) ? image.getPng() : null);
-			sumImage = image;
-			
+			return renderList;
 		}
 		
+		getUpdateLock(UUID.fromString(renderID)).lock();
+		var render = renderRepository.findById(renderID).get();
+		
+		//
+		//
+		//
+		
+		final BufferedImage existingImage, sumBufferedImage;
+		final Image sumImage;
+		
+		if (render.getPngBase64() != null) {
+			LOG.info("UUID={}: Adding received image to existing image.", render.getUuid());
+			LOG.trace("UUID={}: Decoding existing image as PNG ...", render.getUuid());
+			existingImage = ImageIO.read(new ByteArrayInputStream(Base64.getDecoder().decode(render.getPngBase64())));
+		} else {
+			LOG.info("UUID={}: Saving received image to database.", render.getUuid());
+			existingImage = new BufferedImage(render.getWidth(), render.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		}
+		
+		LOG.trace("UUID={}: Retrieving new image ...", render.getUuid());
+		final var newImage = image.getBufferedImage();
+		
+		LOG.trace("UUID={}: Allocating sum-image buffer ...", render.getUuid());
+		sumBufferedImage = new BufferedImage(render.getWidth(), render.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		
+		LOG.trace("UUID={}: Painting existing and new images onto buffer ...", render.getUuid());
+		LOG.trace("UUID={}: New image is offset by ({},{}) ...", render.getUuid(), offsetX - render.getOffsetX(),
+				offsetY - render.getOffsetY());
+		final var g = sumBufferedImage.getGraphics();
+		g.drawImage(existingImage, 0, 0, null);
+		g.drawImage(newImage, offsetX - render.getOffsetX(), offsetY - render.getOffsetY(), null);
+		
+		LOG.trace("UUID={}: Saving sum-image as PNG ...", render.getUuid());
+		final var sumImageBuffer = new ByteArrayOutputStream();
+		ImageIO.write(sumBufferedImage, "png", sumImageBuffer);
+		
+		render.setPngBase64(Base64.getEncoder().encodeToString(sumImageBuffer.toByteArray()));
+		sumImage = new Image(sumBufferedImage, UUID.fromString(render.getUuid()));
+		
+		//
+		//
+		//
 		if (render.isChild()) {
 			LOG.info("Also adding image to parent Render ...");
 			renderList.addAll(saveImageToDatabase(sumImage, render.getParent().getUuid(), render.getOffsetX(),
@@ -629,6 +698,8 @@ public class RenderUpdateService {
 		
 		render.getPngBase64();
 		renderList.add(render);
+		
+		getUpdateLock(UUID.fromString(renderID)).unlock();
 		
 		return renderList;
 	}

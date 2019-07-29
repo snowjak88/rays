@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.annotations.bean.Node;
@@ -51,6 +53,7 @@ import org.snowjak.rays.transform.ScaleTransform;
 import org.snowjak.rays.transform.Transform;
 import org.snowjak.rays.transform.TranslationTransform;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.math.DoubleMath;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -118,16 +121,19 @@ public class Settings {
 	 * @see #getColorMappingFunctionDistribution()
 	 */
 	private ColorMappingFunctions colorMappingFunctions = null;
+	private Lock colorMappingFunctionsLock = new ReentrantLock();
 	
 	/**
 	 * @see #getIlluminatorSpectralPowerDistribution()
 	 */
 	private SpectralPowerDistribution illuminatorSpectralPowerDistribution = null;
+	private Lock illuminatorSpectralPowerDistributionLock = new ReentrantLock();
 	
 	/**
 	 * @see #getComponentSpectra()
 	 */
-	private Map<ComponentSpectrumName, SpectralPowerDistribution> componentSpectra = null;
+	private ImmutableMap<ComponentSpectrumName, SpectralPowerDistribution> componentSpectra = null;
+	private Lock componentSpectraLock = new ReentrantLock();
 	
 	/**
 	 * @see #getCieXyzIntegrationStepCount()
@@ -146,11 +152,18 @@ public class Settings {
 	
 	private final Properties coreSettings;
 	private static Settings __INSTANCE = null;
+	private static Lock __INSTANCE_LOCK = new ReentrantLock();
 	
 	public static Settings getInstance() {
 		
-		if (__INSTANCE == null)
-			__INSTANCE = new Settings();
+		if (__INSTANCE == null) {
+			__INSTANCE_LOCK.lock();
+			
+			if (__INSTANCE == null)
+				__INSTANCE = new Settings();
+			
+			__INSTANCE_LOCK.unlock();
+		}
 		
 		return __INSTANCE;
 	}
@@ -406,19 +419,28 @@ public class Settings {
 	 */
 	public ColorMappingFunctions getColorMappingFunctions() {
 		
-		if (colorMappingFunctions == null)
-			if (coreSettings.containsKey("org.snowjak.rays.cie-csv-xyz-color-mapping-path"))
-				try {
-					colorMappingFunctions = TabulatedColorMappingFunctions.loadFromCSV(new FileInputStream(
-							coreSettings.getProperty("org.snowjak.rays.cie-csv-xyz-color-mapping-path")));
-				} catch (IOException e) {
-					//
-					//
-					colorMappingFunctions = new AnalyticColorMappingFunctions();
-				}
-			else
-				colorMappingFunctions = new AnalyticColorMappingFunctions();
+		if (colorMappingFunctions == null) {
 			
+			colorMappingFunctionsLock.lock();
+			
+			if (colorMappingFunctions == null) {
+				if (coreSettings.containsKey("org.snowjak.rays.cie-csv-xyz-color-mapping-path"))
+					try {
+						colorMappingFunctions = TabulatedColorMappingFunctions.loadFromCSV(new FileInputStream(
+								coreSettings.getProperty("org.snowjak.rays.cie-csv-xyz-color-mapping-path")));
+					} catch (IOException e) {
+						//
+						//
+						colorMappingFunctions = new AnalyticColorMappingFunctions();
+					}
+				else
+					colorMappingFunctions = new AnalyticColorMappingFunctions();
+			}
+			
+			colorMappingFunctionsLock.unlock();
+			
+		}
+		
 		return colorMappingFunctions;
 	}
 	
@@ -428,19 +450,27 @@ public class Settings {
 	 */
 	public SpectralPowerDistribution getIlluminatorSpectralPowerDistribution() {
 		
-		if (illuminatorSpectralPowerDistribution == null)
-			try {
-				
-				illuminatorSpectralPowerDistribution = SpectralPowerDistribution
-						.loadFromCSV(new FileInputStream(
-								coreSettings.getProperty("org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path")))
-						.normalize();
-				
-			} catch (IOException e) {
-				//
-				//
-				throw new RuntimeException("Could not load standard-illuminator SDP.", e);
-			}
+		if (illuminatorSpectralPowerDistribution == null) {
+			
+			illuminatorSpectralPowerDistributionLock.lock();
+			
+			if (illuminatorSpectralPowerDistribution == null)
+				try {
+					
+					illuminatorSpectralPowerDistribution = SpectralPowerDistribution
+							.loadFromCSV(new FileInputStream(coreSettings
+									.getProperty("org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path")))
+							.normalize();
+					
+				} catch (IOException e) {
+					//
+					//
+					throw new RuntimeException("Could not load standard-illuminator SDP.", e);
+				}
+			
+			illuminatorSpectralPowerDistributionLock.unlock();
+			
+		}
 		
 		return illuminatorSpectralPowerDistribution;
 	}
@@ -448,23 +478,33 @@ public class Settings {
 	public Map<ComponentSpectrumName, SpectralPowerDistribution> getComponentSpectra() {
 		
 		if (componentSpectra == null) {
-			componentSpectra = new HashMap<>();
 			
-			for (ComponentSpectrumName name : ComponentSpectrumName.values()) {
+			componentSpectraLock.lock();
+			
+			if (componentSpectra == null) {
+				final Map<ComponentSpectrumName, SpectralPowerDistribution> spectra = new HashMap<>();
 				
-				final String filePath = coreSettings.getProperty("org.snowjak.rays.component-spectra-path")
-						+ File.separator + name.getName() + ".csv";
-				try {
+				for (ComponentSpectrumName name : ComponentSpectrumName.values()) {
 					
-					final InputStream stream = new FileInputStream(filePath);
-					componentSpectra.put(name, SpectralPowerDistribution.loadFromCSV(stream));
-					
-				} catch (IOException e) {
-					//
-					//
-					throw new RuntimeException("Could not load component-spectrum from [" + filePath + "].", e);
+					final String filePath = coreSettings.getProperty("org.snowjak.rays.component-spectra-path")
+							+ File.separator + name.getName() + ".csv";
+					try {
+						
+						final InputStream stream = new FileInputStream(filePath);
+						spectra.put(name, SpectralPowerDistribution.loadFromCSV(stream));
+						
+					} catch (IOException e) {
+						//
+						//
+						throw new RuntimeException("Could not load component-spectrum from [" + filePath + "].", e);
+					}
 				}
+				
+				componentSpectra = ImmutableMap.copyOf(spectra);
 			}
+			
+			componentSpectraLock.unlock();
+			
 		}
 		
 		return componentSpectra;

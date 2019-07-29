@@ -57,6 +57,5 @@ services:
       - frontend
     environment:
       - SPRING_RABBITMQ_HOST=rays-mq
-      - RAYS_WORKER_THREADS=1
     restart: always
 

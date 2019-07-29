@@ -7,6 +7,8 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -18,35 +20,28 @@ import com.google.common.util.concurrent.MoreExecutors;
 @SpringBootApplication(scanBasePackages = "org.snowjak.rays.worker")
 public class App extends SpringApplication {
 	
-	@Value("${rays.worker.threads}")
-	private int parallelism;
-	
-	@Value("${rays.worker.queueSize}")
-	private int queueSize;
+	private static final Logger LOG = LoggerFactory.getLogger(App.class);
 	
 	public static void main(String[] args) {
 		
 		SpringApplication.run(App.class, args);
 	}
 	
-	private int getParallelism() {
-		if (parallelism < 1)
-			parallelism = max(1, Runtime.getRuntime().availableProcessors() - 1);
-		return parallelism;
-	}
-	
-	private int getQueueSize() {
-		if (queueSize < 1)
-			queueSize = 1;
-		return queueSize;
-	}
-	
 	@Bean("renderTaskExecutor")
-	public ListeningExecutorService renderTaskExecutor() {
+	public ListeningExecutorService renderTaskExecutor(@Value("${rays.worker.threads}") int parallelism,
+			@Value("${rays.worker.queueSize}") int queueSize) {
+		
+		if (parallelism < 1)
+			parallelism = Runtime.getRuntime().availableProcessors() - 1;
+		
+		queueSize = max(queueSize, 1);
+		
+		LOG.info("Spinning up a RenderTask executor: {} threads, with a pending-queue {} tasks deep.", parallelism,
+				queueSize);
 		
 		final var executor = MoreExecutors
-				.listeningDecorator(new ThreadPoolExecutor(getParallelism(), getParallelism(), 30, TimeUnit.SECONDS,
-						new LinkedBlockingQueue<>(getQueueSize()), new BlocksUntilReadyRejectedExecutionHandler()));
+				.listeningDecorator(new ThreadPoolExecutor(1, parallelism, 30, TimeUnit.SECONDS,
+						new LinkedBlockingQueue<>(queueSize), new BlocksUntilReadyRejectedExecutionHandler()));
 		
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> executor.shutdownNow()));
 		return executor;
@@ -55,9 +50,7 @@ public class App extends SpringApplication {
 	@Bean("renderResultExecutor")
 	public ListeningExecutorService renderResultExecutor() {
 		
-		final var executor = MoreExecutors
-				.listeningDecorator(new ThreadPoolExecutor(getParallelism(), getParallelism(), 30, TimeUnit.SECONDS,
-						new LinkedBlockingQueue<>(getQueueSize()), new BlocksUntilReadyRejectedExecutionHandler()));
+		final var executor = MoreExecutors.listeningDecorator(MoreExecutors.newDirectExecutorService());
 		
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> executor.shutdownNow()));
 		return executor;
@@ -69,6 +62,7 @@ public class App extends SpringApplication {
 		public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
 			
 			try {
+				LOG.debug("Waiting to drop another task into the executor {} ...", executor.toString());
 				executor.getQueue().put(r);
 			} catch (InterruptedException e) {
 				// do nothing here
