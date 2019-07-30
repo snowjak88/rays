@@ -38,7 +38,7 @@ plugins {
 }
 
 group = 'org.snowjak'
-version = '0.3.8'
+version = '0.3.9'
 wrapper { gradleVersion = 5.5 }
 
 

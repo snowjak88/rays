@@ -61,12 +61,17 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 		
 		final var material = interaction.getInteracted().getMaterial();
 		
-		return estimate(() -> material.getReflectionSample(interaction, sample.getSample()),
-				(s) -> material.getReflection(interaction, s.getDirection(),
-						estimate(new TracedSample(sample.getSample(),
-								new Ray(interaction.getPoint(), s.getDirection(), sample.getRay().getDepth() + 1)),
-								scene).getRadiance().multiply(
-										Vector3D.from(interaction.getNormal()).dotProduct(s.getDirection()))));
+		if (material.isReflective())
+			return estimate(
+					() -> material.getReflectionSample(interaction, sample
+							.getSample()),
+					(s) -> material.getReflection(interaction, s.getDirection(),
+							estimate(new TracedSample(sample.getSample(),
+									new Ray(interaction.getPoint(), s.getDirection(), sample.getRay().getDepth() + 1)),
+									scene).getRadiance().multiply(
+											Vector3D.from(interaction.getNormal()).dotProduct(s.getDirection()))));
+		else
+			return new SpectralPowerDistribution();
 	}
 	
 	@Override
