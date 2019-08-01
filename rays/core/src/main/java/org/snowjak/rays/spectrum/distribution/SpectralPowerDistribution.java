@@ -422,6 +422,16 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 					+ addend.getClass().getSimpleName() + "\" is not supported yet!");
 	}
 	
+	@Override
+	public Spectrum subtract(Spectrum subtrahend) {
+		
+		if (SpectralPowerDistribution.class.isAssignableFrom(subtrahend.getClass())) {
+			return this.apply((SpectralPowerDistribution) subtrahend, (p1, p2) -> p1.subtract(p2));
+		} else
+			throw new RuntimeException("Subtracting \"" + subtrahend.getClass().getSimpleName() + "\" from \""
+					+ this.getClass().getSimpleName() + "\" is not supported yet!");
+	}
+	
 	/**
 	 * {@inheritDoc}
 	 * <p>
@@ -454,6 +464,17 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	public Spectrum multiply(double scalar) {
 		
 		return this.apply(p -> p.multiply(scalar));
+	}
+	
+	@Override
+	public Spectrum divide(Spectrum divisor) {
+		
+		if (SpectralPowerDistribution.class.isAssignableFrom(divisor.getClass())) {
+			return this.apply((SpectralPowerDistribution) divisor, (p1, p2) -> p1
+					.divide((p2.get(0) == 0d) ? new Point(Settings.getInstance().getDoubleEqualityEpsilon()) : p2));
+		} else
+			throw new RuntimeException("Dividing \"" + this.getClass().getSimpleName() + "\" by \""
+					+ divisor.getClass().getSimpleName() + "\" is not supported yet!");
 	}
 	
 	@Override

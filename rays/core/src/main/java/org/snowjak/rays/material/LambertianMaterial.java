@@ -5,7 +5,6 @@ import static org.apache.commons.math3.util.FastMath.cos;
 import static org.apache.commons.math3.util.FastMath.sin;
 import static org.apache.commons.math3.util.FastMath.sqrt;
 
-import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Vector3D;
@@ -31,19 +30,6 @@ public class LambertianMaterial implements Material {
 	public LambertianMaterial(Texture texture) {
 		
 		this.texture = texture;
-	}
-	
-	@Override
-	public boolean isDirectLightable() {
-		
-		return true;
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getDirectLightReflection(Interaction<T> interaction,
-			Spectrum irradiance) {
-		
-		return SpectralPowerDistribution.fromRGB(texture.getRGB(interaction)).multiply(irradiance);
 	}
 	
 	@Override
@@ -80,24 +66,20 @@ public class LambertianMaterial implements Material {
 		//
 		// Convert the Cartesian coordinates to a Vector in the constructed
 		// coordinate system.
-		return new MaterialSample(i.multiply(x).add(j.multiply(y)).add(k.multiply(z)).normalize(),
-				1d / (2d * FastMath.PI));
+		return new MaterialSample(i.multiply(x).add(j.multiply(y)).add(k.multiply(z)).normalize(), 1d / (2d * PI));
 	}
 	
 	@Override
 	public <T extends Interactable<T>> double getReflectionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 1d / (2d * FastMath.PI);
+		return 1d / (2d * PI);
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction, Vector3D direction,
-			Spectrum incident) {
+	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction,
+			Spectrum totalIncidentRadiance) {
 		
-		final var cos_i = Vector3D.from(interaction.getNormal()).normalize().dotProduct(direction.normalize());
-		
-		return incident.multiply(
-				SpectralPowerDistribution.fromRGB(texture.getRGB(interaction)).multiply(1d / PI).multiply(cos_i));
+		return totalIncidentRadiance.multiply(texture.getSpectrum(interaction).multiply(1d / PI));
 	}
 	
 	@Override
@@ -119,8 +101,8 @@ public class LambertianMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction, Vector3D direction,
-			Spectrum incident) {
+	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction,
+			Spectrum totalIncidentRadiance) {
 		
 		return new SpectralPowerDistribution();
 	}

@@ -28,6 +28,11 @@ public interface Spectrum extends Serializable {
 	public Spectrum add(Spectrum addend);
 	
 	/**
+	 * Compute the result of subtracting another Spectrum's energy from this one.
+	 */
+	public Spectrum subtract(Spectrum subtrahend);
+	
+	/**
 	 * Compute the result of multiplying this Spectrum's energy with another.
 	 * (Usually used to model filtering or fractional selection of radiant energy.)
 	 */
@@ -43,8 +48,17 @@ public interface Spectrum extends Serializable {
 	public Spectrum multiply(double scalar);
 	
 	/**
-	 * Get this Spectrum's power ({@code W / m^2 nm}) at the given
-	 * wavelength ({@code nm}).
+	 * Compute the result of dividing this Spectrum's energy by the values of
+	 * another.
+	 * 
+	 * @param divisor
+	 * @return
+	 */
+	public Spectrum divide(Spectrum divisor);
+	
+	/**
+	 * Get this Spectrum's power ({@code W / m^2 nm}) at the given wavelength
+	 * ({@code nm}).
 	 * 
 	 * @param lambda
 	 * @return
@@ -52,7 +66,7 @@ public interface Spectrum extends Serializable {
 	public double getPower(double lambda);
 	
 	/**
-	 * Rescale this Spectrum's total power ({@code W}) to the given power-level.
+	 * Rescale this Spectrum's total power ({@code W / m^2}) to the given power-level.
 	 * 
 	 * @param power
 	 * @return
