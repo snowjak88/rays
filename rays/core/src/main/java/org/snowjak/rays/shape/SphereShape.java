@@ -153,6 +153,7 @@ public class SphereShape extends Shape {
 	public SurfaceDescriptor<Shape> sampleSurface(Sample sample) {
 		
 		final Point2D samplePoint = sample.getAdditional2DSample();
+		final boolean flipHemispheres = (sample.getAdditional1DSample() <= 0.5);
 		
 		final double sin2_theta = samplePoint.getX();
 		final double cos2_theta = 1d - sin2_theta;
@@ -162,7 +163,7 @@ public class SphereShape extends Shape {
 		final double orientation = samplePoint.getY() * 2d * PI;
 		//
 		final double x = sin_theta * cos(orientation);
-		final double y = cos_theta;
+		final double y = cos_theta * (flipHemispheres ? -1d : 1d);
 		final double z = sin_theta * sin(orientation);
 		//
 		final Vector3D samplePoint_local = new Vector3D(x, y, z).multiply(radius);
@@ -216,6 +217,9 @@ public class SphereShape extends Shape {
 	@Override
 	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
 		
+		//
+		// We don't sample the whole Sphere evenly, but only that hemisphere facing the
+		// neighboring point.
 		return 1d / (2d * PI);
 	}
 	
