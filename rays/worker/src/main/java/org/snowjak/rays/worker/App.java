@@ -32,7 +32,7 @@ public class App extends SpringApplication {
 			@Value("${rays.worker.queueSize}") int queueSize) {
 		
 		if (parallelism < 1)
-			parallelism = Runtime.getRuntime().availableProcessors() - 1;
+			parallelism = max(1, Runtime.getRuntime().availableProcessors() - 1);
 		
 		queueSize = max(queueSize, 1);
 		

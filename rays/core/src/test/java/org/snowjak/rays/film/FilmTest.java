@@ -11,7 +11,6 @@ import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.sampler.PseudorandomSampler;
 import org.snowjak.rays.sampler.Sampler;
 import org.snowjak.rays.spectrum.colorspace.RGB;
-import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 public class FilmTest {
@@ -37,8 +36,7 @@ public class FilmTest {
 				rgb = RGB.WHITE;
 			
 			final var spd = SpectralPowerDistribution.fromRGB(rgb);
-			final EstimatedSample estimated = new EstimatedSample(sample,
-					spd.multiply(1d / XYZ.fromSpectrum(spd, true).getY()));
+			final EstimatedSample estimated = new EstimatedSample(sample, spd);
 			film.addSample(estimated);
 			
 		}
@@ -60,11 +58,11 @@ public class FilmTest {
 				final RGB actual = RGB.fromPacked(img.getRGB(x, y));
 				
 				assertEquals("RGB(R) at [" + x + "," + y + "] not as expected!", expected.getRed(), actual.getRed(),
-						0.08);
+						1d / 12d);
 				assertEquals("RGB(G) at [" + x + "," + y + "] not as expected!", expected.getGreen(), actual.getGreen(),
-						0.08);
+						1d / 12d);
 				assertEquals("RGB(B) at [" + x + "," + y + "] not as expected!", expected.getBlue(), actual.getBlue(),
-						0.08);
+						1d / 12d);
 				
 			}
 	}

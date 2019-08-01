@@ -1,6 +1,7 @@
 package org.snowjak.rays.light;
 
 import org.snowjak.rays.Scene;
+import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
@@ -26,6 +27,31 @@ public interface Light {
 	public default boolean isDelta() {
 		
 		return false;
+	}
+	
+	/**
+	 * Indicates whether this Light-source is infinite in size and power.
+	 * 
+	 * @return
+	 */
+	public default boolean isInfinite() {
+		
+		return false;
+	}
+	
+	/**
+	 * Calculate this Light's falloff factor due to distance. Ordinarily equal to 1
+	 * / ( distance^2 ), although implementations may opt to override this to, e.g.,
+	 * implement infinite light-sources.
+	 * 
+	 * @param distanceSq
+	 *            the square of the distance between the light-point and the
+	 *            surface-point.
+	 * @return
+	 */
+	public default double getFalloff(double distanceSq) {
+		
+		return 1d / distanceSq;
 	}
 	
 	/**
@@ -65,7 +91,11 @@ public interface Light {
 		// and the distance to the interaction is less than the distance to the light,
 		// then the interaction is occluding the light.
 		//
-		if (lightInteraction != null && lightDistance > lightInteraction.getInteractingRay().getT())
+		if (lightInteraction == null)
+			return true;
+		
+		if (lightDistance - lightInteraction.getInteractingRay().getT() >= Settings.getInstance()
+				.getDoubleEqualityEpsilon())
 			return false;
 		
 		return true;

@@ -107,7 +107,7 @@ public class DiffuseLight implements Light {
 		return this.visible;
 	}
 	
-	private SpectralPowerDistribution getPower() {
+	protected SpectralPowerDistribution getPower() {
 		
 		if (power == null)
 			if (rgb == null)

@@ -43,7 +43,8 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 	 * radiance (W/sr*m^2)).
 	 * <p>
 	 * <strong>Note</strong> that it is assumed that the given SPD represents a
-	 * non-emissive energy-distribution.
+	 * non-relative energy-distribution -- i.e., with physical units of
+	 * {@code W * nm}, integrating to {@code W}.
 	 * </p>
 	 * 
 	 * @param spectrum
@@ -61,20 +62,24 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 	 * radiance (W/sr*m^2)).
 	 * 
 	 * <p>
-	 * If {@code isEmissive = true}, then the returned XYZ triplet expresses
-	 * <em>absolute</em> luminance -- i.e., its {@code Y} component will report
-	 * luminance in terms of candela per square meter.
+	 * If {@code isRelative = false}, then it is assumed that this Spectrum's
+	 * integral equals a certain power (in Watts), and the returned XYZ triplet
+	 * expresses <em>absolute</em> luminance -- i.e., its {@code Y} component will
+	 * report luminance in terms of candela per square meter.
 	 * </p>
 	 * <p>
-	 * If {@code isEmissive = false}, then the returned XYZ triplet expresses
-	 * <em>relative</em> luminance.
+	 * If {@code isRelative = true}, then the returned XYZ triplet expresses
+	 * <em>relative</em> luminance. It is assumed that this spectrum represents an
+	 * absorption-spectrum being illuminated by the standard illuminant (see
+	 * {@link Settings#getIlluminatorSpectralPowerDistribution()} with a total
+	 * luminous intensity of 1 candela.
 	 * </p>
 	 * 
 	 * @param spectrum
-	 * @param isEmissive
+	 * @param isRelative
 	 * @return
 	 */
-	public static XYZ fromSpectrum(Spectrum spectrum, boolean isEmissive) {
+	public static XYZ fromSpectrum(Spectrum spectrum, boolean isRelative) {
 		
 		final var cmf = Settings.getInstance().getColorMappingFunctions();
 		final var illuminant = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
@@ -91,18 +96,17 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 		final var numerator = Util.integrateTriplet(lowLambda, highLambda,
 				Settings.getInstance().getCieXyzIntegrationStepCount(),
 				(lambda) -> cmf.get(lambda).multiply(spd.get(lambda).get(0)));
-		final var denominator = Util.integrate(lowLambda, highLambda,
-				Settings.getInstance().getCieXyzIntegrationStepCount(),
-				(lambda) -> cmf.get(lambda).get(1) * illuminant.get(lambda).get(0));
 		
-		final XYZ result;
-		if (isEmissive)
-			result = new XYZ(numerator);
-		else
-			result = new XYZ(numerator.divide(denominator));
-		
-		return result;
-		
+		if (!isRelative)
+			return new XYZ(numerator);
+		else {
+			
+			final var denominator = Util.integrate(lowLambda, highLambda,
+					Settings.getInstance().getCieXyzIntegrationStepCount(),
+					(lambda) -> cmf.get(lambda).get(1) * illuminant.get(lambda).get(0));
+			
+			return new XYZ(numerator.divide(denominator));
+		}
 	}
 	
 	/**
@@ -165,8 +169,8 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 	protected void registerConverters(ColorspaceConverterRegistry<XYZ> registry) {
 		
 		registry.register(XYZ.class, (xyz) -> xyz);
-		
-		registry.register(RGB.class, (xyz) -> new RGB(__CONVERSION_TO_RGB.multiply(xyz.get(), 0d)
+		registry.register(RGB_Gammaless.class, (xyz) -> new RGB_Gammaless(__CONVERSION_TO_RGB.multiply(xyz.get(), 0d)));
+		registry.register(RGB.class, (xyz) -> new RGB(xyz.to(RGB_Gammaless.class).get()
 				.apply(c -> (c <= 0.0031308d) ? (12.92d * c) : (1.055d * pow(c, 1d / 2.4d)) - 0.055d)));
 	}
 	

@@ -17,7 +17,7 @@ public class Test {
 		
 		String json = "";
 		try (var reader = new BufferedReader(
-				new InputStreamReader(Test.class.getClassLoader().getResourceAsStream("test-box_pt_4spp.json")))) {
+				new InputStreamReader(Test.class.getClassLoader().getResourceAsStream("task.json")))) {
 			
 			final var buffer = new StringBuffer();
 			

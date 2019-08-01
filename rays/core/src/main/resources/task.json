@@ -1,9 +1,10 @@
 {
 	"uuid": "20f58c43-a87e-43c2-8355-9aa343779fe6",
 	"renderer": {
-		"type": "path-tracing",
-		"maxDepth": 4,
-		"lightSamples": 4
+		"type": "monte-carlo",
+		"maxDepth": 3,
+		"lightSamples": 4,
+		"n": 4
 	},
 	"film": {
 		"filter": {
@@ -47,7 +48,7 @@
 	},
 	"scene": {
 		"primitives": [
-			{
+			/* {
 				"shape": {
 					"type": "plane",
 					"worldToLocal": [
@@ -196,7 +197,7 @@
 						}
 					}
 				}
-			},
+			}, */
 			{
 				"shape": {
 					"type": "sphere",
@@ -270,7 +271,7 @@
 				"visible": true,
 				"power": {
 					"type": "blackbody",
-					"kelvin": 2800,
+					"kelvin": 3500,
 					"intensity": 250
 				}
 			}

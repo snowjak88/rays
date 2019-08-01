@@ -1,8 +1,9 @@
 {
 	"renderer": {
-		"type": "path-tracing",
-		"maxDepth": 4,
-		"lightSamples": 4
+		"type": "monte-carlo",
+		"maxDepth": 3,
+		"lightSamples": 4,
+		"n": 4
 	},
 	"film": {
 		"filter": {

@@ -214,7 +214,7 @@ public class Film {
 						
 						final var filterContribution = filter.getContribution(estimate.getSample(), pixelX, pixelY);
 						final var newXyz = new XYZ(
-								XYZ.fromSpectrum(sampleRadiance, true).get().multiply(filterContribution));
+								XYZ.fromSpectrum(sampleRadiance, false).get().multiply(filterContribution));
 						
 						filterWeights[indexX][indexY] += filterContribution;
 						

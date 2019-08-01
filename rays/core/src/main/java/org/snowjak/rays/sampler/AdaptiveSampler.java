@@ -309,7 +309,7 @@ public class AdaptiveSampler extends Sampler {
 	@Override
 	public boolean reportSampleResult(EstimatedSample estimate) {
 		
-		this.estimates.add(XYZ.fromSpectrum(estimate.getRadiance(), true));
+		this.estimates.add(XYZ.fromSpectrum(estimate.getRadiance(), false));
 		
 		return true;
 	}

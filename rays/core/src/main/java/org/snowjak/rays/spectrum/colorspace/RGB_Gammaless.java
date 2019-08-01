@@ -3,11 +3,13 @@ package org.snowjak.rays.spectrum.colorspace;
 import static org.apache.commons.math3.util.FastMath.abs;
 import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
+import static org.apache.commons.math3.util.FastMath.pow;
 
 import java.lang.reflect.Type;
 
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
+import org.snowjak.rays.geometry.util.Matrix;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.serialization.IsLoadable;
 
@@ -18,7 +20,11 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 
 /**
- * Represents the sRGB colorspace.
+ * Represents the sRGB colorspace without gamma-correction.
+ * <p>
+ * For comparison, {@link RGB} represents the sRGB colorspace <em>with</em>
+ * gamma-correction.
+ * </p>
  * 
  * @author snowjak88
  *
@@ -26,28 +32,38 @@ import com.google.gson.JsonSerializationContext;
 @UIType(fields = { @UIField(name = "red", type = Double.class, defaultValue = "1"),
 		@UIField(name = "green", type = Double.class, defaultValue = "1"),
 		@UIField(name = "blue", type = Double.class, defaultValue = "1") })
-public class RGB extends Colorspace<RGB, Triplet> {
+public class RGB_Gammaless extends Colorspace<RGB_Gammaless, Triplet> {
 	
 	/**
 	 * Represents the RGB triplet { 0, 0, 0 }
 	 */
-	public static final RGB BLACK = new RGB(0d, 0d, 0d);
+	public static final RGB_Gammaless BLACK = new RGB_Gammaless(0d, 0d, 0d);
 	/**
 	 * Represents the RGB triplet { 1, 1, 1 }
 	 */
-	public static final RGB WHITE = new RGB(1d, 1d, 1d);
+	public static final RGB_Gammaless WHITE = new RGB_Gammaless(1d, 1d, 1d);
 	/**
 	 * Represents the RGB triplet { 1, 0, 0 }
 	 */
-	public static final RGB RED = new RGB(1d, 0d, 0d);
+	public static final RGB_Gammaless RED = new RGB_Gammaless(1d, 0d, 0d);
 	/**
 	 * Represents the RGB triplet { 0, 1, 0 }
 	 */
-	public static final RGB GREEN = new RGB(0d, 1d, 0d);
+	public static final RGB_Gammaless GREEN = new RGB_Gammaless(0d, 1d, 0d);
 	/**
 	 * Represents the RGB triplet { 0, 0, 1 }
 	 */
-	public static final RGB BLUE = new RGB(0d, 0d, 1d);
+	public static final RGB_Gammaless BLUE = new RGB_Gammaless(0d, 0d, 1d);
+	
+	//@formatter:off
+	private static final Matrix __CONVERSION_TO_XYZ =
+			new Matrix(new double[][] {
+				{ 0.4124d, 0.3576d, 0.1805d, 0d },
+				{ 0.2126d, 0.7152d, 0.0722d, 0d },
+				{ 0.0193d, 0.1192d, 0.9505d, 0d },
+				{ 0d,      0d,      0d,      0d }
+			});
+	//@formatter:on
 	
 	/**
 	 * Construct a new RGB trio from an HSL trio.
@@ -60,7 +76,7 @@ public class RGB extends Colorspace<RGB, Triplet> {
 	 *            lightness-value, given in <code>[0,1]</code>
 	 * @return
 	 */
-	public static RGB fromHSL(double hue, double saturation, double lightness) {
+	public static RGB_Gammaless fromHSL(double hue, double saturation, double lightness) {
 		
 		final double chroma = (1d - abs(2d * lightness - 1)) * saturation;
 		
@@ -101,7 +117,7 @@ public class RGB extends Colorspace<RGB, Triplet> {
 		
 		final double m = lightness - chroma / 2d;
 		
-		return new RGB(r1 + m, g1 + m, b1 + m);
+		return new RGB_Gammaless(r1 + m, g1 + m, b1 + m);
 	}
 	
 	/**
@@ -111,7 +127,7 @@ public class RGB extends Colorspace<RGB, Triplet> {
 	 * @param packedRGB
 	 * @return
 	 */
-	public static RGB fromPacked(int packedRGB) {
+	public static RGB_Gammaless fromPacked(int packedRGB) {
 		
 		final int b = packedRGB & 255;
 		
@@ -121,7 +137,7 @@ public class RGB extends Colorspace<RGB, Triplet> {
 		packedRGB = packedRGB >> 8;
 		final int r = packedRGB & 255;
 		
-		return new RGB((double) r / 256d, (double) g / 256d, (double) b / 256d);
+		return new RGB_Gammaless((double) r / 256d, (double) g / 256d, (double) b / 256d);
 	}
 	
 	/**
@@ -132,7 +148,7 @@ public class RGB extends Colorspace<RGB, Triplet> {
 	 * @return
 	 * @see #toPacked()
 	 */
-	public static int toPacked(RGB rgb) {
+	public static int toPacked(RGB_Gammaless rgb) {
 		
 		return toPacked(rgb, 1.0);
 	}
@@ -144,7 +160,7 @@ public class RGB extends Colorspace<RGB, Triplet> {
 	 * @param alpha
 	 * @return
 	 */
-	public static int toPacked(RGB rgb, double alpha) {
+	public static int toPacked(RGB_Gammaless rgb, double alpha) {
 		
 		final double a = max(min(alpha, 1d), 0d);
 		final double r = max(min(rgb.getRed(), 1d), 0d);
@@ -159,19 +175,19 @@ public class RGB extends Colorspace<RGB, Triplet> {
 	 * Pack this RGB instance into an ARGB quadruple.
 	 * 
 	 * @return
-	 * @see #toPacked(RGB)
+	 * @see #toPacked(RGB_Gammaless)
 	 */
 	public int toPacked() {
 		
-		return RGB.toPacked(this);
+		return RGB_Gammaless.toPacked(this);
 	}
 	
-	public RGB(double red, double green, double blue) {
+	public RGB_Gammaless(double red, double green, double blue) {
 		
 		this(new Triplet(red, green, blue));
 	}
 	
-	public RGB(Triplet representation) {
+	public RGB_Gammaless(Triplet representation) {
 		
 		super(representation);
 	}
@@ -192,29 +208,52 @@ public class RGB extends Colorspace<RGB, Triplet> {
 	}
 	
 	@Override
-	public RGB clamp() {
+	public RGB_Gammaless clamp() {
 		
-		return new RGB(get().clamp(0d, 1d));
+		return new RGB_Gammaless(get().clamp(0d, 1d));
+	}
+	
+	/**
+	 * Remove gamma-correction from an sRGB triplet.
+	 * 
+	 * @param rgb
+	 * @return
+	 */
+	protected static RGB_Gammaless degammafy(RGB rgb) {
+		
+		return new RGB_Gammaless(
+				rgb.get().apply(c -> (c <= 0.04045d) ? (c / 12.92d) : (pow((c + 0.055d) / 1.055d, 2.4d))));
+	}
+	
+	/**
+	 * Add gamma-correction, producing an sRGB triplet.
+	 * 
+	 * @param rgb
+	 * @return
+	 */
+	protected static RGB gammafy(RGB_Gammaless rgb) {
+		
+		return new RGB(rgb.get().apply(c -> (c <= 0.0031308d) ? (12.92d * c) : (1.055d * pow(c, 1d / 2.4d)) - 0.055d));
 	}
 	
 	@Override
-	protected void registerConverters(ColorspaceConverterRegistry<RGB> registry) {
+	protected void registerConverters(ColorspaceConverterRegistry<RGB_Gammaless> registry) {
 		
-		registry.register(RGB.class, (rgb) -> rgb);
-		registry.register(RGB_Gammaless.class, (rgb) -> RGB_Gammaless.degammafy(rgb));
-		registry.register(XYZ.class, (rgb) -> rgb.to(RGB_Gammaless.class).to(XYZ.class));
+		registry.register(RGB_Gammaless.class, (rgb) -> rgb);
+		registry.register(RGB.class, (rgb) -> gammafy(rgb));
+		registry.register(XYZ.class, (rgb) -> new XYZ(__CONVERSION_TO_XYZ.multiply(rgb.get(), 0d)));
 	}
 	
 	@Override
 	public String toString() {
 		
-		return "RGB [red=" + getRed() + ", green=" + getGreen() + ", blue=" + getBlue() + "]";
+		return "RGB_Gammaless [red=" + getRed() + ", green=" + getGreen() + ", blue=" + getBlue() + "]";
 	}
 	
-	public static class Loader implements IsLoadable<RGB> {
+	public static class Loader implements IsLoadable<RGB_Gammaless> {
 		
 		@Override
-		public RGB deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+		public RGB_Gammaless deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
 				throws JsonParseException {
 			
 			if (!json.isJsonObject())
@@ -226,12 +265,12 @@ public class RGB extends Colorspace<RGB, Triplet> {
 			final var green = obj.get("green");
 			final var blue = obj.get("blue");
 			
-			return new RGB(new Triplet((red == null) ? 0 : red.getAsDouble(), (green == null) ? 0 : green.getAsDouble(),
-					(blue == null) ? 0 : blue.getAsDouble()));
+			return new RGB_Gammaless(new Triplet((red == null) ? 0 : red.getAsDouble(),
+					(green == null) ? 0 : green.getAsDouble(), (blue == null) ? 0 : blue.getAsDouble()));
 		}
 		
 		@Override
-		public JsonElement serialize(RGB src, Type typeOfSrc, JsonSerializationContext context) {
+		public JsonElement serialize(RGB_Gammaless src, Type typeOfSrc, JsonSerializationContext context) {
 			
 			final var obj = new JsonObject();
 			

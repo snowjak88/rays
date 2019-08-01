@@ -1,6 +1,7 @@
 package org.snowjak.rays.specgen;
 
 import static org.apache.commons.math3.util.FastMath.max;
+import static org.apache.commons.math3.util.FastMath.pow;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -12,7 +13,9 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -21,7 +24,9 @@ import org.slf4j.LoggerFactory;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.geometry.util.Triplet;
+import org.snowjak.rays.specgen.SpectrumSearch.Result;
 import org.snowjak.rays.spectrum.colorspace.RGB;
+import org.snowjak.rays.spectrum.colorspace.RGB_Gammaless;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,7 +59,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 public class SpectrumGenerator implements CommandLineRunner {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SpectrumGenerator.class);
-	private static final Random RND = new Random(System.currentTimeMillis());
+	public static final Random RND = new Random(System.currentTimeMillis());
 	
 	@Value("${generator-type}")
 	private String generatorType;
@@ -71,6 +76,9 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Value("${bumpiness}")
 	private double targetBumpiness;
 	
+	@Value("${color-model}")
+	private String colorModel;
+	
 	@Value("${parallelism}")
 	private int parallelism;
 	
@@ -86,14 +94,18 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Value("${output}")
 	private String outputName;
 	
-	private SpectralPowerDistribution startingSpd = null;
+	private Function<String, SpectralPowerDistribution> startingSpd = null;
 	
 	private Function<String, OutputStream> outputSupplier = null;
+	
+	private BiFunction<SpectralPowerDistribution, RGB, SpectrumSearch.Result> distanceCalculator = null;
 	
 	@Autowired
 	private StochasticSpectrumSearch stochastic;
 	@Autowired
 	private BruteForceSpectrumSearch bruteForce;
+	@Autowired
+	private SpectrumResultViewer viewResult;
 	
 	@Autowired
 	SpectrumGeneratorProperties spectrumGeneratorProperties;
@@ -155,28 +167,75 @@ public class SpectrumGenerator implements CommandLineRunner {
 			return;
 		}
 		
+		distanceCalculator = (spd, targetColor) -> {
+			final XYZ xyz = XYZ.fromSpectrum(spd, true);
+			final RGB_Gammaless rgb = xyz.to(RGB_Gammaless.class);
+			
+			final var targetRGB = targetColor.to(RGB_Gammaless.class);
+			
+			return new Result(pow(rgb.getRed() - targetRGB.getRed(), 2) + pow(rgb.getGreen() - targetRGB.getGreen(), 2)
+					+ pow(rgb.getBlue() - targetRGB.getBlue(), 2), 0, xyz, rgb, spd);
+		};
+		
+		switch (colorModel.toLowerCase()) {
+		case "xyz":
+			distanceCalculator = (spd, targetColor) -> {
+				final XYZ xyz = XYZ.fromSpectrum(spd, true);
+				final RGB_Gammaless rgb = xyz.to(RGB_Gammaless.class);
+				
+				final var targetXYZ = targetColor.to(XYZ.class);
+				
+				return new Result(pow(xyz.getX() - targetXYZ.getX(), 2) + pow(xyz.getY() - targetXYZ.getY(), 2)
+						+ pow(xyz.getZ() - targetXYZ.getZ(), 2), 0, xyz, rgb, spd);
+			};
+			break;
+		case "rgb":
+			break;
+		default:
+			LOG.error("Unknown color-model ({}) -- must be one of 'xyz', 'rgb'. Falling back to 'rgb'.", colorModel);
+		}
+		
 		if (minEnergy < 0d)
 			LOG.warn(
-					"WARNING -- you've selected an allowed minimum-energy of less than 0. This will allow the Generator to generate non-physical Spectral Power Distributions.");
+					"WARNING -- you've selected an allowed minimum-energy of less than 0 W*nm. This will allow the Generator to generate non-physical Spectral Power Distributions.");
 		
-		if (maxEnergy > 1d)
-			LOG.warn(
-					"WARNING -- you've selected an allowed maximum-energy of greater than 1. This will allow the Generator to generate non-physical Spectral Power Distributions.");
+		final Supplier<SpectralPowerDistribution> defaultSpd = () -> Settings.getInstance()
+				.getIlluminatorSpectralPowerDistribution();
+		final Function<String, SpectralPowerDistribution> spdFileLoader = (name) -> {
+			final Optional<String> spdFileName = Arrays.stream(directory.list())
+					.filter(fn -> fn.equalsIgnoreCase(name + ".csv")).findFirst();
+			
+			if (spdFileName.isPresent()) {
+				LOG.trace("Loading existing SPD {} as starting-SPD.", spdFileName.get());
+				
+				try {
+					return SpectralPowerDistribution
+							.loadFromCSV(new FileInputStream(new File(directory, spdFileName.get())));
+				} catch (FileNotFoundException e) {
+					LOG.error("Cannot load existing SPD {} as starting-SPD -- file does not exist!");
+				} catch (IOException e) {
+					LOG.error("Cannot load existing SPD {} as starting-SPD -- unexpected exception!", e);
+				}
+				
+			}
+			LOG.info("Cannot use existing SPD {} as starting-SPD. Falling back to default (random).", startingSPDName);
+			return defaultSpd.get();
+			
+		};
 		
-		startingSpd = getRandomizedSPD(binCount);
-		if (startingSPDName.equalsIgnoreCase("D65"))
-			startingSpd = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
+		if (startingSPDName == null || startingSPDName.trim().equals("")
+				|| startingSPDName.trim().equalsIgnoreCase("RANDOM"))
+			startingSpd = (name) -> getRandomizedSPD(binCount);
+		
+		else if (startingSPDName.trim().equalsIgnoreCase("D65"))
+			startingSpd = (name) -> Settings.getInstance().getIlluminatorSpectralPowerDistribution();
+		
+		else if (startingSPDName.trim().equalsIgnoreCase("{}"))
+			startingSpd = (name) -> spdFileLoader.apply(name);
 		
 		else if (startingSPDName != null && !startingSPDName.trim().equals("")) {
 			
-			final Optional<String> spdFileName = Arrays.stream(directory.list())
-					.filter(fn -> fn.equalsIgnoreCase(startingSPDName + ".csv")).findFirst();
-			
-			if (spdFileName.isPresent()) {
-				LOG.info("Loading existing SPD {} as starting-SPD.", spdFileName.get());
-				startingSpd = SpectralPowerDistribution
-						.loadFromCSV(new FileInputStream(new File(directory, spdFileName.get())));
-			}
+			startingSpd = (name) -> spdFileLoader.apply(startingSPDName.trim());
 			
 		}
 		
@@ -208,8 +267,8 @@ public class SpectrumGenerator implements CommandLineRunner {
 		}
 		
 		for (String color : colors.split(","))
-			runFor(generatorType, parallelism, color, binCount, new RGB(new Triplet(spectrumGeneratorProperties
-					.getColorDefinitions().get(color).stream().mapToDouble(d -> d).toArray())));
+			runFor(generatorType, color, binCount, new RGB(new Triplet(spectrumGeneratorProperties.getColorDefinitions()
+					.get(color).stream().mapToDouble(d -> d).toArray())));
 		
 	}
 	
@@ -220,7 +279,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 				.toArray(len -> new Point[len]));
 	}
 	
-	public void runFor(String generatorType, int parallelism, String name, int binCount, RGB rgb)
+	public void runFor(String generatorType, String name, int binCount, RGB rgb)
 			throws IOException, InterruptedException, ExecutionException {
 		
 		LOG.info("Generating a spectrum fit for: \"{}\" ({} / {})", name, rgb.toString(), rgb.to(XYZ.class).toString());
@@ -229,11 +288,15 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		switch (generatorType) {
 		case "STOCHASTIC":
-			result = stochastic.doSearch(rgb.to(XYZ.class), startingSpd, new StatusReporter(name, 9, 40));
+			result = stochastic.doSearch(distanceCalculator, rgb, () -> startingSpd.apply(name),
+					new StatusReporter(name));
 			break;
 		case "BRUTE-FORCE":
-			result = bruteForce.doSearch(rgb.to(XYZ.class), startingSpd, new StatusReporter(name, 9, 40));
+			result = bruteForce.doSearch(distanceCalculator, rgb, () -> startingSpd.apply(name),
+					new StatusReporter(name));
 			break;
+		case "VIEW":
+			viewResult.doSearch(distanceCalculator, rgb, () -> startingSpd.apply(name), new StatusReporter(name));
 		default:
 			result = null;
 			return;
@@ -241,7 +304,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		LOG.info("{}: writing result to file.", name);
 		
-		LOG.info("{}: resulting RGB = {}", name, XYZ.fromSpectrum(result.getSpd()).to(RGB.class));
+		LOG.info("{}: resulting RGB = {}", name, result.getRgb());
 		LOG.info("{}: Distance: {}", name, result.getDistance());
 		LOG.info("{}: Bumpiness: {}", name, result.getBumpiness());
 		
@@ -263,7 +326,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		private double bestDistance, bestBumpiness;
 		private XYZ bestXYZ;
-		private RGB bestRGB;
+		private RGB_Gammaless bestRGB;
 		private SpectralPowerDistribution bestSPD = null;
 		
 		public StatusReporter(String name) {
@@ -321,7 +384,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 							final double rowBoundHigh = (double) (graphRows - row - 1) * rowSpan;
 							
 							final var isLastRow = (row == graphRows - 1);
-							final var isTickRow = ( rowBoundLow <= 1d && rowBoundHigh >= 1d );
+							final var isTickRow = (rowBoundLow <= 1d && rowBoundHigh >= 1d);
 							if (isLastRow)
 								graphBuilder.append("+");
 							else if (isTickRow)

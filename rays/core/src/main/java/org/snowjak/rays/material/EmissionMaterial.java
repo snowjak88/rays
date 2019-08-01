@@ -35,19 +35,6 @@ public class EmissionMaterial implements Material {
 	}
 	
 	@Override
-	public boolean isDirectLightable() {
-		
-		return false;
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getDirectLightReflection(Interaction<T> interaction,
-			Spectrum irradiance) {
-		
-		return SpectralPowerDistribution.BLACK;
-	}
-	
-	@Override
 	public boolean isReflective() {
 		
 		return false;
@@ -66,8 +53,8 @@ public class EmissionMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction, Vector3D direction,
-			Spectrum incident) {
+	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction,
+			Spectrum totalIncidentRadiance) {
 		
 		return SpectralPowerDistribution.BLACK;
 	}
@@ -91,8 +78,8 @@ public class EmissionMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction, Vector3D direction,
-			Spectrum incident) {
+	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction,
+			Spectrum totalIncidentRadiance) {
 		
 		return SpectralPowerDistribution.BLACK;
 	}

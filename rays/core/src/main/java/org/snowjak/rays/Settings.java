@@ -39,6 +39,7 @@ import org.snowjak.rays.shape.PlaneShape;
 import org.snowjak.rays.shape.Shape;
 import org.snowjak.rays.shape.SphereShape;
 import org.snowjak.rays.spectrum.ColorMappingFunctions;
+import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.AnalyticColorMappingFunctions;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.spectrum.distribution.TabulatedColorMappingFunctions;
@@ -447,6 +448,10 @@ public class Settings {
 	/**
 	 * The spectral power-distribution associated with the standard illuminator.
 	 * (Used to calculate {@link CIEXYZ} triplets from spectra.)
+	 * <p>
+	 * Scaled such that its XYZ Y-component = 1.0 (i.e., its measurements are scaled
+	 * such that its total power is equal to 1 candela's worth of luminance)
+	 * </p>
 	 */
 	public SpectralPowerDistribution getIlluminatorSpectralPowerDistribution() {
 		
@@ -460,7 +465,12 @@ public class Settings {
 					illuminatorSpectralPowerDistribution = SpectralPowerDistribution
 							.loadFromCSV(new FileInputStream(coreSettings
 									.getProperty("org.snowjak.rays.cie-csv-xyz-d65-standard-illuminator-path")))
-							.normalize();
+							.resize().normalizePower();
+					
+					final var illuminatorXyz = XYZ.fromSpectrum(illuminatorSpectralPowerDistribution);
+					
+					illuminatorSpectralPowerDistribution = (SpectralPowerDistribution) illuminatorSpectralPowerDistribution
+							.multiply(1d / illuminatorXyz.getY());
 					
 				} catch (IOException e) {
 					//
@@ -475,6 +485,16 @@ public class Settings {
 		return illuminatorSpectralPowerDistribution;
 	}
 	
+	/**
+	 * Get the RGB-component-specific spectra necessary to implement
+	 * Spectrum-construction. (See
+	 * {@link SpectralPowerDistribution#fromRGB(org.snowjak.rays.spectrum.colorspace.RGB)}.)
+	 * <p>
+	 * Scaled such that its components' values lie in <code>[0,1]</code>
+	 * </p>
+	 * 
+	 * @return
+	 */
 	public Map<ComponentSpectrumName, SpectralPowerDistribution> getComponentSpectra() {
 		
 		if (componentSpectra == null) {

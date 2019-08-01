@@ -124,25 +124,32 @@ public class SpectralPowerDistributionTest {
 	public void testNormalize() {
 		
 		final var values = new Point[Settings.getInstance().getSpectrumBinCount()];
-		Arrays.fill(values, new Point());
-		values[1] = new Point(1);
-		values[2] = new Point(2);
+		Arrays.fill(values, new Point(2));
 		
 		final var spd = new SpectralPowerDistribution(values);
 		
-		final var norm = (SpectralPowerDistribution) spd.normalize();
+		final var norm = (SpectralPowerDistribution) spd.normalizePower();
 		
 		assertEquals(Settings.getInstance().getSpectrumBinCount(), norm.size());
 		
 		assertEquals(Settings.getInstance().getSpectrumRangeLow(), norm.getBounds().get().getFirst(), 0.00001);
 		assertEquals(Settings.getInstance().getSpectrumRangeHigh(), norm.getBounds().get().getSecond(), 0.00001);
 		
-		assertEquals(0d, norm.get(Settings.getInstance().getSpectrumRangeLow() + 0d * norm.getIndexStep()).get(0),
-				0.00001);
-		assertEquals(0.5d, norm.get(Settings.getInstance().getSpectrumRangeLow() + 1d * norm.getIndexStep()).get(0),
-				0.00001);
-		assertEquals(1d, norm.get(Settings.getInstance().getSpectrumRangeLow() + 2d * norm.getIndexStep()).get(0),
-				0.00001);
+		assertEquals(1d, norm.getTotalPower(), 0.00001);
+	}
+	
+	@Test
+	public void testIntegrate() {
+		
+		final var values = new Point[Settings.getInstance().getSpectrumBinCount()];
+		Arrays.fill(values, new Point(2));
+		
+		final var spd = new SpectralPowerDistribution(values);
+		
+		final var expected = 2d
+				* (Settings.getInstance().getSpectrumRangeHigh() - Settings.getInstance().getSpectrumRangeLow());
+		
+		assertEquals(expected, spd.integrate(), 0.00001);
 	}
 	
 	@Test
@@ -253,22 +260,34 @@ public class SpectralPowerDistributionTest {
 	}
 	
 	@Test
-	public void testToRGB() {
+	public void testD65ToXYZ() {
 		
 		final var d65 = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
-		final var rgb = d65.toRGB();
-		final var expected = new XYZ(0.95047d, 1.0d, 1.08883d).to(RGB.class);
+		final var xyz = XYZ.fromSpectrum(d65);
+		final var expected = new XYZ(0.95047d, 1.0d, 1.08883d);
 		
-		assertEquals("RGB(R) not as expected.", expected.getRed(), rgb.getRed(), 0.05);
-		assertEquals("RGB(G) not as expected.", expected.getGreen(), rgb.getGreen(), 0.05);
-		assertEquals("RGB(B) not as expected.", expected.getBlue(), rgb.getBlue(), 0.05);
+		assertEquals("XYZ(X) not as expected.", expected.getX(), xyz.getX(), 0.01);
+		assertEquals("XYZ(Y) not as expected.", expected.getY(), xyz.getY(), 0.01);
+		assertEquals("XYZ(Z) not as expected.", expected.getZ(), xyz.getZ(), 0.01);
+	}
+	
+	@Test
+	public void testToRGB2() {
+		
+		final var expected = new RGB(0.2, 0.3, 0.4);
+		final var spd = SpectralPowerDistribution.fromRGB(expected);
+		final var result = spd.toRGB();
+		
+		assertEquals("RGB(R) not as expected.", expected.getRed(), result.getRed(), 0.05);
+		assertEquals("RGB(G) not as expected.", expected.getGreen(), result.getGreen(), 0.05);
+		assertEquals("RGB(B) not as expected.", expected.getBlue(), result.getBlue(), 0.05);
 	}
 	
 	@Test
 	public void testFromBlackbody() {
 		
 		final var spd = SpectralPowerDistribution.fromBlackbody(2400, 1.0);
-		final var xyz = XYZ.fromSpectrum(spd).normalize();
+		final var xyz = XYZ.fromSpectrum(spd, false).normalize();
 		final var rgb = xyz.to(RGB.class);
 		
 		//
@@ -302,11 +321,11 @@ public class SpectralPowerDistributionTest {
 	@Test
 	public void testFromBlackbody2() {
 		
-		final var kelvin = 2400;
+		final var kelvin = 5500;
 		final var intensity = 1600;
 		
 		final var spd = SpectralPowerDistribution.fromBlackbody(kelvin, intensity);
-		final var spdIntensity = XYZ.fromSpectrum(spd, true).getY();
+		final var spdIntensity = spd.integrate();
 		
 		assertEquals(intensity, spdIntensity, 1.0);
 	}

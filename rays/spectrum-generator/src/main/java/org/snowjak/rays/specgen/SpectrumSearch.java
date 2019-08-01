@@ -2,30 +2,27 @@ package org.snowjak.rays.specgen;
 
 import static org.apache.commons.math3.util.FastMath.pow;
 
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.specgen.SpectrumGenerator.StatusReporter;
 import org.snowjak.rays.spectrum.colorspace.RGB;
+import org.snowjak.rays.spectrum.colorspace.RGB_Gammaless;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 public interface SpectrumSearch {
 	
-	public SpectrumSearch.Result doSearch(XYZ targetColor, SpectralPowerDistribution startingSpd,
-			StatusReporter reporter);
+	public SpectrumSearch.Result doSearch(
+			BiFunction<SpectralPowerDistribution, RGB, SpectrumSearch.Result> distanceCalculator, RGB targetColor,
+			Supplier<SpectralPowerDistribution> startingSpdSupplier, StatusReporter reporter);
 	
-	public static SpectrumSearch.Result evaluateSPD(SpectralPowerDistribution spd, XYZ targetColor) {
+	public default SpectrumSearch.Result evaluateSPD(SpectralPowerDistribution spd, RGB targetColor,
+			BiFunction<SpectralPowerDistribution, RGB, SpectrumSearch.Result> distanceCalculator) {
 		
-		final RGB targetRGB = targetColor.to(RGB.class);
-		final XYZ xyz = XYZ.fromSpectrum(spd);
-		final RGB rgb = xyz.to(RGB.class);
-		
-		final double targetDistance =
-				// pow(rgb.getRed() - targetRGB.getRed(), 2) + pow(rgb.getGreen() -
-				// targetRGB.getGreen(), 2) + pow(rgb.getBlue() - targetRGB.getBlue(), 2);
-				pow(xyz.getX() - targetColor.getX(), 2) + pow(xyz.getY() - targetColor.getY(), 2)
-						+ pow(xyz.getZ() - targetColor.getZ(), 2);
+		final Result targetResult = distanceCalculator.apply(spd, targetColor);
 		
 		final var spdTable = spd.getTable();
 		final Point[] spdPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
@@ -33,17 +30,18 @@ public interface SpectrumSearch {
 		final double bumpinessDistance = IntStream.range(0, spdPoints.length - 1)
 				.mapToDouble(i -> pow(spdPoints[i + 1].get(0) - spdPoints[i].get(0), 2)).sum();
 		
-		return new Result(targetDistance, bumpinessDistance, xyz, rgb, spd);
+		return new Result(targetResult.getDistance(), bumpinessDistance, targetResult.getXyz(), targetResult.getRgb(),
+				spd);
 	}
 	
 	public static class Result {
 		
 		private final double distance, bumpiness;
 		private final XYZ xyz;
-		private final RGB rgb;
+		private final RGB_Gammaless rgb;
 		private final SpectralPowerDistribution spd;
 		
-		public Result(double distance, double bumpiness, XYZ xyz, RGB rgb, SpectralPowerDistribution spd) {
+		public Result(double distance, double bumpiness, XYZ xyz, RGB_Gammaless rgb, SpectralPowerDistribution spd) {
 			
 			this.distance = distance;
 			this.bumpiness = bumpiness;
@@ -67,7 +65,7 @@ public interface SpectrumSearch {
 			return xyz;
 		}
 		
-		public RGB getRgb() {
+		public RGB_Gammaless getRgb() {
 			
 			return rgb;
 		}

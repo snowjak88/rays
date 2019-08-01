@@ -51,19 +51,6 @@ public class PerfectMirrorMaterial implements Material {
 	}
 	
 	@Override
-	public boolean isDirectLightable() {
-		
-		return false;
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getDirectLightReflection(Interaction<T> interaction,
-			Spectrum irradiance) {
-		
-		return new SpectralPowerDistribution();
-	}
-	
-	@Override
 	public boolean isReflective() {
 		
 		return true;
@@ -113,10 +100,11 @@ public class PerfectMirrorMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction, Vector3D direction,
-			Spectrum incident) {
+	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction,
+			Spectrum totalIncidentRadiance) {
 		
-		return incident.multiply(SpectralPowerDistribution.fromRGB(getTint().getRGB(interaction)));
+		return totalIncidentRadiance
+				.multiply(SpectralPowerDistribution.fromRGB(getTint().getRGB(interaction)).normalizePower());
 	}
 	
 	@Override
@@ -138,8 +126,8 @@ public class PerfectMirrorMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction, Vector3D direction,
-			Spectrum incident) {
+	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction,
+			Spectrum totalIncidentRadiance) {
 		
 		return new SpectralPowerDistribution();
 	}

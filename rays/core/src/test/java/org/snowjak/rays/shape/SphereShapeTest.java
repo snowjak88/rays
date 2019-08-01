@@ -60,6 +60,30 @@ public class SphereShapeTest {
 	}
 	
 	@Test
+	public void testGetSurfaceNearest_exterior() {
+		
+		final var neighbor = new Point3D(-2, 0, 0);
+		final var sphere = new SphereShape(1d, new RotationTransform(Vector3D.J, 90));
+		
+		final var surface = sphere.getSurfaceNearestTo(neighbor);
+		assertEquals(-1d, surface.getNormal().getX(), 0.0001);
+		assertEquals(0d, surface.getNormal().getY(), 0.0001);
+		assertEquals(0d, surface.getNormal().getZ(), 0.0001);
+	}
+	
+	@Test
+	public void testGetSurfaceNearest_interior() {
+		
+		final var neighbor = new Point3D(-1, 0, 0);
+		final var sphere = new SphereShape(2d, new RotationTransform(Vector3D.J, 90));
+		
+		final var surface = sphere.getSurfaceNearestTo(neighbor);
+		assertEquals(1d, surface.getNormal().getX(), 0.0001);
+		assertEquals(0d, surface.getNormal().getY(), 0.0001);
+		assertEquals(0d, surface.getNormal().getZ(), 0.0001);
+	}
+	
+	@Test
 	public void testSerialization() {
 		
 		final var sphere = new SphereShape(0.5, new TranslationTransform(1, 2, 3));

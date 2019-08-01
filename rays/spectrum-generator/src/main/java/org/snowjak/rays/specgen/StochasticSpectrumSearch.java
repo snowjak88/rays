@@ -7,9 +7,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.specgen.SpectrumGenerator.StatusReporter;
+import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,7 +36,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 public class StochasticSpectrumSearch implements SpectrumSearch {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(StochasticSpectrumSearch.class);
-	private static final Random RND = new Random(System.currentTimeMillis());
 	
 	private int generationSize;
 	private int reproducerPoolSize;
@@ -47,7 +47,6 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	private int newMemberSeed;
 	private int newMemberSeedInterval;
 	private double crossover;
-	private String newMemberType;
 	
 	@Value("${parallelism}")
 	private int parallelism;
@@ -78,29 +77,17 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 					(int) (r2.getDistance() * 10000d) + r2.getBumpiness()));
 	
 	@Override
-	public Result doSearch(XYZ targetColor, SpectralPowerDistribution startingSPD, StatusReporter reporter) {
+	public Result doSearch(BiFunction<SpectralPowerDistribution, RGB, SpectrumSearch.Result> distanceCalculator,
+			RGB targetColor, Supplier<SpectralPowerDistribution> startingSPDSupplier, StatusReporter reporter) {
 		
 		if (executor == null)
 			this.executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(parallelism));
 		
-		final Supplier<SpectralPowerDistribution> newMemberSupplier;
-		switch (newMemberType) {
-		case "RANDOM":
-			newMemberSupplier = () -> getRandomizedSPD(binCount);
-			break;
-		case "WHITE":
-			newMemberSupplier = () -> Settings.getInstance().getIlluminatorSpectralPowerDistribution();
-			break;
-		case "EVEN":
-			newMemberSupplier = () -> getUniformSPD(binCount, 0.5d);
-			break;
-		default:
-			newMemberSupplier = () -> startingSPD;
-		}
+		final Supplier<SpectralPowerDistribution> newMemberSupplier = startingSPDSupplier;
 		
 		List<SpectrumSearch.Result> currentGeneration = new ArrayList<>(generationSize);
 		for (int i = 0; i < generationSize; i++)
-			currentGeneration.add(SpectrumSearch.evaluateSPD(rescale(startingSPD, targetColor), targetColor));
+			currentGeneration.add(evaluateSPD(startingSPDSupplier.get(), targetColor, distanceCalculator));
 		
 		int generationCount = 0;
 		
@@ -118,23 +105,25 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 					.forEach(r -> nextGenerationFutures.add(Futures.immediateFuture(r)));
 			
 			if (generationCount % newMemberSeedInterval == 0)
-				IntStream.range(0, newMemberSeed).forEach(i -> nextGenerationFutures.add(Futures.immediateFuture(
-						SpectrumSearch.evaluateSPD(rescale(newMemberSupplier.get(), targetColor), targetColor))));
+				IntStream.range(0, newMemberSeed).forEach(i -> nextGenerationFutures.add(Futures
+						.immediateFuture(evaluateSPD(newMemberSupplier.get(), targetColor, distanceCalculator))));
 			
 			while (nextGenerationFutures.size() < generationSize) {
 				nextGenerationFutures.add(executor.submit(() -> {
 					
 					final var parent1 = IntStream.range(0, reproducerPoolSize)
-							.mapToObj(i -> fixedCurrentGeneration.get(RND.nextInt(fixedCurrentGeneration.size())))
+							.mapToObj(i -> fixedCurrentGeneration
+									.get(SpectrumGenerator.RND.nextInt(fixedCurrentGeneration.size())))
 							.reduce((r1, r2) -> (RESULT_COMPARATOR.compare(r1, r2) == 1) ? r2 : r1).get();
 					
 					final var parent2 = IntStream.range(0, reproducerPoolSize)
-							.mapToObj(i -> fixedCurrentGeneration.get(RND.nextInt(fixedCurrentGeneration.size())))
+							.mapToObj(i -> fixedCurrentGeneration
+									.get(SpectrumGenerator.RND.nextInt(fixedCurrentGeneration.size())))
 							.reduce((r1, r2) -> (RESULT_COMPARATOR.compare(r1, r2) == 1) ? r2 : r1).get();
 					
-					final var offspring = rescale(mutate(cross(parent1.getSpd(), parent2.getSpd())), targetColor);
+					final var offspring = mutate(cross(parent1.getSpd(), parent2.getSpd()));
 					
-					return SpectrumSearch.evaluateSPD(offspring, targetColor);
+					return evaluateSPD(offspring, targetColor, distanceCalculator);
 				}));
 			}
 			
@@ -179,23 +168,10 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 		return results.stream().min(RESULT_COMPARATOR).get();
 	}
 	
-	private SpectralPowerDistribution getRandomizedSPD(int binCount) {
-		
-		return new SpectralPowerDistribution(IntStream.range(0, binCount)
-				.mapToObj(i -> new Point(RND.nextDouble() * (maxEnergy - minEnergy) + minEnergy))
-				.toArray(len -> new Point[len]));
-	}
-	
-	private SpectralPowerDistribution getUniformSPD(int binCount, double value) {
-		
-		return new SpectralPowerDistribution(
-				IntStream.range(0, binCount).mapToObj(i -> new Point(value)).toArray(len -> new Point[len]));
-	}
-	
 	private SpectralPowerDistribution cross(SpectralPowerDistribution spd1, SpectralPowerDistribution spd2) {
 		
-		if (RND.nextDouble() > crossover)
-			return (RND.nextDouble() > 0.5) ? spd2 : spd1;
+		if (SpectrumGenerator.RND.nextDouble() > crossover)
+			return (SpectrumGenerator.RND.nextDouble() > 0.5) ? spd2 : spd1;
 		
 		final Point[] entries1 = spd1.getTable().navigableKeySet().stream().map(k -> spd1.get(k))
 				.toArray(len -> new Point[len]);
@@ -224,13 +200,14 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 				.toArray(len -> new Point[len]);
 		
 		for (int i = 0; i < entries.length; i++)
-			if (RND.nextDouble() < mutation)
-				entries[i] = entries[i].add(RND.nextDouble() * mutationWindow - (mutationWindow / 2d)).clamp(minEnergy,
-						maxEnergy);
+			if (SpectrumGenerator.RND.nextDouble() < mutation)
+				entries[i] = entries[i].add(SpectrumGenerator.RND.nextDouble() * 2d * mutationWindow - mutationWindow)
+						.clamp(minEnergy, maxEnergy);
 			
 		return new SpectralPowerDistribution(spd.getBounds().get(), entries);
 	}
 	
+	@Deprecated
 	private SpectralPowerDistribution rescale(SpectralPowerDistribution spd, XYZ targetColor) {
 		
 		final double targetBrightness = targetColor.getY();
@@ -340,16 +317,6 @@ public class StochasticSpectrumSearch implements SpectrumSearch {
 	public void setCrossover(double crossover) {
 		
 		this.crossover = crossover;
-	}
-	
-	public String getNewMemberType() {
-		
-		return newMemberType;
-	}
-	
-	public void setNewMemberType(String newMemberType) {
-		
-		this.newMemberType = newMemberType;
 	}
 	
 }

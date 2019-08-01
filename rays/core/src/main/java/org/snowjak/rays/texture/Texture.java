@@ -1,8 +1,12 @@
 package org.snowjak.rays.texture;
 
+import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.DescribesSurface;
+import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.interact.SurfaceDescriptor;
+import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.colorspace.RGB;
+import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.texture.mapping.IdentityTextureMapping;
 import org.snowjak.rays.texture.mapping.TextureMapping;
 
@@ -50,5 +54,17 @@ public abstract class Texture {
 	 * @return
 	 */
 	public abstract <S extends DescribesSurface<S>> RGB getRGB(SurfaceDescriptor<S> surfaceDescriptor);
+	
+	/**
+	 * Get the color mapped to the given {@link SurfaceDescriptor}, expressed as a
+	 * {@link Spectrum}.
+	 * 
+	 * @param interaction
+	 * @return
+	 */
+	public <S extends DescribesSurface<S>> Spectrum getSpectrum(SurfaceDescriptor<S> surfaceDescriptor) {
+		
+		return SpectralPowerDistribution.fromRGB(getRGB(surfaceDescriptor));
+	}
 	
 }

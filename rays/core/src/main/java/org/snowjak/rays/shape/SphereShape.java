@@ -180,9 +180,13 @@ public class SphereShape extends Shape {
 	@Override
 	public SurfaceDescriptor<Shape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
 		
-		final Vector3D towardsV_local = Vector3D.from(worldToLocal(neighbor));
+		final Vector3D neighbor_local = Vector3D.from(worldToLocal(neighbor));
 		
-		final Vector3D J = towardsV_local.normalize();
+		final Vector3D J;
+		if (neighbor_local.getMagnitude() == 0d)
+			J = Vector3D.J;
+		else
+			J = neighbor_local.normalize();
 		final Vector3D I = J.orthogonal();
 		final Vector3D K = I.crossProduct(J);
 		//
@@ -203,7 +207,8 @@ public class SphereShape extends Shape {
 		//
 		final Vector3D samplePoint_local = (Vector3D) I.multiply(x).add(J.multiply(y)).add(K.multiply(z))
 				.multiply(radius);
-		final Normal3D normal_local = Normal3D.from(samplePoint_local.normalize());
+		final Vector3D samplePointToNeighbor_local = neighbor_local.subtract(samplePoint_local);
+		final Normal3D normal_local = Normal3D.from(samplePointToNeighbor_local.normalize());
 		return localToWorld(new SurfaceDescriptor<>(this, Point3D.from(samplePoint_local), normal_local,
 				getParamFromLocalSurface(Point3D.from(samplePoint_local))));
 	}

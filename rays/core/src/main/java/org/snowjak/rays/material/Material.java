@@ -16,25 +16,6 @@ import org.snowjak.rays.spectrum.Spectrum;
 public interface Material {
 	
 	/**
-	 * Indicates whether this Material should participate in direct-lighting.
-	 * 
-	 * @return
-	 */
-	public boolean isDirectLightable();
-	
-	/**
-	 * At the given {@link Interaction}, given the total {@code irradiance} received
-	 * from all direct-lighting, compute the energy-distribution actually reflected
-	 * back toward the eye-point.
-	 * 
-	 * @param interaction
-	 * @param irradiance
-	 * @return
-	 */
-	public <T extends Interactable<T>> Spectrum getDirectLightReflection(Interaction<T> interaction,
-			Spectrum irradiance);
-	
-	/**
 	 * Indicates whether this Material has only 1 reflection and 1 transmission
 	 * vector -- i.e., if the renderer should only bother doing 1 sample each for
 	 * reflection and transmission.
@@ -78,18 +59,17 @@ public interface Material {
 	public <T extends Interactable<T>> double getReflectionP(Interaction<T> interaction, Vector3D direction);
 	
 	/**
-	 * Given that reflection is occuring at the given {@link Interaction}, in the
-	 * specified {@code direction}, and the given estimated {@link Spectrum} as the
-	 * incident energy for the reflection -- what energy-distribution is reflected
-	 * back toward the eye-point?
+	 * Given that reflection is occurring at the given {@link Interaction}, and the
+	 * given estimated {@link Spectrum} as the total incident radiance for the
+	 * reflection -- what irradiance is reflected back toward the eye-point?
 	 * 
+	 * @param <T>
 	 * @param interaction
-	 * @param direction
-	 * @param incident
+	 * @param totalIncidentRadiance
 	 * @return
 	 */
-	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction, Vector3D direction,
-			Spectrum incident);
+	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction,
+			Spectrum totalIncidentRadiance);
 	
 	/**
 	 * Indicates whether this Material should be queried for transmission.
@@ -123,18 +103,17 @@ public interface Material {
 	public <T extends Interactable<T>> double getTransmissionP(Interaction<T> interaction, Vector3D direction);
 	
 	/**
-	 * Given that transmission is occuring at the given {@link Interaction}, in the
-	 * specified {@code direction}, and the given estimated {@link Spectrum} as the
-	 * incident energy for the transmission -- what energy-distribution is
-	 * transmitted back toward the eye-point?
+	 * Given that transmission is occuring at the given {@link Interaction}, and the
+	 * given estimated {@link Spectrum} as the total incident radiance for the
+	 * transmission -- what irradiance is transmitted back toward the eye-point?
 	 * 
 	 * @param interaction
 	 * @param direction
 	 * @param incident
 	 * @return
 	 */
-	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction, Vector3D direction,
-			Spectrum incident);
+	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction,
+			Spectrum totalIncidentRadiance);
 	
 	/**
 	 * Indicates whether this Material should be queried for emission.

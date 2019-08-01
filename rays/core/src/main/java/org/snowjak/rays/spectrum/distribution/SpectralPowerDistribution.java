@@ -17,10 +17,12 @@ import java.util.regex.Pattern;
 import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.Settings.ComponentSpectrumName;
+import org.snowjak.rays.Util;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.serialization.IsLoadable;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.colorspace.RGB;
+import org.snowjak.rays.spectrum.colorspace.RGB_Gammaless;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
 
 import com.google.gson.JsonArray;
@@ -33,6 +35,13 @@ import com.google.gson.JsonSerializationContext;
 /**
  * A {@link SpectralPowerDistribution} ("SPD") is a distribution of power-levels
  * across a range of wavelengths.
+ * <p>
+ * <strong>Units</strong>:
+ * <ul>
+ * <li>{@link #get(double)}/{@link #getIndex(double)}/{@link #getPoint(double)}
+ * = {@code W*nm}</li>
+ * <li>integrated = {@code W}</li>
+ * </p>
  * 
  * @author snowjak88
  *
@@ -68,6 +77,8 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	 */
 	public static final SpectralPowerDistribution BLACK = new SpectralPowerDistribution();
 	
+	private transient Double integral = null;
+	
 	/**
 	 * Produce a SpectralPowerDistribution which models the results of evaluating
 	 * Planck's Law for blackbody radiation, for a body of the given temperature.
@@ -85,15 +96,12 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	 * Planck's Law for blackbody radiation, for a body of the given temperature.
 	 *
 	 * <p>
-	 * This SPD's power is scaled so that, when it is integrated across the entire
-	 * waveband ({@link Settings#getSpectrumRange()}) and converted to luminous
-	 * intensity (candela) its total intensity is equal to {@code intensity}
-	 * (assuming emission from a unit sphere).
+	 * This SPD's power is scaled to {@code intensity} Watts.
 	 * </p>
 	 * 
 	 * @param kelvin
 	 * @param intensity
-	 *            if < 0, then no scaling is applied
+	 *            if < 0, then no power-scaling is applied
 	 * @return
 	 */
 	public static SpectralPowerDistribution fromBlackbody(double kelvin, double intensity) {
@@ -119,43 +127,23 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 		
 		final var spd = new SpectralPowerDistribution(values);
 		
-		final double scalingFactor;
+		// final double scalingFactor;
+		//
+		// if (intensity < 0.0)
+		// scalingFactor = 1.0;
+		// else {
+		//
+		// final var rawIntensity = XYZ.fromSpectrum(spd, false).getY();
+		//
+		// scalingFactor = intensity / rawIntensity;
+		// }
 		
 		if (intensity < 0.0)
-			scalingFactor = 1.0;
-		else {
-			
-			// final var spdSpecificPower =
-			// Util.integrate(Settings.getInstance().getSpectrumRangeLow() / 1e9,
-			// Settings.getInstance().getSpectrumRangeHigh() / 1e9,
-			// Settings.getInstance().getSpectrumBinCount() * 10,
-			// (l) -> spd.get(l * 1e9).get(0));
-			
-			// final var spdTotalPower = spdSpecificPower * 4.0 * PI;
-			
-			//
-			// To scale this SPD properly, we need to:
-			// 1) calculate the total emitted radiance using the Stefan-Boltzmann law (power
-			// per unit area steradian)
-			// 3) calculate the total power emitted by the blackbody in all directions
-			// 4) calculate a scaling factor from the total Stefan-Boltzmann power to the
-			// desired power
-			//
-			// The Stefan-Boltzmann law gives a measure of power per square-meter steradian.
-			//
-			// The target power is emitted from a unit sphere -- i.e., from a surface-area
-			// of 4*PI m^2.
-			//
-			// final var sbRadiance = getStefanBoltzmannsLaw(kelvin);
-			
-			// final var sbPower = sbRadiance * 4.0 * PI;
-			
-			final var rawIntensity = XYZ.fromSpectrum(spd, true).getY();
-			
-			scalingFactor = intensity / rawIntensity;
-		}
+			return spd;
 		
-		return (SpectralPowerDistribution) spd.multiply(scalingFactor);
+		return (SpectralPowerDistribution) spd.rescale(intensity);
+		
+		// return (SpectralPowerDistribution) spd.multiply(scalingFactor);
 	}
 	
 	/**
@@ -201,12 +189,14 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	 * sub-project.
 	 * </p>
 	 * 
-	 * @param rgb
+	 * @param rgb_gl
 	 * @return
 	 */
 	public static SpectralPowerDistribution fromRGB(RGB rgb) {
 		
 		Spectrum spd = null;
+		
+		final var rgb_gl = rgb.to(RGB_Gammaless.class);
 		
 		final SpectralPowerDistribution white = Settings.getInstance().getComponentSpectra()
 				.get(ComponentSpectrumName.WHITE),
@@ -217,49 +207,50 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 				magenta = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.MAGENTA),
 				yellow = Settings.getInstance().getComponentSpectra().get(ComponentSpectrumName.YELLOW);
 		
-		if (rgb.getRed() <= rgb.getGreen() && rgb.getRed() <= rgb.getBlue()) {
+		if (rgb_gl.getRed() <= rgb_gl.getGreen() && rgb_gl.getRed() <= rgb_gl.getBlue()) {
 			
-			spd = white.multiply(rgb.getRed());
+			spd = white.multiply(rgb_gl.getRed());
 			
-			if (rgb.getGreen() <= rgb.getBlue()) {
-				spd = spd.add(cyan.multiply(rgb.getGreen() - rgb.getRed()));
-				spd = spd.add(blue.multiply(rgb.getBlue() - rgb.getGreen()));
+			if (rgb_gl.getGreen() <= rgb_gl.getBlue()) {
+				spd = spd.add(cyan.multiply(rgb_gl.getGreen() - rgb_gl.getRed()));
+				spd = spd.add(blue.multiply(rgb_gl.getBlue() - rgb_gl.getGreen()));
 			} else {
-				spd = spd.add(cyan.multiply(rgb.getBlue() - rgb.getRed()));
-				spd = spd.add(green.multiply(rgb.getGreen() - rgb.getBlue()));
+				spd = spd.add(cyan.multiply(rgb_gl.getBlue() - rgb_gl.getRed()));
+				spd = spd.add(green.multiply(rgb_gl.getGreen() - rgb_gl.getBlue()));
 			}
 			
-		} else if (rgb.getGreen() <= rgb.getRed() && rgb.getGreen() <= rgb.getBlue()) {
+		} else if (rgb_gl.getGreen() <= rgb_gl.getRed() && rgb_gl.getGreen() <= rgb_gl.getBlue()) {
 			
-			spd = white.multiply(rgb.getGreen());
+			spd = white.multiply(rgb_gl.getGreen());
 			
-			if (rgb.getRed() <= rgb.getBlue()) {
-				spd = spd.add(magenta.multiply(rgb.getRed() - rgb.getGreen()));
-				spd = spd.add(blue.multiply(rgb.getBlue() - rgb.getRed()));
+			if (rgb_gl.getRed() <= rgb_gl.getBlue()) {
+				spd = spd.add(magenta.multiply(rgb_gl.getRed() - rgb_gl.getGreen()));
+				spd = spd.add(blue.multiply(rgb_gl.getBlue() - rgb_gl.getRed()));
 			} else {
-				spd = spd.add(magenta.multiply(rgb.getBlue() - rgb.getGreen()));
-				spd = spd.add(red.multiply(rgb.getRed() - rgb.getBlue()));
+				spd = spd.add(magenta.multiply(rgb_gl.getBlue() - rgb_gl.getGreen()));
+				spd = spd.add(red.multiply(rgb_gl.getRed() - rgb_gl.getBlue()));
 			}
 			
 		} else {
 			
-			spd = white.multiply(rgb.getBlue());
+			spd = white.multiply(rgb_gl.getBlue());
 			
-			if (rgb.getRed() <= rgb.getGreen()) {
-				spd = spd.add(yellow.multiply(rgb.getRed() - rgb.getBlue()));
-				spd = spd.add(green.multiply(rgb.getGreen() - rgb.getRed()));
+			if (rgb_gl.getRed() <= rgb_gl.getGreen()) {
+				spd = spd.add(yellow.multiply(rgb_gl.getRed() - rgb_gl.getBlue()));
+				spd = spd.add(green.multiply(rgb_gl.getGreen() - rgb_gl.getRed()));
 			} else {
-				spd = spd.add(yellow.multiply(rgb.getGreen() - rgb.getBlue()));
-				spd = spd.add(red.multiply(rgb.getRed() - rgb.getGreen()));
+				spd = spd.add(yellow.multiply(rgb_gl.getGreen() - rgb_gl.getBlue()));
+				spd = spd.add(red.multiply(rgb_gl.getRed() - rgb_gl.getGreen()));
 			}
 			
 		}
 		
 		final double currentSpdY = XYZ.fromSpectrum((SpectralPowerDistribution) spd).getY();
+		
 		if (Settings.getInstance().nearlyEqual(currentSpdY, 0d))
 			return (SpectralPowerDistribution) spd;
 		
-		final double targetY = rgb.to(XYZ.class).getY();
+		final double targetY = rgb_gl.to(XYZ.class).getY();
 		final double scaleFactor = targetY / currentSpdY;
 		
 		return (SpectralPowerDistribution) spd.multiply(scaleFactor);
@@ -465,23 +456,48 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 		return this.apply(p -> p.multiply(scalar));
 	}
 	
+	@Override
+	public double getPower(double lambda) {
+		
+		return get(lambda).get(0);
+	}
+	
 	/**
-	 * Normalize this SPD -- i.e., scale all power-readings together so that each
-	 * power-reading is in (...,1].
-	 * <p>
-	 * Note that this method will resize the backing
-	 * {@link SpectralPowerDistribution} to match the configured settings
-	 * ({@link Settings#getSpectrumBinCount()},
-	 * {@link Settings#getSpectrumRange()}).
-	 * </p>
+	 * Normalize this SPD's components -- i.e., scale it such that its highest-value
+	 * measurement = 1.0
 	 * 
 	 * @return
 	 */
-	public SpectralPowerDistribution normalize() {
+	public SpectralPowerDistribution normalizeComponents() {
 		
-		final Point maxValue = Arrays.stream(getEntries()).reduce((p1, p2) -> (p1.get(0) >= p2.get(0)) ? p1 : p2).get();
+		final var maxValue = Arrays.stream(getEntries()).mapToDouble(p -> p.get(0)).max().orElse(1d);
 		
 		return apply(p -> p.divide(maxValue));
+	}
+	
+	@Override
+	public SpectralPowerDistribution normalizePower() {
+		
+		final var power = integrate();
+		if (power == 0d)
+			return this;
+		
+		return apply(p -> p.divide(power));
+	}
+	
+	@Override
+	public double integrate() {
+		
+		if (this.integral == null) {
+			
+			final double lowLambda = getBounds().get().getFirst();
+			final double highLambda = getBounds().get().getSecond();
+			
+			this.integral = Util.integrate(lowLambda, highLambda,
+					Settings.getInstance().getCieXyzIntegrationStepCount(), (lambda) -> getPower(lambda));
+		}
+		
+		return this.integral;
 	}
 	
 	/**
@@ -500,9 +516,9 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	}
 	
 	@Override
-	public RGB toRGB(boolean isEmissive) {
+	public RGB toRGB(boolean isRelative) {
 		
-		return XYZ.fromSpectrum(this, isEmissive).to(RGB.class);
+		return XYZ.fromSpectrum(this, isRelative).to(RGB.class);
 	}
 	
 	protected static Pair<Double, Point> parseCSVLine(String line) throws NumberFormatException {
@@ -526,7 +542,7 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	@Override
 	public String toString() {
 		
-		final RGB rgb = this.toRGB();
+		final RGB rgb = this.toRGB(true);
 		return "SpectralPowerDistribution [ " + rgb.toString() + " ]";
 	}
 	
