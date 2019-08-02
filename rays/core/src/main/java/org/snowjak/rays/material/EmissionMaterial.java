@@ -3,7 +3,8 @@
  */
 package org.snowjak.rays.material;
 
-import org.apache.commons.math3.util.FastMath;
+import static org.apache.commons.math3.util.FastMath.PI;
+
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
@@ -30,7 +31,7 @@ public class EmissionMaterial implements Material {
 	 */
 	public EmissionMaterial(SpectralPowerDistribution radiantIntensity) {
 		
-		this.radiantIntensity = radiantIntensity;
+		this.radiantIntensity = (SpectralPowerDistribution) radiantIntensity.multiply(2d * PI);
 	}
 	
 	@Override
@@ -46,7 +47,8 @@ public class EmissionMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction,
+			Vector3D direction) {
 		
 		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
@@ -78,13 +80,13 @@ public class EmissionMaterial implements Material {
 	@Override
 	public <T extends Interactable<T>> MaterialSample getEmissionSample(Interaction<T> interaction, Sample sample) {
 		
-		return new MaterialSample(interaction.getW_e(), 1d / (2d * FastMath.PI), radiantIntensity);
+		return new MaterialSample(interaction.getW_e(), 1d / (2d * PI), radiantIntensity);
 	}
 	
 	@Override
 	public <T extends Interactable<T>> MaterialSample getEmissionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return new MaterialSample(direction, 1d / (2d * FastMath.PI), radiantIntensity);
+		return new MaterialSample(direction, 1d / (2d * PI), radiantIntensity);
 	}
 	
 }
