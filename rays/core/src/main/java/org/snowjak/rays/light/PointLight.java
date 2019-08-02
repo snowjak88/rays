@@ -1,6 +1,5 @@
 package org.snowjak.rays.light;
 
-import org.apache.commons.math3.util.FastMath;
 import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
@@ -35,7 +34,13 @@ public class PointLight implements Light {
 	public PointLight(Point3D position, SpectralPowerDistribution radiance) {
 		
 		this.position = position;
-		this.radiance = radiance;
+		this.radiance = (SpectralPowerDistribution) radiance;
+	}
+	
+	@Override
+	public boolean isDelta() {
+		
+		return true;
 	}
 	
 	public Point3D getPosition() {
@@ -56,8 +61,8 @@ public class PointLight implements Light {
 	@Override
 	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Sample sample) {
 		
-		return new LightSample(position, Vector3D.from(position, interaction.getPoint()).normalize(),
-				1d / (4d * FastMath.PI), getRadiance());
+		return new LightSample(position, Vector3D.from(position, interaction.getPoint()).normalize(), 1d,
+				getRadiance());
 	}
 	
 	@Override

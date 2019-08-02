@@ -73,7 +73,7 @@ public class LambertianMaterial implements Material {
 	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction,
 			Vector3D direction) {
 		
-		return new MaterialSample(direction.negate(), 1 / (2d * PI), texture.getSpectrum(interaction));
+		return new MaterialSample(direction, 1 / (2d * PI), texture.getSpectrum(interaction));
 	}
 	
 	@Override

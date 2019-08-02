@@ -17,6 +17,7 @@ import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
+import org.snowjak.rays.light.DiffuseLight;
 import org.snowjak.rays.light.InfiniteLight;
 import org.snowjak.rays.light.Light;
 import org.snowjak.rays.light.PointLight;
@@ -25,6 +26,7 @@ import org.snowjak.rays.renderer.PathTracingRenderer;
 import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sample.TracedSample;
 import org.snowjak.rays.sampler.StratifiedSampler;
+import org.snowjak.rays.shape.PlaneShape;
 import org.snowjak.rays.shape.SphereShape;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
@@ -115,6 +117,75 @@ public class RenderingTest {
 				.estimate(new TracedSample(sample, new Ray(new Point3D(0, 0, -3), new Vector3D(0, 0, 1))), scene);
 		
 		assertEquals(radiance.multiply(texture.getSpectrum(null)).getTotalPower(),
+				estimate.getRadiance().getTotalPower(), 0.01 * radianceWatts);
+	}
+	
+	@Test
+	public void directLightingDiffuseLightTest() {
+		
+		final var albedo = 0.5;
+		final var albedoRGB = new RGB(albedo, albedo, albedo);
+		final var texture = new ConstantTexture(albedoRGB);
+		
+		final Collection<Primitive> primitives = Arrays
+				.asList(new Primitive(new PlaneShape(), new LambertianMaterial(texture)));
+		
+		final var radianceWatts = 100d;
+		final var radiance = (SpectralPowerDistribution) SpectralPowerDistribution.fromRGB(RGB.WHITE)
+				.rescale(radianceWatts);
+		
+		final var lightDistance = 1d;
+		final Collection<Light> lights = Arrays.asList(
+				new DiffuseLight(new SphereShape(0.001, new TranslationTransform(0, lightDistance, 0)), radiance));
+		
+		final var scene = new Scene(primitives, lights);
+		
+		final var sampler = new StratifiedSampler(0, 0, 1, 1, 4, 9, 25);
+		
+		final var renderer = new PathTracingRenderer(1, 1024);
+		
+		final var sample = sampler.getNextSample();
+		
+		final var estimate = renderer
+				.estimate(new TracedSample(sample, new Ray(new Point3D(0, 3, -3), new Vector3D(0, -1, 1))), scene);
+		
+		final var falloff = 1d / (lightDistance * lightDistance);
+		
+		assertEquals(radiance.multiply(falloff).multiply(texture.getSpectrum(null)).getTotalPower(),
+				estimate.getRadiance().getTotalPower(), 0.01 * radianceWatts);
+	}
+	
+	@Test
+	public void directLightingPointLightTest() {
+		
+		final var albedo = 0.5;
+		final var albedoRGB = new RGB(albedo, albedo, albedo);
+		final var texture = new ConstantTexture(albedoRGB);
+		
+		final Collection<Primitive> primitives = Arrays
+				.asList(new Primitive(new PlaneShape(), new LambertianMaterial(texture)));
+		
+		final var radianceWatts = 100d;
+		final var radiance = (SpectralPowerDistribution) SpectralPowerDistribution.fromRGB(RGB.WHITE)
+				.rescale(radianceWatts);
+		
+		final var lightDistance = 1d;
+		final Collection<Light> lights = Arrays.asList(new PointLight(new Point3D(0, lightDistance, 0), radiance));
+		
+		final var scene = new Scene(primitives, lights);
+		
+		final var sampler = new StratifiedSampler(0, 0, 1, 1, 4, 9, 25);
+		
+		final var renderer = new PathTracingRenderer(1, 1024);
+		
+		final var sample = sampler.getNextSample();
+		
+		final var estimate = renderer
+				.estimate(new TracedSample(sample, new Ray(new Point3D(0, 3, -3), new Vector3D(0, -1, 1))), scene);
+		
+		final var falloff = 1d / (lightDistance * lightDistance);
+		
+		assertEquals(radiance.multiply(falloff).multiply(texture.getSpectrum(null)).getTotalPower(),
 				estimate.getRadiance().getTotalPower(), 0.01 * radianceWatts);
 	}
 	
