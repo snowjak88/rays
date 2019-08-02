@@ -173,7 +173,7 @@ public class SphereShape extends Shape {
 	}
 	
 	@Override
-	public double sampleSurfaceP(Sample sample, SurfaceDescriptor<?> surface) {
+	public double sampleSurfaceP(SurfaceDescriptor<?> surface) {
 		
 		return 1d / (4d * PI);
 	}

@@ -11,6 +11,7 @@ import org.snowjak.rays.Primitive;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
+import org.snowjak.rays.sampler.StratifiedSampler;
 import org.snowjak.rays.shape.PlaneShape;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.colorspace.RGB;
@@ -68,7 +69,9 @@ public class LambertianMaterialTest {
 		//
 		// Should be equal to ( rho / pi ) * ( Li * pi ) = ( rho * Li ) ( W m^-2 sr^-1 )
 		//
-		final var reflected = material.getReflection(interaction, totalRadiantFlux);
+		final var sampler = new StratifiedSampler(0, 0, 1, 1, 9);
+		final var reflectedSample = material.getReflectionSample(interaction, sampler.getNextSample());
+		final var reflected = reflectedSample.getAlbedo().multiply(totalRadiantFlux);
 		
 		assertEquals("Reflected power is not as expected.",
 				radiantIntensity.multiply(texture.getSpectrum(interaction)).getTotalPower(), reflected.getTotalPower(),

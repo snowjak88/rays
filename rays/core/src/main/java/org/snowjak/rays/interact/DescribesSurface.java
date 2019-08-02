@@ -60,16 +60,15 @@ public interface DescribesSurface<D extends DescribesSurface<D>> {
 	 * @return
 	 */
 	public SurfaceDescriptor<D> sampleSurface(Sample sample);
-	
+
 	/**
 	 * Given a sample of this surface (obtained via {@link #sampleSurface(Sample)}),
 	 * compute the probability that this sample would have been chosen.
-	 * 
-	 * @param sample
 	 * @param surface
+	 * 
 	 * @return
 	 */
-	public double sampleSurfaceP(Sample sample, SurfaceDescriptor<?> surface);
+	public double sampleSurfaceP(SurfaceDescriptor<?> surface);
 	
 	/**
 	 * Sample a point from the surface of this object such that the sampled point is
@@ -88,10 +87,10 @@ public interface DescribesSurface<D extends DescribesSurface<D>> {
 	 * 
 	 * @param neighbor
 	 * @param sample
-	 * @param surface
+	 * @param surfaceSample
 	 * @return
 	 */
-	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface);
+	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surfaceSample);
 	
 	/**
 	 * Given a neighboring point <code>viewedFrom</code>, compute the solid-angle

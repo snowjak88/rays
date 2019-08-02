@@ -21,6 +21,16 @@ import com.google.gson.JsonSerializationContext;
 
 /**
  * Represents the CIE 1931 XYZ tristimulus colorspace.
+ * <h3>JSON</h3>
+ * <p>
+ * An XYZ triplet may be serialized to JSON as an array.
+ * </p>
+ * 
+ * <pre>
+ * ...
+ * [ <em>x</em>, <em>y</em>, <em>z</em> ]
+ * ...
+ * </pre>
  * 
  * @author snowjak88
  *

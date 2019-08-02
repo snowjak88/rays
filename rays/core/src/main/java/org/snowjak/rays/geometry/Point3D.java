@@ -17,6 +17,21 @@ import com.google.gson.JsonSerializationContext;
 /**
  * Semantic repackaging of {@link Triplet}.
  * 
+ * <h3>JSON</h3>
+ * <p>
+ * A Point3D may be serialized to JSON in the following format.
+ * </p>
+ * 
+ * <pre>
+ * ...
+ * {
+ *     "x": <em>x</em>,
+ *     "y": <em>y</em>,
+ *     "z": <em>z</em>
+ * }
+ * ...
+ * </pre>
+ * 
  * @author snowjak88
  */
 @UIType(fields = { @UIField(name = "x", type = Double.class, defaultValue = "0"),

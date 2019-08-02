@@ -1,15 +1,15 @@
 package org.snowjak.rays.light;
 
 import org.apache.commons.math3.util.FastMath;
+import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point3D;
+import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
-import org.snowjak.rays.spectrum.Spectrum;
-import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 /**
@@ -20,23 +20,22 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  *
  */
 @UIType(type = "point", fields = { @UIField(name = "position", type = Point3D.class),
-		@UIField(name = "rgb", type = RGB.class), @UIField(name = "power", type = SpectralPowerDistribution.class) })
+		@UIField(name = "radiance", type = SpectralPowerDistribution.class) })
 public class PointLight implements Light {
 	
 	private Point3D position;
-	private SpectralPowerDistribution power = null;
-	private RGB rgb = null;
+	private SpectralPowerDistribution radiance = null;
 	
-	public PointLight(Point3D position, RGB rgb) {
+	/**
+	 * @param position
+	 *            world-space coordinates
+	 * @param radiance
+	 *            W m^-2 sr^-1
+	 */
+	public PointLight(Point3D position, SpectralPowerDistribution radiance) {
 		
 		this.position = position;
-		this.rgb = rgb;
-	}
-	
-	public PointLight(Point3D position, SpectralPowerDistribution power) {
-		
-		this.position = position;
-		this.power = power;
+		this.radiance = radiance;
 	}
 	
 	public Point3D getPosition() {
@@ -44,37 +43,28 @@ public class PointLight implements Light {
 		return position;
 	}
 	
-	public SpectralPowerDistribution getPower() {
+	/**
+	 * Get the radiance (W m^-2 sr^-1) yielded by this light.
+	 * 
+	 * @return
+	 */
+	protected SpectralPowerDistribution getRadiance() {
 		
-		if (power == null)
-			if (rgb == null)
-				throw new RuntimeException(
-						"Trying to get power from a PointLight that has no configured spectrum or RGB!");
-			else
-				power = SpectralPowerDistribution.fromRGB(rgb);
-			
-		return power;
-	}
-	
-	public RGB getRgb() {
-		
-		if (rgb == null)
-			rgb = power.toRGB(true);
-		
-		return rgb;
+		return radiance;
 	}
 	
 	@Override
-	public <T extends Interactable<T>> LightSample sampleSurface(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Sample sample) {
 		
 		return new LightSample(position, Vector3D.from(position, interaction.getPoint()).normalize(),
-				1d / (4d * FastMath.PI));
+				1d / (4d * FastMath.PI), getRadiance());
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Spectrum getRadiance(Point3D surface, Interaction<T> interaction) {
+	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Ray sampleDirection,
+			Scene scene) {
 		
-		return getPower();
+		return new LightSample(getPosition(), sampleDirection.getDirection().negate(), 0.0, getRadiance());
 	}
 	
 }

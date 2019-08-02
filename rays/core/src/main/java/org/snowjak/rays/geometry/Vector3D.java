@@ -1,6 +1,6 @@
 package org.snowjak.rays.geometry;
 
-import static org.apache.commons.math3.util.FastMath.pow;
+import static org.apache.commons.math3.util.FastMath.*;
 import static org.apache.commons.math3.util.FastMath.sqrt;
 
 import java.io.Serializable;
@@ -20,6 +20,21 @@ import com.google.gson.JsonSerializationContext;
 
 /**
  * Represents a vector in 3-space -- direction plus magnitude.
+ * 
+ * <h3>JSON</h3>
+ * <p>
+ * A Vector3D may be serialized to JSON in the following format.
+ * </p>
+ * 
+ * <pre>
+ * ...
+ * {
+ *     "x": <em>x</em>,
+ *     "y": <em>y</em>,
+ *     "z": <em>z</em>
+ * }
+ * ...
+ * </pre>
  * 
  * @author snowjak88
  */
@@ -61,6 +76,38 @@ public class Vector3D extends Triplet implements Serializable {
 			return (Vector3D) t;
 		
 		return new Vector3D(t.get(0), t.get(1), t.get(2));
+	}
+	
+	/**
+	 * Construct a Vector3D in Cartesian coordinates from the given polar
+	 * coordinates. The given Triplet's components are assumed to be of the form
+	 * <code>[ r, theta, phi ]</code>, where:
+	 * <ul>
+	 * <li><strong>r</strong>: radius</li>
+	 * <li><strong>theta</strong>: elevation</li>
+	 * <li><strong>phi</strong>: azimuth</li>
+	 * </ul>
+	 * 
+	 * @param t
+	 * @return
+	 */
+	public static Vector3D fromPolar(Triplet t) {
+		
+		return fromPolar(t.get(0), t.get(1), t.get(2));
+	}
+	
+	/**
+	 * Construct a Vector3D in Cartesian coordinates from the given polar
+	 * coordinates.
+	 * 
+	 * @param r
+	 * @param theta
+	 * @param phi
+	 * @return
+	 */
+	public static Vector3D fromPolar(double r, double theta, double phi) {
+		
+		return new Vector3D(r * sin(theta) * cos(phi), r * sin(theta) * sin(phi), r * cos(theta));
 	}
 	
 	/**
@@ -184,6 +231,22 @@ public class Vector3D extends Triplet implements Serializable {
 		}
 		
 		return new Vector3D(newX, newY, newZ).normalize();
+	}
+	
+	/**
+	 * Convert this Vector3D from Cartesian to polar coordinates (where the returned
+	 * Triplet's components are of the form <code>[ r, theta, phi ]</code>, where:
+	 * <ul>
+	 * <li><strong>r</strong>: radius</li>
+	 * <li><strong>theta</strong>: elevation</li>
+	 * <li><strong>phi</strong>: azimuth</li>
+	 * </ul>
+	 * 
+	 * @return
+	 */
+	public Triplet toPolar() {
+		
+		return new Triplet(getMagnitude(), atan2(getY(), getX()), acos(getZ() / getMagnitude()));
 	}
 	
 	public double getX() {

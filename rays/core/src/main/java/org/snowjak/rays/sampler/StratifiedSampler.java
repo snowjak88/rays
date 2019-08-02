@@ -6,15 +6,16 @@ package org.snowjak.rays.sampler;
 import static org.apache.commons.math3.util.FastMath.ceil;
 import static org.apache.commons.math3.util.FastMath.sqrt;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Iterator;
+import java.util.PrimitiveIterator;
+import java.util.function.Supplier;
 
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point2D;
-import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sample.Sample;
+import org.snowjak.rays.sample.SuppliedSample;
 
 /**
  * Implements a stratified {@link Sampler}.
@@ -33,8 +34,8 @@ import org.snowjak.rays.sample.Sample;
 		@UIField(name = "xEnd", type = Double.class, defaultValue = "399"),
 		@UIField(name = "yEnd", type = Double.class, defaultValue = "299"),
 		@UIField(name = "samplesPerPixel", type = Integer.class, defaultValue = "4"),
-		@UIField(name = "additional1DSamples", type = Integer.class, defaultValue = "4"),
-		@UIField(name = "additional2DSamples", type = Integer.class, defaultValue = "4") })
+		@UIField(name = "additional1DSamples", type = Integer.class, defaultValue = "9"),
+		@UIField(name = "additional2DSamples", type = Integer.class, defaultValue = "9") })
 public class StratifiedSampler extends Sampler {
 	
 	private transient boolean initialized = false;
@@ -42,10 +43,16 @@ public class StratifiedSampler extends Sampler {
 	private transient int currentPixelSampleNumber;
 	
 	private transient double blockSize1D, blockSize2D, additionalSize1D, additionalSize2D;
-	private transient Point2D[][] film, lens, add2d;
-	private transient double[] t, add1d;
+	private transient Point2D[][] film, lens, add2dJitter, add2d;
+	private transient double[] t, add1dJitter, add1d;
 	
 	private transient long samplesGenerated = 0;
+	
+	private transient Supplier<Double> additional1DSupplier;
+	private transient Supplier<Point2D> additional2DSupplier;
+	
+	private transient DoubleArrayIterator additional1DIterator;
+	private transient Array2DIterator<Point2D> additional2DIterator;
 	
 	/**
 	 * 
@@ -57,7 +64,7 @@ public class StratifiedSampler extends Sampler {
 	 */
 	public StratifiedSampler(int xStart, int yStart, int xEnd, int yEnd, int samplesPerPixel) {
 		
-		this(xStart, yStart, xEnd, yEnd, samplesPerPixel, 0, 0);
+		this(xStart, yStart, xEnd, yEnd, samplesPerPixel, 9, 9);
 	}
 	
 	/**
@@ -102,10 +109,74 @@ public class StratifiedSampler extends Sampler {
 		t = generate1D(getSamplesPerPixel(), blockCount1D, blockSize1D);
 		lens = generate2D(getSamplesPerPixel(), blockCount2D, blockSize2D, blockSize2D);
 		
-		add1d = generate1D(getAdditional1DSamples(), additionalBlockCount1D, additionalSize1D);
-		add2d = generate2D(getAdditional2DSamples(), additionalBlockCount2D, additionalSize2D, additionalSize2D);
+		add1dJitter = generate1D(getAdditional1DSamples(), additionalBlockCount1D, additionalSize1D);
+		add2dJitter = generate2D(getAdditional2DSamples(), additionalBlockCount2D, additionalSize2D, additionalSize2D);
+		
+		shuffle2D(film);
+		shuffle1D(t);
+		shuffle2D(lens);
+		shuffle1D(add1dJitter);
+		shuffle2D(add2dJitter);
+		
+		add1d = new double[add1dJitter.length];
+		add2d = new Point2D[add2dJitter.length][add2dJitter[0].length];
+		
+		update1DFromJittered(add1d, add1dJitter, additionalSize1D);
+		update2DFromJittered(add2d, add2dJitter, additionalSize2D, additionalSize2D);
+		
+		shuffle1D(add1d);
+		shuffle2D(add2d);
+		
+		additional1DIterator = new DoubleArrayIterator(add1d);
+		additional2DIterator = new Array2DIterator<>(add2d);
+		
+		additional1DSupplier = () -> {
+			if (!additional1DIterator.hasNext()) {
+				shuffle1D(add1dJitter);
+				update1DFromJittered(add1d, add1dJitter, additionalSize1D);
+				shuffle1D(add1d);
+				additional1DIterator.reset();
+			}
+			return additional1DIterator.nextDouble();
+		};
+		additional2DSupplier = () -> {
+			if (!additional2DIterator.hasNext()) {
+				shuffle2D(add2dJitter);
+				update2DFromJittered(add2d, add2dJitter, additionalSize2D, additionalSize2D);
+				shuffle2D(add2d);
+				additional2DIterator.reset();
+			}
+			return additional2DIterator.next();
+		};
 		
 		initialized = true;
+	}
+	
+	private void update1DFromJittered(double[] result, double[] jitter, double blockSize) {
+		
+		assert (result.length == jitter.length);
+		
+		for (int i = 0; i < jitter.length; i++) {
+			double si = (double) i * blockSize;
+			
+			result[i] = si + jitter[i];
+		}
+	}
+	
+	private void update2DFromJittered(Point2D[][] result, Point2D[][] jitter, double blockSizeX, double blockSizeY) {
+		
+		assert (result.length == jitter.length);
+		
+		for (int i = 0; i < jitter.length; i++) {
+			double si = (double) i * blockSizeX;
+			
+			for (int j = 0; j < jitter[i].length; j++) {
+				double sj = (double) j * blockSizeY;
+				
+				final var jit = jitter[i][j];
+				result[i][j] = new Point2D(si + jit.getX(), sj + jit.getY());
+			}
+		}
 	}
 	
 	private double[] generate1D(int samples, int blockCount1D, double blockSize) {
@@ -170,28 +241,8 @@ public class StratifiedSampler extends Sampler {
 				lens[index2Dx][index2Dy].getY() + (double) index2Dy * blockSize2D);
 		final double tPoint = t[index1D];
 		
-		final List<Double> additional1DSamples = new LinkedList<>();
-		for (int i = 0; i < add1d.length; i++) {
-			final double si = (double) i * additionalSize1D;
-			
-			additional1DSamples.add(si + add1d[i]);
-		}
-		
-		final List<Point2D> additional2DSamples = new LinkedList<>();
-		for (int x = 0; x < add2d.length; x++) {
-			final double sx = (double) x * additionalSize2D;
-			for (int y = 0; y < add2d[x].length; y++) {
-				final double sy = (double) y * additionalSize2D;
-				
-				additional2DSamples.add(new Point2D(sx + add2d[x][y].getX(), sy + add2d[x][y].getY()));
-			}
-		}
-		
-		final Sample result = new FixedSample(filmPoint, lensUV, tPoint, additional1DSamples, additional2DSamples);
+		final Sample result = new SuppliedSample(filmPoint, lensUV, tPoint, additional1DSupplier, additional2DSupplier);
 		samplesGenerated++;
-		
-		shuffle1D(add1d);
-		shuffle2D(add2d);
 		
 		currentPixelSampleNumber++;
 		
@@ -270,4 +321,116 @@ public class StratifiedSampler extends Sampler {
 				getAdditional2DSamples());
 	}
 	
+	public static class DoubleArrayIterator implements PrimitiveIterator.OfDouble {
+		
+		private double[] array;
+		private int i;
+		
+		public DoubleArrayIterator(double[] anArray) {
+			
+			this.array = anArray;
+			this.i = 0;
+		}
+		
+		@Override
+		public boolean hasNext() {
+			
+			return i < array.length - 1;
+		}
+		
+		@Override
+		public double nextDouble() {
+			
+			if (!hasNext())
+				throw new IllegalStateException();
+			
+			final double result = array[i];
+			advanceIndex();
+			return result;
+		}
+		
+		private void advanceIndex() {
+			
+			i++;
+		}
+		
+		/**
+		 * Rewind this Iterator to the beginning of the referenced array.
+		 */
+		public void reset() {
+			
+			i = 0;
+		}
+	}
+	
+	/**
+	 * An {@link Iterator} which iterators across a 2-dimensional array.
+	 * <p>
+	 * Given an array {@code A[m][n]}, this Iterator will return its items in this
+	 * order:
+	 * 
+	 * <pre>
+	 * A[0][0]
+	 * A[0][1]
+	 * ...
+	 * A[0][n-1]
+	 * A[1][0]
+	 * A[1][1]
+	 * ...
+	 * A[m-1][n-1]
+	 * </pre>
+	 * </p>
+	 * 
+	 * @author snowjak88
+	 *
+	 * @param <T>
+	 */
+	public static class Array2DIterator<T> implements Iterator<T> {
+		
+		private T[][] array;
+		private int i, j;
+		
+		public Array2DIterator(T[][] anArray) {
+			
+			this.array = anArray;
+			this.i = 0;
+			this.j = 0;
+		}
+		
+		@Override
+		public boolean hasNext() {
+			
+			return i < array[i].length - 1;
+		}
+		
+		@Override
+		public T next() {
+			
+			if (!hasNext())
+				throw new IllegalStateException();
+			
+			final T result = array[i][j];
+			advanceIndexes();
+			return result;
+		}
+		
+		private void advanceIndexes() {
+			
+			j++;
+			if (j >= array[i].length) {
+				j = 0;
+				i++;
+			}
+		}
+		
+		/**
+		 * Rewind this Iterator to the beginning of the referenced array.
+		 */
+		public void reset() {
+			
+			i = 0;
+			j = 0;
+		}
+		
+	}
 }

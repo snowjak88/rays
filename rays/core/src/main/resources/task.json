@@ -269,10 +269,10 @@
 					]
 				},
 				"visible": true,
-				"power": {
+				"radiance": {
 					"type": "blackbody",
 					"kelvin": 3500,
-					"intensity": 250
+					"radiance": 250
 				}
 			}
 		]

@@ -53,14 +53,13 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 		
 		if (material.isEmissive())
 			return estimate(interaction, () -> material.getEmissionSample(interaction, sample.getSample()),
-					(s) -> material.getEmission(interaction, s.getDirection()));
+					MaterialSample::getAlbedo);
 		else
-			return new SpectralPowerDistribution();
+			return SpectralPowerDistribution.BLACK;
 	}
 	
 	@Override
-	protected Spectrum estimateIndirectLightingRadiance(Interaction<Primitive> interaction, TracedSample sample,
-			Scene scene) {
+	protected Spectrum estimateIndirectLighting(Interaction<Primitive> interaction, TracedSample sample, Scene scene) {
 		
 		final var material = interaction.getInteracted().getMaterial();
 		
@@ -68,11 +67,11 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 			
 			return estimate(interaction, () -> material.getReflectionSample(interaction, sample.getSample()), (s) -> {
 				if (s.getPdf() <= 0d)
-					return new SpectralPowerDistribution();
+					return SpectralPowerDistribution.BLACK;
 				
 				final var cos_i = Vector3D.from(interaction.getNormal()).normalize().dotProduct(s.getDirection());
 				if (cos_i <= 0d)
-					return new SpectralPowerDistribution();
+					return SpectralPowerDistribution.BLACK;
 				
 				final var radianceEstimate = estimate(
 						new TracedSample(sample.getSample(),
@@ -83,7 +82,7 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 			}, (material.isDelta() ? 1 : this.n));
 		
 		else
-			return new SpectralPowerDistribution();
+			return SpectralPowerDistribution.BLACK;
 	}
 	
 	@Override
@@ -103,7 +102,7 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 			});
 		
 		else
-			return new SpectralPowerDistribution();
+			return SpectralPowerDistribution.BLACK;
 	}
 	
 	private Spectrum estimate(Interaction<Primitive> interaction, Supplier<MaterialSample> sampler,
@@ -115,7 +114,7 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 	private Spectrum estimate(Interaction<Primitive> interaction, Supplier<MaterialSample> sampler,
 			Function<MaterialSample, Spectrum> indirectRadianceFunction, int n) {
 		
-		Spectrum totalIndirectEnergy = new SpectralPowerDistribution();
+		Spectrum totalIndirectEnergy = SpectralPowerDistribution.BLACK;
 		
 		if (n > 0) {
 			for (int i = 0; i < n; i++) {

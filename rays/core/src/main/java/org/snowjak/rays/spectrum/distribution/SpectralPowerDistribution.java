@@ -42,6 +42,46 @@ import com.google.gson.JsonSerializationContext;
  * = {@code W*nm}</li>
  * <li>integrated = {@code W}</li>
  * </p>
+ * <h3>JSON</h3>
+ * <p>
+ * An SPD may be serialized to JSON in several formats.
+ * </p>
+ * <h4>Tabulated</h4>
+ * 
+ * <pre>
+ * ...
+ * {
+ *     "type": "data",
+ *     "low": 360.0,
+ *     "high": 830.0,
+ *     "data": [ <em>measurements</em> ]
+ * }
+ * ...
+ * </pre>
+ * 
+ * <h4>RGB + Radiant Power</h4>
+ * 
+ * <pre>
+ * ...
+ * {
+ *     "type": "rgb",
+ *     "rgb": <em>RGB serialization</em>,
+ *     "radiance": 2.5
+ * }
+ * ...
+ * </pre>
+ * 
+ * <h4>Blackbody</h4>
+ * 
+ * <pre>
+ * ...
+ * {
+ *     "type": "blackbody",
+ *     "kelvin": 5500,
+ *     <em>(OPTIONAL)</em> "radiance": 2.5
+ * }
+ * ...
+ * </pre>
  * 
  * @author snowjak88
  *
@@ -73,9 +113,14 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	private static final double sigma = 5.670374419e-8;
 	
 	/**
-	 * A 0-energy SPD.
+	 * A 0-energy SPD. Equivalent to {@link #ZERO}.
 	 */
 	public static final SpectralPowerDistribution BLACK = new SpectralPowerDistribution();
+	
+	/**
+	 * A 0-energy SPD. Equivalent to {@link #BLACK}.
+	 */
+	public static final SpectralPowerDistribution ZERO = BLACK;
 	
 	private transient Double integral = null;
 	
@@ -96,7 +141,7 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	 * Planck's Law for blackbody radiation, for a body of the given temperature.
 	 *
 	 * <p>
-	 * This SPD's power is scaled to {@code intensity} Watts.
+	 * This SPD's power is scaled to {@code intensity} W / m^2 sr.
 	 * </p>
 	 * 
 	 * @param kelvin
@@ -127,23 +172,10 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 		
 		final var spd = new SpectralPowerDistribution(values);
 		
-		// final double scalingFactor;
-		//
-		// if (intensity < 0.0)
-		// scalingFactor = 1.0;
-		// else {
-		//
-		// final var rawIntensity = XYZ.fromSpectrum(spd, false).getY();
-		//
-		// scalingFactor = intensity / rawIntensity;
-		// }
-		
 		if (intensity < 0.0)
 			return spd;
 		
 		return (SpectralPowerDistribution) spd.rescale(intensity);
-		
-		// return (SpectralPowerDistribution) spd.multiply(scalingFactor);
 	}
 	
 	/**
@@ -287,7 +319,7 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	 * {@link Settings#getSpectrumBinCount()} entries covering
 	 * {@link Settings#getSpectrumRange()}).
 	 */
-	public SpectralPowerDistribution() {
+	protected SpectralPowerDistribution() {
 		
 		super(Settings.getInstance().getSpectrumRange(), Settings.getInstance().getSpectrumBinCount());
 	}
@@ -608,18 +640,31 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 				result = new SpectralPowerDistribution(low, high, values.toArray(new Point[0]));
 				break;
 			
+			case "rgb":
+				if (!obj.has("rgb"))
+					throw new JsonParseException("Cannot parse RGB-SpectralPowerDistribution: missing [rgb]!");
+				
+				if (!obj.has("radiance"))
+					throw new JsonParseException("Cannot parse RGB-SpectralPowerDistribution: missing [radiance]!");
+				
+				final RGB rgb = context.deserialize(obj.get("rgb").getAsJsonObject(), RGB.class);
+				final double radiantPower = obj.get("radiance").getAsDouble();
+				
+				result = (SpectralPowerDistribution) SpectralPowerDistribution.fromRGB(rgb).rescale(radiantPower);
+				break;
+			
 			case "blackbody":
 				if (!obj.has("kelvin"))
 					throw new JsonParseException("Cannot parse blackbody SpectralPowerDistribution: missing [kelvin]!");
 				
 				final double kelvin = obj.get("kelvin").getAsDouble();
-				final double intensity;
-				if (obj.has("intensity"))
-					intensity = obj.get("intensity").getAsDouble();
+				final double radiance;
+				if (obj.has("radiance"))
+					radiance = obj.get("radiance").getAsDouble();
 				else
-					intensity = -1.0;
+					radiance = -1.0;
 				
-				result = SpectralPowerDistribution.fromBlackbody(kelvin, intensity);
+				result = SpectralPowerDistribution.fromBlackbody(kelvin, radiance);
 				break;
 			
 			default:

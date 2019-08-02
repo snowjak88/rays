@@ -1,6 +1,5 @@
 package org.snowjak.rays.material;
 
-import org.snowjak.rays.Settings;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Normal3D;
@@ -8,7 +7,6 @@ import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
-import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.texture.ConstantTexture;
@@ -59,21 +57,14 @@ public class PerfectMirrorMaterial implements Material {
 	@Override
 	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Sample sample) {
 		
-		return new MaterialSample(getReflection(interaction.getW_e(), interaction.getNormal()), 1d);
+		return new MaterialSample(getReflection(interaction.getW_e(), interaction.getNormal()), 1d,
+				tint.getSpectrum(interaction));
 	}
 	
 	@Override
-	public <T extends Interactable<T>> double getReflectionP(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Vector3D direction) {
 		
-		final var reflection = getReflection(interaction.getW_e(), interaction.getNormal()).normalize();
-		direction = direction.normalize();
-		
-		if (!(Settings.getInstance().nearlyEqual(reflection.getX(), direction.getX())
-				&& Settings.getInstance().nearlyEqual(reflection.getY(), direction.getY())
-				&& Settings.getInstance().nearlyEqual(reflection.getZ(), direction.getZ())))
-			return 0d;
-		
-		return 1d;
+		return new MaterialSample(direction, 0d, tint.getSpectrum(interaction));
 	}
 	
 	/**
@@ -100,14 +91,6 @@ public class PerfectMirrorMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction,
-			Spectrum totalIncidentRadiance) {
-		
-		return totalIncidentRadiance
-				.multiply(SpectralPowerDistribution.fromRGB(getTint().getRGB(interaction)).normalizePower());
-	}
-	
-	@Override
 	public boolean isTransmissive() {
 		
 		return false;
@@ -116,20 +99,13 @@ public class PerfectMirrorMaterial implements Material {
 	@Override
 	public <T extends Interactable<T>> MaterialSample getTransmissionSample(Interaction<T> interaction, Sample sample) {
 		
-		return null;
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 	@Override
-	public <T extends Interactable<T>> double getTransmissionP(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> MaterialSample getTransmissionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 0;
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction,
-			Spectrum totalIncidentRadiance) {
-		
-		return new SpectralPowerDistribution();
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 	@Override
@@ -141,19 +117,13 @@ public class PerfectMirrorMaterial implements Material {
 	@Override
 	public <T extends Interactable<T>> MaterialSample getEmissionSample(Interaction<T> interaction, Sample sample) {
 		
-		return null;
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 	@Override
-	public <T extends Interactable<T>> double getEmissionP(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> MaterialSample getEmissionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 0;
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getEmission(Interaction<T> interaction, Vector3D direction) {
-		
-		return new SpectralPowerDistribution();
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 }

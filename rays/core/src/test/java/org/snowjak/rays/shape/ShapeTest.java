@@ -98,7 +98,7 @@ public class ShapeTest {
 			}
 			
 			@Override
-			public double sampleSurfaceP(Sample sample, SurfaceDescriptor<?> surface) {
+			public double sampleSurfaceP(SurfaceDescriptor<?> surface) {
 				
 				// We don't care about this method for the purposes of this
 				// test.

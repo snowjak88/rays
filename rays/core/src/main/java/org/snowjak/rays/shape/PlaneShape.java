@@ -125,7 +125,7 @@ public class PlaneShape extends Shape {
 	}
 	
 	@Override
-	public double sampleSurfaceP(Sample sample, SurfaceDescriptor<?> surface) {
+	public double sampleSurfaceP(SurfaceDescriptor<?> surface) {
 		
 		return 1d;
 	}
@@ -146,7 +146,7 @@ public class PlaneShape extends Shape {
 	@Override
 	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
 		
-		return sampleSurfaceP(sample, surface);
+		return sampleSurfaceP(surface);
 	}
 	
 	@Override

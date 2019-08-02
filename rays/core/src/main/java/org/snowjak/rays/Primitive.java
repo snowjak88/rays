@@ -89,11 +89,11 @@ public class Primitive implements Interactable<Primitive>, Transformable {
 		
 		return new SurfaceDescriptor<>(this, shape.sampleSurface(sample));
 	}
-	
+
 	@Override
-	public double sampleSurfaceP(Sample sample, SurfaceDescriptor<?> surface) {
+	public double sampleSurfaceP(SurfaceDescriptor<?> surface) {
 		
-		return shape.sampleSurfaceP(sample, surface);
+		return shape.sampleSurfaceP(surface);
 	}
 	
 	@Override

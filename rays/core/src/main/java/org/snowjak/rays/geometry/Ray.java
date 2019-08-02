@@ -34,6 +34,21 @@ import com.google.gson.JsonSerializationContext;
  * </ul>
  * </p>
  * 
+ * <h3>JSON</h3>
+ * <p>A Ray may be serialized to JSON in the following format.</p>
+ * <pre>
+ * ...
+ * {
+ *     "o": <em>Point3D serialization</em>,
+ *     "d": <em>Vector3D serialization</em>,
+ *     <em>OPTIONAL:</em> "t": 0.0,
+ *     <em>OPTIONAL:</em> "depth": 0,
+ *     <em>OPTIONAL:</em> "minT": 0.0,
+ *     <em>OPTIONAL:</em> "maxT": 0.0
+ * }
+ * ...
+ * </pre>
+ * 
  * @author snowjak88
  */
 @UIType(fields = { @UIField(name = "origin", type = Point3D.class),

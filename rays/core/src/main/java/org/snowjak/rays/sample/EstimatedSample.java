@@ -25,7 +25,7 @@ public class EstimatedSample implements Serializable {
 	 */
 	public static EstimatedSample zero(TracedSample sample) {
 		
-		return new EstimatedSample(sample.getSample(), new SpectralPowerDistribution());
+		return new EstimatedSample(sample.getSample(), SpectralPowerDistribution.BLACK);
 	}
 	
 	public EstimatedSample(Sample sample, Spectrum radiance) {

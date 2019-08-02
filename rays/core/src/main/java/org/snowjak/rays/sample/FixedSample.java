@@ -112,7 +112,7 @@ public class FixedSample implements Sample {
 		this.lensUV = lensUV;
 	}
 	
-	public List<Double> getAdditional1DSamples() {
+	protected List<Double> getAdditional1DSamples() {
 		
 		return additional1DSamples;
 	}

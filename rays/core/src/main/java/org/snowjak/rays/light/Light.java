@@ -61,7 +61,20 @@ public interface Light {
 	 * @param interaction
 	 * @return
 	 */
-	public <T extends Interactable<T>> LightSample sampleSurface(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Sample sample);
+	
+	/**
+	 * Given an {@link Interaction} somewhere in the {@link Scene}, and a
+	 * {@link Ray} pointing somewhere in the world, what is the probability that
+	 * this Light would select the reverse of this direction along which to send
+	 * some radiation?
+	 * 
+	 * @param <T>
+	 * @param interaction
+	 * @param lightSurface
+	 * @return
+	 */
+	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Ray sampleDirection, Scene scene);
 	
 	/**
 	 * Determines if the given {@code surface} point on this Light is visible from
@@ -102,17 +115,6 @@ public interface Light {
 	}
 	
 	/**
-	 * Computes the total radiance emitted by this Light from the given
-	 * {@code surface}-point, toward the given {@link Interaction}. (Does not
-	 * account for fall-off due to distance.)
-	 * 
-	 * @param surface
-	 * @param interaction
-	 * @return
-	 */
-	public <T extends Interactable<T>> Spectrum getRadiance(Point3D surface, Interaction<T> interaction);
-	
-	/**
 	 * Data bean holding a sampled point, direction, and their accompanying PDF.
 	 * 
 	 * @author snowjak88
@@ -123,12 +125,14 @@ public interface Light {
 		private final Point3D point;
 		private final Vector3D direction;
 		private final double pdf;
+		private final Spectrum radiance;
 		
-		public LightSample(Point3D point, Vector3D direction, double pdf) {
+		public LightSample(Point3D point, Vector3D direction, double pdf, Spectrum radiance) {
 			
 			this.point = point;
 			this.direction = direction.normalize();
 			this.pdf = pdf;
+			this.radiance = radiance;
 		}
 		
 		/**
@@ -160,6 +164,16 @@ public interface Light {
 		public double getPdf() {
 			
 			return pdf;
+		}
+		
+		/**
+		 * The sampled radiance (W m^-2 sr^-1)
+		 * 
+		 * @return
+		 */
+		public Spectrum getRadiance() {
+			
+			return radiance;
 		}
 		
 	}

@@ -19,6 +19,18 @@ import com.google.gson.JsonSerializationContext;
  * A Normal3D is distinct from a {@link Vector3D} in that a Normal3D does not
  * inherently represent magnitude, only direction.
  * 
+ * <h3>JSON</h3>
+ * <p>A Normal3D may be serialized to JSON in the following format.</p>
+ * <pre>
+ * ...
+ * {
+ *     "x": <em>x</em>,
+ *     "y": <em>y</em>,
+ *     "z": <em>z</em>
+ * }
+ * ...
+ * </pre>
+ * 
  * @author snowjak88
  */
 @UIType(fields = { @UIField(name = "x", type = Double.class, defaultValue = "0"),

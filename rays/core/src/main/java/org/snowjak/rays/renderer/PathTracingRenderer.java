@@ -10,7 +10,7 @@ import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.light.Light;
-import org.snowjak.rays.material.Material;
+import org.snowjak.rays.light.Light.LightSample;
 import org.snowjak.rays.sample.EstimatedSample;
 import org.snowjak.rays.sample.TracedSample;
 import org.snowjak.rays.spectrum.Spectrum;
@@ -57,8 +57,7 @@ public class PathTracingRenderer extends Renderer {
 		//
 		//
 		//
-		final Material mat = interaction.getInteracted().getMaterial();
-		Spectrum irradiance = new SpectralPowerDistribution();
+		Spectrum irradiance = SpectralPowerDistribution.BLACK;
 		
 		//
 		// Gather emission.
@@ -68,16 +67,12 @@ public class PathTracingRenderer extends Renderer {
 		//
 		// Gather reflection.
 		//
-		Spectrum reflectiveRadiance = estimateReflectiveRadiance(interaction, sample, scene);
-		
-		irradiance = irradiance.add(mat.getReflection(interaction, reflectiveRadiance));
+		irradiance = irradiance.add(estimateReflection(interaction, sample, scene));
 		
 		//
 		// Gather transmission.
 		//
-		Spectrum transmissiveRadiance = estimateTransmissiveRadiance(interaction, sample, scene);
-		
-		irradiance = irradiance.add(mat.getTransmission(interaction, transmissiveRadiance));
+		irradiance = irradiance.add(estimateTransmissiveRadiance(interaction, sample, scene));
 		
 		//
 		//
@@ -88,42 +83,38 @@ public class PathTracingRenderer extends Renderer {
 		
 		final var mat = interaction.getInteracted().getMaterial();
 		
-		if (mat.isEmissive()) {
-			final var emissiveV = sample.getRay().getDirection().negate();
-			return mat.getEmission(interaction, emissiveV);
-		}
+		if (mat.isEmissive())
+			return mat.getEmissionSample(interaction, sample.getSample()).getAlbedo();
 		
-		return new SpectralPowerDistribution();
+		return SpectralPowerDistribution.BLACK;
 	}
 	
-	protected Spectrum estimateReflectiveRadiance(Interaction<Primitive> interaction, TracedSample sample,
-			Scene scene) {
+	protected Spectrum estimateReflection(Interaction<Primitive> interaction, TracedSample sample, Scene scene) {
 		
 		final var mat = interaction.getInteracted().getMaterial();
-		Spectrum totalRadiance = new SpectralPowerDistribution();
+		Spectrum totalRadiance = SpectralPowerDistribution.BLACK;
 		
 		if (mat.isReflective()) {
 			
 			//
 			// Gather direct lighting.
 			//
-			totalRadiance = totalRadiance.add(estimateDirectLightingRadiance(interaction, sample, scene));
+			totalRadiance = totalRadiance.add(estimateDirectLighting(interaction, sample, scene));
 			
 			//
 			// Gather indirect lighting.
 			//
-			totalRadiance = totalRadiance.add(estimateIndirectLightingRadiance(interaction, sample, scene));
+			totalRadiance = totalRadiance.add(estimateIndirectLighting(interaction, sample, scene));
 		}
 		
 		return totalRadiance;
 	}
 	
-	protected Spectrum estimateDirectLightingRadiance(Interaction<Primitive> interaction, TracedSample sample,
-			Scene scene) {
+	protected Spectrum estimateDirectLighting(Interaction<Primitive> interaction, TracedSample sample, Scene scene) {
 		
 		final var mat = interaction.getInteracted().getMaterial();
 		
-		Spectrum result = new SpectralPowerDistribution();
+		Spectrum result = SpectralPowerDistribution.BLACK;
 		if (mat.isReflective() && !mat.isDelta()) {
 			
 			for (Light light : scene.getLights()) {
@@ -134,62 +125,97 @@ public class PathTracingRenderer extends Renderer {
 				//
 				final var lightSampleCount = (light.isDelta() ? 1 : lightSamples);
 				
-				Spectrum totalLightIrradiance = SpectralPowerDistribution.BLACK;
+				Spectrum totalIrradiance = SpectralPowerDistribution.BLACK;
 				
 				for (int n = 0; n < lightSampleCount; n++) {
 					
-					final var lightSample = light.sampleSurface(interaction, sample.getSample());
-					final var lightP = lightSample.getPoint();
-					final var lightV = lightSample.getDirection();
-					final var wo = lightV.normalize().negate();
-					final var lightPDF = lightSample.getPdf();
+					//
+					// First, try to get a contribution from the light by sampling the light's
+					// surface.
+					//
 					
 					//
-					// If the direction to the light is on the other side of the surface from the
-					// normal, then we won't be able to see it and it doesn't count.
-					final var cos_i = wo.dotProduct(Vector3D.from(interaction.getNormal()));
-					if (cos_i < 0d)
-						continue;
-						
+					// Sample the light source with multiple-importance sampling.
 					//
-					// Determine if we can see the light-source at all.
-					if (!light.isVisible(lightP, interaction, scene))
-						continue;
-						
-					//
-					// If the light has no probability of being sampled, then we won't get any
-					// illumination from it.
-					if (lightPDF <= 0d)
-						continue;
 					
-					final var falloff = light
-							.getFalloff(Vector3D.from(interaction.getPoint(), lightP).getMagnitudeSq());
-					
-					//
-					// Calculate the total energy available after falloff.
-					final Spectrum lightIrradiance;
-					if (light.isDelta())
-						lightIrradiance = light.getRadiance(lightP, interaction).multiply(falloff).multiply(cos_i);
-					else {
-						final var scatteringPDF = mat.getReflectionP(interaction, wo);
-						if (scatteringPDF <= 0)
-							continue;
+					final var fromlightSample = light.sample(interaction, sample.getSample());
+					if (fromlightSample.getPdf() > 0d && !fromlightSample.getRadiance().isBlack()) {
 						
-						final var weight = getPowerHeuristic(lightSampleCount, lightPDF, 1, scatteringPDF);
+						Spectrum irradiance = SpectralPowerDistribution.BLACK;
 						
-						// lightIrradiance = light.getRadiance(lightP,
-						// interaction).multiply(falloff).multiply(cos_i)
-						// .multiply(weight / scatteringPDF);
-						lightIrradiance = light.getRadiance(lightP, interaction).multiply(falloff).multiply(cos_i)
-								.multiply(1d / lightPDF);
+						final var cos_i = fromlightSample.getDirection().negate().normalize()
+								.dotProduct(Vector3D.from(interaction.getNormal()));
+						
+						final var matSample = mat.getReflectionSample(interaction,
+								fromlightSample.getDirection().negate());
+						final var albedo = matSample.getAlbedo().multiply(cos_i);
+						
+						final Spectrum lightRadiance;
+						
+						if (!albedo.isBlack() && light.isVisible(fromlightSample.getPoint(), interaction, scene))
+							lightRadiance = fromlightSample.getRadiance();
+						else
+							lightRadiance = SpectralPowerDistribution.BLACK;
+						
+						if (!lightRadiance.isBlack())
+							if (light.isDelta())
+								irradiance = albedo.multiply(lightRadiance).multiply(1d / fromlightSample.getPdf());
+							else {
+								final var weight = getPowerHeuristic(1, fromlightSample.getPdf(), 1,
+										matSample.getPdf());
+								irradiance = albedo.multiply(lightRadiance).multiply(weight / fromlightSample.getPdf());
+							}
+						
+						totalIrradiance = totalIrradiance.add(irradiance);
 					}
 					
-					totalLightIrradiance = totalLightIrradiance.add(lightIrradiance);
+					//
+					// Sample the material with multiple-importance sampling.
+					//
 					
+					if (!light.isDelta()) {
+						final var matSample = mat.getReflectionSample(interaction, sample.getSample());
+						
+						final var cos_i = matSample.getDirection().normalize()
+								.dotProduct(Vector3D.from(interaction.getNormal()));
+						
+						final var albedo = matSample.getAlbedo().multiply(cos_i);
+						
+						if (!albedo.isBlack() && matSample.getPdf() > 0) {
+							
+							final LightSample toLightSample;
+							final double weight;
+							
+							if (mat.isDelta()) {
+								toLightSample = null;
+								weight = 1d;
+							} else {
+								
+								final var fromMaterialRay = new Ray(interaction.getPoint(), matSample.getDirection());
+								toLightSample = light.sample(interaction, fromMaterialRay, scene);
+								
+								if (toLightSample.getPdf() <= 0d)
+									continue;
+								weight = getPowerHeuristic(1, matSample.getPdf(), 1, toLightSample.getPdf());
+							}
+							
+							boolean isHidden = false;
+							if (toLightSample != null && !light.isVisible(toLightSample.getPoint(), interaction, scene))
+								isHidden = true;
+							
+							final var radiance = toLightSample.getRadiance();
+							if (!isHidden && !radiance.isBlack()) {
+								
+								final var irradiance = albedo.multiply(radiance).multiply(weight / matSample.getPdf());
+								
+								totalIrradiance = totalIrradiance.add(irradiance);
+							}
+						}
+					}
 				}
 				
-				totalLightIrradiance = totalLightIrradiance.multiply(1d / (double) lightSampleCount);
-				result = result.add(totalLightIrradiance);
+				totalIrradiance = totalIrradiance.multiply(1d / (double) lightSampleCount);
+				result = result.add(totalIrradiance);
 			}
 			
 		}
@@ -197,8 +223,7 @@ public class PathTracingRenderer extends Renderer {
 		return result;
 	}
 	
-	protected Spectrum estimateIndirectLightingRadiance(Interaction<Primitive> interaction, TracedSample sample,
-			Scene scene) {
+	protected Spectrum estimateIndirectLighting(Interaction<Primitive> interaction, TracedSample sample, Scene scene) {
 		
 		final var mat = interaction.getInteracted().getMaterial();
 		final var reflection = mat.getReflectionSample(interaction, sample.getSample());
@@ -206,7 +231,7 @@ public class PathTracingRenderer extends Renderer {
 		final var cos_i = reflectiveV.dotProduct(Vector3D.from(interaction.getNormal()));
 		
 		if (cos_i <= 0d)
-			return new SpectralPowerDistribution();
+			return SpectralPowerDistribution.BLACK;
 		
 		final var reflectiveRay = new Ray(interaction.getPoint(), reflectiveV, 0,
 				interaction.getInteractingRay().getDepth() + 1);
@@ -217,7 +242,7 @@ public class PathTracingRenderer extends Renderer {
 			Scene scene) {
 		
 		final var mat = interaction.getInteracted().getMaterial();
-		Spectrum totalRadiance = new SpectralPowerDistribution();
+		Spectrum totalRadiance = SpectralPowerDistribution.BLACK;
 		
 		if (mat.isTransmissive()) {
 			final var transmission = mat.getTransmissionSample(interaction, sample.getSample());
@@ -233,6 +258,11 @@ public class PathTracingRenderer extends Renderer {
 		}
 		
 		return totalRadiance;
+	}
+	
+	protected double getBalanceHeuristic(int nf, double pf, int ng, double pg) {
+		
+		return (nf * pf) / (nf * pf + ng * pg);
 	}
 	
 	protected double getPowerHeuristic(int nf, double pf, int ng, double pg) {

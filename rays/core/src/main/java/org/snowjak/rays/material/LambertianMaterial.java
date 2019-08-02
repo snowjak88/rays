@@ -11,7 +11,6 @@ import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
-import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.texture.Texture;
 
@@ -66,20 +65,15 @@ public class LambertianMaterial implements Material {
 		//
 		// Convert the Cartesian coordinates to a Vector in the constructed
 		// coordinate system.
-		return new MaterialSample(i.multiply(x).add(j.multiply(y)).add(k.multiply(z)).normalize(), 1d / (2d * PI));
+		return new MaterialSample(i.multiply(x).add(j.multiply(y)).add(k.multiply(z)).normalize(), 1d / (2d * PI),
+				texture.getSpectrum(interaction).multiply(1d / PI));
 	}
 	
 	@Override
-	public <T extends Interactable<T>> double getReflectionP(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction,
+			Vector3D direction) {
 		
-		return 1d / (2d * PI);
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction,
-			Spectrum totalIncidentRadiance) {
-		
-		return totalIncidentRadiance.multiply(texture.getSpectrum(interaction).multiply(1d / PI));
+		return new MaterialSample(direction.negate(), 1 / (2d * PI), texture.getSpectrum(interaction));
 	}
 	
 	@Override
@@ -91,20 +85,13 @@ public class LambertianMaterial implements Material {
 	@Override
 	public <T extends Interactable<T>> MaterialSample getTransmissionSample(Interaction<T> interaction, Sample sample) {
 		
-		return null;
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 	@Override
-	public <T extends Interactable<T>> double getTransmissionP(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> MaterialSample getTransmissionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 0;
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction,
-			Spectrum totalIncidentRadiance) {
-		
-		return new SpectralPowerDistribution();
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 	@Override
@@ -116,19 +103,13 @@ public class LambertianMaterial implements Material {
 	@Override
 	public <T extends Interactable<T>> MaterialSample getEmissionSample(Interaction<T> interaction, Sample sample) {
 		
-		return null;
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 	@Override
-	public <T extends Interactable<T>> double getEmissionP(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> MaterialSample getEmissionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 0;
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getEmission(Interaction<T> interaction, Vector3D direction) {
-		
-		return new SpectralPowerDistribution();
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 }

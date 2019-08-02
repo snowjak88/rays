@@ -17,6 +17,17 @@ import com.google.gson.JsonSerializationContext;
 /**
  * Semantic repackaging of {@link Pair}.
  * 
+ * <h3>JSON</h3>
+ * <p>A Point2D may be serialized to JSON in the following format.</p>
+ * <pre>
+ * ...
+ * {
+ *     "x": <em>x</em>,
+ *     "y": <em>y</em>
+ * }
+ * ...
+ * </pre>
+ * 
  * @author snowjak88
  */
 @UIType(fields = { @UIField(name = "x", type = Double.class, defaultValue = "0"),

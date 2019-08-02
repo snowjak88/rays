@@ -15,12 +15,16 @@ import org.junit.Test;
 import org.snowjak.rays.camera.OrthographicCamera;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
+import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
+import org.snowjak.rays.light.InfiniteLight;
 import org.snowjak.rays.light.Light;
 import org.snowjak.rays.light.PointLight;
 import org.snowjak.rays.material.LambertianMaterial;
 import org.snowjak.rays.renderer.PathTracingRenderer;
 import org.snowjak.rays.sample.FixedSample;
+import org.snowjak.rays.sample.TracedSample;
+import org.snowjak.rays.sampler.StratifiedSampler;
 import org.snowjak.rays.shape.SphereShape;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
@@ -70,7 +74,7 @@ public class RenderingTest {
 		
 		final var l = scene.getLights().iterator().next();
 		
-		final var ls = l.sampleSurface(interaction, sample);
+		final var ls = l.sample(interaction, sample);
 		final var lp = ls.getPoint();
 		assertEquals(0, lp.getX(), 0.00001);
 		assertEquals(3, lp.getY(), 0.00001);
@@ -81,6 +85,37 @@ public class RenderingTest {
 		final var estimate = renderer.estimate(tracedSample, scene);
 		
 		assertNotNull(estimate);
+	}
+	
+	@Test
+	public void directLightingFurnaceTest() {
+		
+		final var albedo = 0.3;
+		final var albedoRGB = new RGB(albedo, albedo, albedo);
+		final var texture = new ConstantTexture(albedoRGB);
+		
+		final Collection<Primitive> primitives = Arrays
+				.asList(new Primitive(new SphereShape(1d), new LambertianMaterial(texture)));
+		
+		final var radianceWatts = 100d;
+		final var radiance = (SpectralPowerDistribution) SpectralPowerDistribution.fromRGB(RGB.WHITE)
+				.rescale(radianceWatts);
+		
+		final Collection<Light> lights = Arrays.asList(new InfiniteLight(radiance));
+		
+		final var scene = new Scene(primitives, lights);
+		
+		final var sampler = new StratifiedSampler(0, 0, 1, 1, 4, 9, 25);
+		
+		final var renderer = new PathTracingRenderer(1, 1024);
+		
+		final var sample = sampler.getNextSample();
+		
+		final var estimate = renderer
+				.estimate(new TracedSample(sample, new Ray(new Point3D(0, 0, -3), new Vector3D(0, 0, 1))), scene);
+		
+		assertEquals(radiance.multiply(texture.getSpectrum(null)).getTotalPower(),
+				estimate.getRadiance().getTotalPower(), 0.01 * radianceWatts);
 	}
 	
 }

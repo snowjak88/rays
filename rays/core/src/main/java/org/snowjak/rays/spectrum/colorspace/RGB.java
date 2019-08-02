@@ -20,6 +20,18 @@ import com.google.gson.JsonSerializationContext;
 /**
  * Represents the sRGB colorspace.
  * 
+ * <h3>JSON</h3>
+ * <p>An RGB may be serialized to JSON in the following format.</p>
+ * <pre>
+ * ...
+ * {
+ *     "red": 0.5,
+ *     "green": 0.4,
+ *     "blue": 0.3
+ * }
+ * ...
+ * </pre>
+ * 
  * @author snowjak88
  *
  */

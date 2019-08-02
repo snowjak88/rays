@@ -9,7 +9,6 @@ import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.light.Light;
 import org.snowjak.rays.sample.Sample;
-import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 
 /**
@@ -21,17 +20,17 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  */
 public class EmissionMaterial implements Material {
 	
-	private transient SpectralPowerDistribution specificPower;
+	private transient SpectralPowerDistribution radiantIntensity;
 	
 	/**
-	 * Construct a new EmissionMaterial using the given {@code specificPower} (in
-	 * candela, being luminous power per steradian).
+	 * Construct a new EmissionMaterial using the given {@code specificPower} W m^-2
+	 * sr^-1.
 	 * 
 	 * @param specificPower
 	 */
-	public EmissionMaterial(SpectralPowerDistribution specificPower) {
+	public EmissionMaterial(SpectralPowerDistribution radiantIntensity) {
 		
-		this.specificPower = specificPower;
+		this.radiantIntensity = radiantIntensity;
 	}
 	
 	@Override
@@ -43,20 +42,13 @@ public class EmissionMaterial implements Material {
 	@Override
 	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Sample sample) {
 		
-		return null;
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 	@Override
-	public <T extends Interactable<T>> double getReflectionP(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Vector3D direction) {
 		
-		return 0;
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getReflection(Interaction<T> interaction,
-			Spectrum totalIncidentRadiance) {
-		
-		return SpectralPowerDistribution.BLACK;
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 	@Override
@@ -68,20 +60,13 @@ public class EmissionMaterial implements Material {
 	@Override
 	public <T extends Interactable<T>> MaterialSample getTransmissionSample(Interaction<T> interaction, Sample sample) {
 		
-		return null;
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 	@Override
-	public <T extends Interactable<T>> double getTransmissionP(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> MaterialSample getTransmissionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 0;
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getTransmission(Interaction<T> interaction,
-			Spectrum totalIncidentRadiance) {
-		
-		return SpectralPowerDistribution.BLACK;
+		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
 	}
 	
 	@Override
@@ -93,19 +78,13 @@ public class EmissionMaterial implements Material {
 	@Override
 	public <T extends Interactable<T>> MaterialSample getEmissionSample(Interaction<T> interaction, Sample sample) {
 		
-		return new MaterialSample(interaction.getW_e(), 1d / (2d * FastMath.PI));
+		return new MaterialSample(interaction.getW_e(), 1d / (2d * FastMath.PI), radiantIntensity);
 	}
 	
 	@Override
-	public <T extends Interactable<T>> double getEmissionP(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> MaterialSample getEmissionP(Interaction<T> interaction, Vector3D direction) {
 		
-		return 1d / (2d * FastMath.PI);
-	}
-	
-	@Override
-	public <T extends Interactable<T>> Spectrum getEmission(Interaction<T> interaction, Vector3D direction) {
-		
-		return specificPower;
+		return new MaterialSample(direction, 1d / (2d * FastMath.PI), radiantIntensity);
 	}
 	
 }
