@@ -18,6 +18,7 @@ import org.snowjak.rays.RenderTask;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.filter.Filter;
+import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.sample.EstimatedSample;
 import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sampler.Sampler;
@@ -55,7 +56,7 @@ public class Film {
 	private Filter filter;
 	
 	private transient boolean initialized = false;
-	private transient XYZ[][] receivedLuminance;
+	private transient double[][][] receivedLuminance;
 	private transient double[][] filterWeights;
 	
 	/**
@@ -154,12 +155,13 @@ public class Film {
 	
 	private void initialize() {
 		
-		this.receivedLuminance = new XYZ[width + filter.getExtentX() * 2][height + filter.getExtentY() * 2];
+		this.receivedLuminance = new double[width + filter.getExtentX() * 2][height + filter.getExtentY() * 2][3];
 		this.filterWeights = new double[width + filter.getExtentX() * 2][height + filter.getExtentY() * 2];
 		
 		for (int x = 0; x < receivedLuminance.length; x++)
 			for (int y = 0; y < receivedLuminance[x].length; y++) {
-				receivedLuminance[x][y] = null;
+				for (int z = 0; z < receivedLuminance[x][y].length; z++)
+					receivedLuminance[x][y][z] = 0;
 				filterWeights[x][y] = 0;
 			}
 		
@@ -218,11 +220,9 @@ public class Film {
 						
 						filterWeights[indexX][indexY] += filterContribution;
 						
-						if (receivedLuminance[indexX][indexY] == null)
-							receivedLuminance[indexX][indexY] = newXyz;
-						else
-							receivedLuminance[indexX][indexY] = new XYZ(
-									receivedLuminance[indexX][indexY].get().add(newXyz.get()));
+						receivedLuminance[indexX][indexY][0] += newXyz.getX();
+						receivedLuminance[indexX][indexY][1] += newXyz.getY();
+						receivedLuminance[indexX][indexY][2] += newXyz.getZ();
 						
 					}
 					
@@ -251,7 +251,7 @@ public class Film {
 			return new XYZ(0, 0, 0);
 		
 		final var filterWeight = filterWeights[indexX][indexY];
-		return new XYZ(receivedLuminance[indexX][indexY].get().multiply(1d / filterWeight));
+		return new XYZ(new Triplet(receivedLuminance[indexX][indexY]).multiply(1d / filterWeight));
 	}
 	
 	/**
@@ -306,7 +306,7 @@ public class Film {
 					final var offsetY = y + this.offsetY;
 					
 					if ((offsetX < xStart || offsetX > xEnd) || (offsetY < yStart || offsetY > yEnd)
-							|| receivedLuminance[indexX][indexY] == null || filterWeights[indexX][indexY] == 0d)
+							|| filterWeights[indexX][indexY] == 0d)
 						image.setRGB(x, y, RGB.toPacked(RGB.BLACK, 0d));
 					
 					else {
