@@ -47,12 +47,12 @@ import org.snowjak.rays.spectrum.colorspace.XYZ;
 		@UIField(name = "filter", type = Filter.class) })
 public class Film {
 	
-	private int width, height;
-	private int offsetX, offsetY;
-	private double aperture;
-	private double exposureTime;
-	private double isoSensitivity;
-	private double calibrationConstant;
+	private int width = 400, height = 300;
+	private int offsetX = 0, offsetY = 0;
+	private double aperture = 16.0;
+	private double exposureTime = 0.0333;
+	private double isoSensitivity = 100;
+	private double calibrationConstant = 815;
 	private Filter filter;
 	
 	private transient boolean initialized = false;

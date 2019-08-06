@@ -60,7 +60,7 @@ public class V0_0_1__SetupSampleSceneAndRender extends BaseJavaMigration {
 						SpectralPowerDistribution.fromBlackbody(2800, 250))));
 		
 		final RenderTask rt = new RenderTask(new StratifiedSampler(0, 0, 399, 299, 4, 9, 9),
-				new PathTracingRenderer(4, 4),
+				new PathTracingRenderer(4, 1, 4),
 				new Film(400, 300, 16.0, 0.04, 100, 12.4, new MitchellFilter(1, 0.33333, 0.33333)), scene, null);
 		
 		try (PreparedStatement insertSampleScene = context.getConnection()

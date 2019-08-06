@@ -7,6 +7,7 @@ import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Ray;
+import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.light.Light;
 import org.snowjak.rays.sample.EstimatedSample;
@@ -23,21 +24,36 @@ import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
  *
  */
 @UIType(type = "path-tracing", fields = { @UIField(name = "maxDepth", type = Integer.class, defaultValue = "4"),
+		@UIField(name = "n", type = Integer.class, defaultValue = "1"),
 		@UIField(name = "lightSamples", type = Integer.class, defaultValue = "1") })
 public class PathTracingRenderer extends Renderer {
 	
-	private int maxDepth;
-	private int lightSamples;
+	private int maxDepth = 4;
+	private int lightSamples = 1;
+	private int n = 1;
 	
-	public PathTracingRenderer(int maxDepth, int lightSamples) {
+	public PathTracingRenderer() {
+		
+		this(4, 1, 1);
+	}
+	
+	public PathTracingRenderer(int maxDepth, int n, int lightSamples) {
 		
 		this.maxDepth = maxDepth;
+		this.n = n;
 		this.lightSamples = lightSamples;
 	}
 	
 	@Override
 	public EstimatedSample estimate(TracedSample sample, Scene scene) {
 		
+		if (maxDepth < 1)
+			maxDepth = 1;
+		if (lightSamples < 1)
+			lightSamples = 1;
+		if (n < 1)
+			n = 1;
+			
 		//
 		// If we've exceeded our allowed depth, return.
 		//
@@ -74,7 +90,7 @@ public class PathTracingRenderer extends Renderer {
 		
 		//
 		//
-		return new EstimatedSample(sample.getSample(), irradiance);
+		return new EstimatedSample(sample.getSample(), interaction, irradiance);
 	}
 	
 	protected Spectrum estimateEmission(Interaction<Primitive> interaction, TracedSample sample) {
@@ -177,27 +193,52 @@ public class PathTracingRenderer extends Renderer {
 	
 	protected Spectrum estimateIndirectLighting(Interaction<Primitive> interaction, TracedSample sample, Scene scene) {
 		
+		//
+		// We estimate indirect-lighting using the rendering equation in
+		// directional-form
+		//
+		
 		final var mat = interaction.getInteracted().getMaterial();
 		
-		final var reflection = mat.sampleReflectionW_i(interaction, sample.getSample());
-		final var reflectiveV = reflection.getA().normalize();
-		final var reflectivePdf = reflection.getB();
-		final var reflectionAlbedo = reflection.getC();
+		Spectrum totalIrradiance = SpectralPowerDistribution.BLACK;
 		
-		if (reflectivePdf <= 0d)
-			return SpectralPowerDistribution.BLACK;
+		final var reflectionSamples = mat.isDelta() ? 1 : n;
+		for (int i = 0; i < reflectionSamples; i++) {
+			
+			final var reflection = mat.sampleReflectionW_i(interaction, sample.getSample());
+			final var reflectiveV = reflection.getA().normalize();
+			final var reflectivePdf = reflection.getB();
+			final var reflectionAlbedo = reflection.getC();
+			
+			if (reflectivePdf <= 0d)
+				continue;
+			
+			final var cos_i = reflectiveV.dotProduct(interaction.getNormal());
+			if (cos_i <= 0d)
+				continue;
+			
+			final var reflectiveRay = new Ray(interaction.getPoint(), reflectiveV,
+					interaction.getInteractingRay().getDepth() + 1);
+			
+			final var reflectedEstimate = this.estimate(new TracedSample(sample.getSample(), reflectiveRay), scene);
+			
+			final double distanceSq;
+			if (reflectedEstimate.getInteraction() == null || reflectedEstimate.getInteraction().getPoint() == null
+					|| reflectedEstimate.getInteraction().getPoint().nearlyEquals(interaction.getPoint()))
+				distanceSq = 1d;
+			else
+				distanceSq = Vector3D.from(interaction.getPoint(), reflectedEstimate.getInteraction().getPoint())
+						.getMagnitudeSq();
+			
+			final var irradiance = reflectedEstimate.getRadiance().multiply(cos_i / (reflectivePdf * distanceSq))
+					.multiply(reflectionAlbedo);
+			
+			totalIrradiance = totalIrradiance.add(irradiance);
+		}
 		
-		final var cos_i = reflectiveV.dotProduct(interaction.getNormal());
-		if (cos_i <= 0d)
-			return SpectralPowerDistribution.BLACK;
+		totalIrradiance = totalIrradiance.multiply(1d / (double) reflectionSamples);
 		
-		final var reflectiveRay = new Ray(interaction.getPoint(), reflectiveV, 0,
-				interaction.getInteractingRay().getDepth() + 1);
-		
-		final var reflectedRadiance = this.estimate(new TracedSample(sample.getSample(), reflectiveRay), scene)
-				.getRadiance();
-		
-		return reflectedRadiance.multiply(cos_i).multiply(reflectionAlbedo);
+		return totalIrradiance;
 	}
 	
 	protected Spectrum estimateTransmissiveRadiance(Interaction<Primitive> interaction, TracedSample sample,
@@ -216,10 +257,10 @@ public class PathTracingRenderer extends Renderer {
 			
 			final var cos_i = abs(transmissiveV.dotProduct(interaction.getNormal()));
 			
-			final var transmissiveRay = new Ray(interaction.getPoint(), transmissiveV, 0,
+			final var transmissiveRay = new Ray(interaction.getPoint(), transmissiveV,
 					interaction.getInteractingRay().getDepth() + 1);
 			final var transmissiveIncident = this.estimate(new TracedSample(sample.getSample(), transmissiveRay), scene)
-					.getRadiance().multiply(cos_i);
+					.getRadiance().multiply(cos_i / transmissivePdf);
 			
 			totalRadiance = transmissiveIncident;
 		}

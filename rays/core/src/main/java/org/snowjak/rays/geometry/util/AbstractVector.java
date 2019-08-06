@@ -10,6 +10,7 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import org.apache.commons.math3.util.FastMath;
+import org.snowjak.rays.Settings;
 
 /**
  * Represents a vector of <code>n</code> values.
@@ -390,6 +391,19 @@ public abstract class AbstractVector<T extends AbstractVector<?>> implements Ser
 	public T divide(double divisor) {
 		
 		return this.apply(d -> d / divisor);
+	}
+	
+	/**
+	 * Determines if each of the elements in this AbstractVector "nearly equal"
+	 * their corresponding entries in the opposite AbstractVector.
+	 * 
+	 * @param other
+	 * @return {@code true} if this AbstractVector nearly equals the other
+	 * @see Settings#nearlyEqual(double, double)
+	 */
+	public boolean nearlyEquals(T other) {
+		
+		return this.apply(other, (d1, d2) -> Settings.getInstance().nearlyEqual(d1, d2) ? 0d : 1d).summarize() < 1d;
 	}
 	
 	/**

@@ -27,7 +27,6 @@ import org.snowjak.rays.light.PointLight;
 import org.snowjak.rays.material.LambertianMaterial;
 import org.snowjak.rays.material.Material;
 import org.snowjak.rays.material.PerfectMirrorMaterial;
-import org.snowjak.rays.renderer.MonteCarloRenderer;
 import org.snowjak.rays.renderer.PathTracingRenderer;
 import org.snowjak.rays.renderer.Renderer;
 import org.snowjak.rays.sampler.AdaptiveSampler;
@@ -286,8 +285,7 @@ public class Settings {
 			gb.registerTypeAdapterFactory(
 				RuntimeTypeAdapterFactory
 						.of(Renderer.class, "type")
-						.registerSubtype(PathTracingRenderer.class, "path-tracing")
-						.registerSubtype(MonteCarloRenderer.class, "monte-carlo"));
+						.registerSubtype(PathTracingRenderer.class, "path-tracing"));
 			//@formatter:on
 			
 			//

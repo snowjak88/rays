@@ -105,12 +105,13 @@ public class StratifiedSampler extends Sampler {
 		additionalSize1D = 1d / (double) additionalBlockCount1D;
 		additionalSize2D = 1d / (double) additionalBlockCount2D;
 		
-		film = generate2D(getSamplesPerPixel(), blockCount2D, blockSize2D, blockSize2D);
-		t = generate1D(getSamplesPerPixel(), blockCount1D, blockSize1D);
-		lens = generate2D(getSamplesPerPixel(), blockCount2D, blockSize2D, blockSize2D);
+		film = generate2D(blockCount2D * blockCount2D, blockCount2D, blockSize2D, blockSize2D);
+		t = generate1D(blockCount1D, blockCount1D, blockSize1D);
+		lens = generate2D(blockCount2D * blockCount2D, blockCount2D, blockSize2D, blockSize2D);
 		
-		add1dJitter = generate1D(getAdditional1DSamples(), additionalBlockCount1D, additionalSize1D);
-		add2dJitter = generate2D(getAdditional2DSamples(), additionalBlockCount2D, additionalSize2D, additionalSize2D);
+		add1dJitter = generate1D(additionalBlockCount1D, additionalBlockCount1D, additionalSize1D);
+		add2dJitter = generate2D(additionalBlockCount2D * additionalBlockCount2D, additionalBlockCount2D,
+				additionalSize2D, additionalSize2D);
 		
 		shuffle2D(film);
 		shuffle1D(t);
@@ -131,21 +132,28 @@ public class StratifiedSampler extends Sampler {
 		additional2DIterator = new Array2DIterator<>(add2d);
 		
 		additional1DSupplier = () -> {
-			if (!additional1DIterator.hasNext()) {
-				shuffle1D(add1dJitter);
-				update1DFromJittered(add1d, add1dJitter, additionalSize1D);
-				shuffle1D(add1d);
-				additional1DIterator.reset();
-			}
+			if (!additional1DIterator.hasNext())
+				synchronized (additional1DIterator) {
+					if (!additional1DIterator.hasNext()) {
+						shuffle1D(add1dJitter);
+						update1DFromJittered(add1d, add1dJitter, additionalSize1D);
+						shuffle1D(add1d);
+						additional1DIterator.reset();
+					}
+				}
+			
 			return additional1DIterator.nextDouble();
 		};
 		additional2DSupplier = () -> {
-			if (!additional2DIterator.hasNext()) {
-				shuffle2D(add2dJitter);
-				update2DFromJittered(add2d, add2dJitter, additionalSize2D, additionalSize2D);
-				shuffle2D(add2d);
-				additional2DIterator.reset();
-			}
+			if (!additional2DIterator.hasNext())
+				synchronized (additional2DIterator) {
+					if (!additional2DIterator.hasNext()) {
+						shuffle2D(add2dJitter);
+						update2DFromJittered(add2d, add2dJitter, additionalSize2D, additionalSize2D);
+						shuffle2D(add2d);
+						additional2DIterator.reset();
+					}
+				}
 			return additional2DIterator.next();
 		};
 		
@@ -267,45 +275,48 @@ public class StratifiedSampler extends Sampler {
 	
 	private void shuffle1D(double[] array) {
 		
-		for (int i = 0; i < array.length; i++) {
-			
-			int j = i;
-			while (j == i)
-				j = Settings.RND.nextInt(array.length);
-			
-			final double scratch = array[i];
-			array[i] = array[j];
-			array[j] = scratch;
-		}
+		if (array.length >= 2)
+			for (int i = 0; i < array.length; i++) {
+				
+				int j = i;
+				while (j == i)
+					j = Settings.RND.nextInt(array.length);
+				
+				final double scratch = array[i];
+				array[i] = array[j];
+				array[j] = scratch;
+			}
 	}
 	
 	private void shuffle2D(Point2D[][] array) {
 		
-		for (int i = 0; i < array.length; i++) {
-			
-			int j = i;
-			while (j == i)
-				j = Settings.RND.nextInt(array.length);
-			
-			for (int y = 0; y < array[i].length; y++) {
-				final Point2D scratch = array[i][y];
-				array[i][y] = array[j][y];
-				array[j][y] = scratch;
+		if (array.length >= 2)
+			for (int i = 0; i < array.length; i++) {
+				
+				int j = i;
+				while (j == i)
+					j = Settings.RND.nextInt(array.length);
+				
+				for (int y = 0; y < array[i].length; y++) {
+					final Point2D scratch = array[i][y];
+					array[i][y] = array[j][y];
+					array[j][y] = scratch;
+				}
 			}
-		}
 		
-		for (int i = 0; i < array[0].length; i++) {
-			
-			int j = i;
-			while (j == i)
-				j = Settings.RND.nextInt(array[0].length);
-			
-			for (int x = 0; x < array.length; x++) {
-				final Point2D scratch = array[x][i];
-				array[x][i] = array[x][j];
-				array[x][j] = scratch;
+		if (array[0].length >= 2)
+			for (int i = 0; i < array[0].length; i++) {
+				
+				int j = i;
+				while (j == i)
+					j = Settings.RND.nextInt(array[0].length);
+				
+				for (int x = 0; x < array.length; x++) {
+					final Point2D scratch = array[x][i];
+					array[x][i] = array[x][j];
+					array[x][j] = scratch;
+				}
 			}
-		}
 	}
 	
 	@Override

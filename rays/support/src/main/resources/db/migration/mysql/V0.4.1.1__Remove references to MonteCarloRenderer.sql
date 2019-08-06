@@ -1,0 +1,1 @@
+update render_setup set renderer_json = replace( renderer_json, 'monte-carlo', 'path-tracing' );

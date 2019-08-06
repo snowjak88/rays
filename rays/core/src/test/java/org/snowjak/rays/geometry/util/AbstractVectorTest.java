@@ -1,6 +1,8 @@
 package org.snowjak.rays.geometry.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.function.BinaryOperator;
@@ -233,6 +235,16 @@ public class AbstractVectorTest {
 		assertEquals("u.get(0) not as expected!", 1d / -2d, u.get(0), 0.00001);
 		assertEquals("u.get(1) not as expected!", 2d / -2d, u.get(1), 0.00001);
 		assertEquals("u.get(2) not as expected!", 3d / -2d, u.get(2), 0.00001);
+	}
+	
+	@Test
+	public void testNearlyEqual() {
+		
+		final AbstractVectorImpl v = new AbstractVectorImpl(1, 2, 3), u1 = new AbstractVectorImpl(1, 2, 3),
+				u2 = new AbstractVectorImpl(0, 2, 3);
+		
+		assertTrue("u1 should be nearly equals v!", v.nearlyEquals(u1));
+		assertFalse("u2 should not be nearly equals v!", v.nearlyEquals(u2));
 	}
 	
 	@Test
