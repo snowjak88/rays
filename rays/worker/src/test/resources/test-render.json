@@ -1,22 +1,27 @@
 {
 	"uuid": "3a313f08-8262-4f45-8cf6-60b9cb13601b",
 	"sampler": {
-		"type": "best-candidate",
+		"type": "stratified",
 		"xStart": 0,
 		"yStart": 0,
 		"xEnd": 3,
 		"yEnd": 2,
 		"samplesPerPixel": 4,
-		"additional1DSamples": 8,
-		"additional2DSamples": 8
+		"additional1DSamples": 36,
+		"additional2DSamples": 36
 	},
 	"renderer": {
 		"type": "path-tracing",
-		"maxDepth": 4
+		"maxDepth": 4,
+		"lightSamples": 36
 	},
 	"film": {
 		"width": 4,
 		"height": 3,
+		"aperture": 16.0,
+		"exposureTime": 0.01,
+		"isoSensitivity": 100,
+		"calibrationConstant": 12,
 		"filter": {
 			"type": "box",
 			"extent": 0
@@ -121,10 +126,14 @@
 		"lights": [
 			{
 				"type": "point",
-				"rgb": {
-					"red":5,
-					"green":5,
-					"blue":5
+				"radiance": {
+					"type": "rgb",
+					"rgb": {
+						"red":5,
+						"green":5,
+						"blue":5
+					},
+					"radiance": 100
 				},
 				"position": {
 					"x": 0,
