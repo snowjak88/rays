@@ -6,14 +6,20 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
+import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.snowjak.rays.Settings;
+import org.snowjak.rays.geometry.Normal3D;
+import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.SurfaceDescriptor;
+import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.transform.RotationTransform;
 import org.snowjak.rays.transform.TranslationTransform;
 
@@ -46,7 +52,7 @@ public class SphereShapeTest {
 		assertEquals("Hit normal Z not as expected", 0d, hit.getNormal().getZ(), 0.00001);
 		
 		assertEquals("Hit point distance not as expected", 2d,
-				Vector3D.from(hit.getPoint().subtract(ray.getOrigin())).getMagnitude(), 0.00001);
+				Vector3D.from(ray.getOrigin(), hit.getPoint()).getMagnitude(), 0.00001);
 	}
 	
 	@Test
@@ -81,6 +87,28 @@ public class SphereShapeTest {
 		assertEquals(1d, surface.getNormal().getX(), 0.0001);
 		assertEquals(0d, surface.getNormal().getY(), 0.0001);
 		assertEquals(0d, surface.getNormal().getZ(), 0.0001);
+	}
+	
+	@Test
+	public void testSampleSolidAngle() {
+		
+		final var neighbor = new SurfaceDescriptor<>(null, new Point3D(-2, 0, 0), new Normal3D(0, 1, 0), null);
+		final var sphere = new SphereShape(1.0);
+		
+		final var rnd = new Random(System.currentTimeMillis());
+		
+		final var sample = sphere.sampleSolidAngleFrom(neighbor,
+				new FixedSample(null, null, 0.0,
+						IntStream.range(0, 16).mapToObj(i -> rnd.nextDouble()).collect(Collectors.toList()),
+						IntStream.range(0, 16).mapToObj(i -> new Point2D(rnd.nextDouble(), rnd.nextDouble()))
+								.collect(Collectors.toList())));
+		
+		assertNotNull(sample.getA());
+		assertTrue(sample.getB() != 0d);
+		
+		final var isect = sphere.getSurface(new Ray(neighbor.getPoint(), sample.getA()));
+		
+		assertNotNull(isect);
 	}
 	
 	@Test

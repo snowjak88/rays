@@ -187,6 +187,18 @@ public class Vector3D extends Triplet implements Serializable {
 	}
 	
 	/**
+	 * Compute the dot-product of this Vector3D and a Normal3D. Both this and the
+	 * Normal3D are normalized prior to computing the dot-product.
+	 * 
+	 * @param normal
+	 * @return
+	 */
+	public double dotProduct(Normal3D normal) {
+		
+		return this.normalize().dotProduct(Vector3D.from(normal).normalize());
+	}
+	
+	/**
 	 * Compute the (left-handed) cross-product of this and another Vector3D.
 	 * 
 	 * @param other

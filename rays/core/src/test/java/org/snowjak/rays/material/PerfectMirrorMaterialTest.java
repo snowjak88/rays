@@ -1,6 +1,6 @@
 package org.snowjak.rays.material;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 import org.snowjak.rays.Primitive;
@@ -24,7 +24,7 @@ public class PerfectMirrorMaterialTest {
 		final var expectedReflection = new Vector3D(0, +1, 0);
 		
 		final var result = new PerfectMirrorMaterial(new ConstantTexture(RGB.WHITE))
-				.getReflectionSample(interaction, new FixedSample()).getDirection().normalize();
+				.sampleReflectionW_i(interaction, new FixedSample()).getA().normalize();
 		
 		assertEquals(expectedReflection.getX(), result.getX(), 0.00001);
 		assertEquals(expectedReflection.getY(), result.getY(), 0.00001);

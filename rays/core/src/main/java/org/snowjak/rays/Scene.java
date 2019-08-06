@@ -99,8 +99,22 @@ public class Scene {
 	 */
 	public Interaction<Primitive> getInteraction(Ray ray) {
 		
+		return getInteraction(ray, null);
+	}
+	
+	/**
+	 * Get the {@link Interaction} closest to the given {@link Ray}'s origin
+	 * (ignoring the given (physical) Light), or <code>null</code> if no such
+	 * Interaction exists.
+	 * 
+	 * @param ray
+	 * @return
+	 */
+	public Interaction<Primitive> getInteraction(Ray ray, DiffuseLight ignoring) {
+		
 		final var primitiveInteraction = getAccelerationStructure().getInteraction(ray);
-		final var lightInteraction = getPhysicalLightAccelerationStructure().getInteraction(ray);
+		final var lightInteraction = getPhysicalLightAccelerationStructure().getInteraction(ray,
+				(ignoring == null) ? null : ignoring.getPrimitive());
 		
 		if (primitiveInteraction == null)
 			return lightInteraction;

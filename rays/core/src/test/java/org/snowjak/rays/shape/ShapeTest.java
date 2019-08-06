@@ -15,6 +15,7 @@ import org.snowjak.rays.interact.SurfaceDescriptor;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.transform.RotationTransform;
 import org.snowjak.rays.transform.TranslationTransform;
+import org.snowjak.rays.util.Duo;
 
 public class ShapeTest {
 	
@@ -34,7 +35,7 @@ public class ShapeTest {
 			}
 			
 			@Override
-			public SurfaceDescriptor<Shape> sampleSurface(Sample sample) {
+			public SurfaceDescriptor<Shape> sampleSurfaceArea(Sample sample) {
 				
 				// We don't care about this method for the purposes of this
 				// test.
@@ -42,19 +43,11 @@ public class ShapeTest {
 			}
 			
 			@Override
-			public SurfaceDescriptor<Shape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
+			public SurfaceDescriptor<Shape> sampleSurfaceAreaFacing(Point3D neighbor, Sample sample) {
 				
 				// We don't care about this method for the purposes of this
 				// test.
 				return null;
-			}
-			
-			@Override
-			public double computeSolidAngle(Point3D viewedFrom) {
-				
-				// We don't care about this method for the purposes of this
-				// test.
-				return 0;
 			}
 			
 			@Override
@@ -90,7 +83,7 @@ public class ShapeTest {
 			}
 			
 			@Override
-			public double getSurfaceArea() {
+			public double pdf_sampleSurfaceArea(SurfaceDescriptor<?> surface) {
 				
 				// We don't care about this method for the purposes of this
 				// test.
@@ -98,7 +91,7 @@ public class ShapeTest {
 			}
 			
 			@Override
-			public double sampleSurfaceP(SurfaceDescriptor<?> surface) {
+			public double pdf_sampleSurfaceAreaFacing(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
 				
 				// We don't care about this method for the purposes of this
 				// test.
@@ -106,7 +99,23 @@ public class ShapeTest {
 			}
 			
 			@Override
-			public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
+			public boolean canSampleSolidAngleFrom() {
+				
+				// We don't care about this method for the purposes of this
+				// test.
+				return false;
+			}
+			
+			@Override
+			public Duo<Vector3D, Double> sampleSolidAngleFrom(SurfaceDescriptor<?> neighbor, Sample sample) {
+				
+				// We don't care about this method for the purposes of this
+				// test.
+				return null;
+			}
+			
+			@Override
+			public double pdf_sampleSolidAngleFrom(SurfaceDescriptor<?> neighbor, Vector3D direction) {
 				
 				// We don't care about this method for the purposes of this
 				// test.

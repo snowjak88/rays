@@ -5,9 +5,9 @@ import java.util.Optional;
 
 import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.Util;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.spectrum.ColorMappingFunctions;
+import org.snowjak.rays.util.Util;
 
 /**
  * Copied from <a href="http://jcgt.org/published/0002/02/01/">"Simple Analytic

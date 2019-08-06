@@ -7,6 +7,7 @@ import java.util.Arrays;
 import org.apache.commons.math3.util.FastMath;
 import org.junit.Test;
 import org.snowjak.rays.geometry.util.Triplet;
+import org.snowjak.rays.util.Util;
 
 public class UtilTest {
 	

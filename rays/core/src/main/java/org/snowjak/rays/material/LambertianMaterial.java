@@ -1,9 +1,6 @@
 package org.snowjak.rays.material;
 
 import static org.apache.commons.math3.util.FastMath.PI;
-import static org.apache.commons.math3.util.FastMath.cos;
-import static org.apache.commons.math3.util.FastMath.sin;
-import static org.apache.commons.math3.util.FastMath.sqrt;
 
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
@@ -11,8 +8,12 @@ import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
+import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.texture.Texture;
+import org.snowjak.rays.util.Duo;
+import org.snowjak.rays.util.Trio;
+import org.snowjak.rays.util.Util;
 
 /**
  * A material that has perfect Lambertian diffuse reflection, no transmission,
@@ -23,6 +24,15 @@ import org.snowjak.rays.texture.Texture;
  */
 @UIType(type = "lambertian", fields = { @UIField(name = "texture", type = Texture.class) })
 public class LambertianMaterial implements Material {
+	
+	private static final Duo<Double, Spectrum> NO_REFLECTION_PDF = new Duo<Double, Spectrum>(0.0,
+			SpectralPowerDistribution.BLACK);
+	
+	private static final Duo<Vector3D, Double> NO_TRANSMISSION_SAMPLE = new Duo<>(Vector3D.J, 0.0);
+	
+	private static final Duo<Double, Spectrum> NO_EMISSION_SAMPLE = new Duo<>(0.0, SpectralPowerDistribution.BLACK);
+	
+	private static final double BRDF_PDF = 1d / (2d * PI);
 	
 	private Texture texture;
 	
@@ -38,42 +48,23 @@ public class LambertianMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> Trio<Vector3D, Double, Spectrum> sampleReflectionW_i(Interaction<T> interaction,
+			Sample sample) {
 		
-		final var sphericalPoint = sample.getAdditional2DSample();
-		
-		final var sin2_theta = sphericalPoint.getX();
-		final var cos2_theta = 1d - sin2_theta;
-		final var sin_theta = sqrt(sin2_theta);
-		final var cos_theta = sqrt(cos2_theta);
-		
-		final var orientation = sphericalPoint.getY() * 2d * PI;
-		//
-		//
-		//
-		final var x = sin_theta * cos(orientation);
-		final var y = cos_theta;
-		final var z = sin_theta * sin(orientation);
-		
-		//
-		//
-		// Construct a coordinate system centered around the surface-normal.
-		final var j = Vector3D.from(interaction.getNormal()).normalize();
-		final var i = j.orthogonal();
-		final var k = i.crossProduct(j);
-		//
-		//
-		// Convert the Cartesian coordinates to a Vector in the constructed
-		// coordinate system.
-		return new MaterialSample(i.multiply(x).add(j.multiply(y)).add(k.multiply(z)).normalize(), 1d / (2d * PI),
+		return new Trio<>(Util.sampleHemisphere(interaction.getNormal(), sample), BRDF_PDF,
 				texture.getSpectrum(interaction).multiply(1d / PI));
 	}
 	
 	@Override
-	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction,
-			Vector3D direction) {
+	public <T extends Interactable<T>> Duo<Double, Spectrum> pdfReflectionW_i(Interaction<T> interaction, Sample sample,
+			Vector3D w_i) {
 		
-		return new MaterialSample(direction, 1 / (2d * PI), texture.getSpectrum(interaction));
+		final var cos_i = w_i.dotProduct(interaction.getNormal());
+		
+		if (cos_i <= 0)
+			return NO_REFLECTION_PDF;
+		
+		return new Duo<Double, Spectrum>(BRDF_PDF, texture.getSpectrum(interaction).multiply(1d / PI));
 	}
 	
 	@Override
@@ -83,15 +74,17 @@ public class LambertianMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> MaterialSample getTransmissionSample(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> Duo<Vector3D, Double> sampleTransmissionW_i(Interaction<T> interaction,
+			Sample sample) {
 		
-		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
+		return NO_TRANSMISSION_SAMPLE;
 	}
 	
 	@Override
-	public <T extends Interactable<T>> MaterialSample getTransmissionP(Interaction<T> interaction, Vector3D direction) {
+	public <T extends Interactable<T>> double pdfTransmissionW_i(Interaction<T> interaction, Sample sample,
+			Vector3D w_i) {
 		
-		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
+		return 0;
 	}
 	
 	@Override
@@ -101,15 +94,9 @@ public class LambertianMaterial implements Material {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> MaterialSample getEmissionSample(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> Duo<Double, Spectrum> sampleLe(Interaction<T> interaction, Sample sample) {
 		
-		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
-	}
-	
-	@Override
-	public <T extends Interactable<T>> MaterialSample getEmissionP(Interaction<T> interaction, Vector3D direction) {
-		
-		return new MaterialSample(interaction.getW_e(), 0.0, SpectralPowerDistribution.BLACK);
+		return NO_EMISSION_SAMPLE;
 	}
 	
 }

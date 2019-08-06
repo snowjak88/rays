@@ -7,10 +7,8 @@ import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Ray;
-import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.light.Light;
-import org.snowjak.rays.light.Light.LightSample;
 import org.snowjak.rays.sample.EstimatedSample;
 import org.snowjak.rays.sample.TracedSample;
 import org.snowjak.rays.spectrum.Spectrum;
@@ -84,7 +82,7 @@ public class PathTracingRenderer extends Renderer {
 		final var mat = interaction.getInteracted().getMaterial();
 		
 		if (mat.isEmissive())
-			return mat.getEmissionSample(interaction, sample.getSample()).getAlbedo();
+			return mat.sampleLe(interaction, sample.getSample()).getB();
 		
 		return SpectralPowerDistribution.BLACK;
 	}
@@ -112,6 +110,11 @@ public class PathTracingRenderer extends Renderer {
 	
 	protected Spectrum estimateDirectLighting(Interaction<Primitive> interaction, TracedSample sample, Scene scene) {
 		
+		//
+		// We estimate direct lighting by computing the rendering equation for
+		// direct-lighting in the area-form. For a sketch, see Light.sample()
+		//
+		
 		final var mat = interaction.getInteracted().getMaterial();
 		
 		Spectrum result = SpectralPowerDistribution.BLACK;
@@ -119,102 +122,51 @@ public class PathTracingRenderer extends Renderer {
 			
 			for (Light light : scene.getLights()) {
 				
-				//
-				// If this is a delta (i.e., dimensionless) light, then we'll only
-				// bother doing 1 sample.
-				//
-				final var lightSampleCount = (light.isDelta() ? 1 : lightSamples);
-				
 				Spectrum totalIrradiance = SpectralPowerDistribution.BLACK;
 				
-				for (int n = 0; n < lightSampleCount; n++) {
+				//
+				// We'll sample this light's solid-angle a number of times.
+				//
+				final var lightSampleCount = light.isDelta() ? 1 : lightSamples;
+				for (int i = 0; i < lightSampleCount; i++) {
 					
 					//
-					// First, try to get a contribution from the light by sampling the light's
-					// surface.
+					// Sample the light's solid-angle.
 					//
+					final var lightSample = light.sample(interaction, sample.getSample());
+					final var lightV = lightSample.getA();
+					final var lightPDF = lightSample.getB();
+					final var lightRadiance = lightSample.getC();
+					
+					final var cos_i = lightV.dotProduct(interaction.getNormal());
 					
 					//
-					// Sample the light source with multiple-importance sampling.
+					// We clamp (w` .dot. n) to [0,)
+					// It follows that if we clamped it to 0,
+					// we don't need to bother computing the rest. We know it will
+					// all multiply out to 0.
 					//
-					
-					final var fromlightSample = light.sample(interaction, sample.getSample());
-					if (fromlightSample.getPdf() > 0d && !fromlightSample.getRadiance().isBlack()) {
+					if (cos_i <= 0d)
+						continue;
 						
-						Spectrum irradiance = SpectralPowerDistribution.BLACK;
-						
-						final var cos_i = fromlightSample.getDirection().negate().normalize()
-								.dotProduct(Vector3D.from(interaction.getNormal()));
-						
-						final var matSample = mat.getReflectionSample(interaction,
-								fromlightSample.getDirection().negate());
-						final var albedo = matSample.getAlbedo().multiply(cos_i);
-						
-						final Spectrum lightRadiance;
-						
-						if (!albedo.isBlack() && light.isVisible(fromlightSample.getPoint(), interaction, scene))
-							lightRadiance = fromlightSample.getRadiance();
-						else
-							lightRadiance = SpectralPowerDistribution.BLACK;
-						
-						if (!lightRadiance.isBlack())
-							if (light.isDelta())
-								irradiance = albedo.multiply(lightRadiance).multiply(1d / fromlightSample.getPdf());
-							else {
-								final var weight = getPowerHeuristic(1, fromlightSample.getPdf(), 1,
-										matSample.getPdf());
-								irradiance = albedo.multiply(lightRadiance).multiply(weight / fromlightSample.getPdf());
-							}
-						
-						totalIrradiance = totalIrradiance.add(irradiance);
-					}
-					
 					//
-					// Sample the material with multiple-importance sampling.
+					// Compute the g(X,X`) term.
 					//
+					if (!light.isVisible(interaction, lightV, scene))
+						continue;
 					
-					if (!light.isDelta()) {
-						final var matSample = mat.getReflectionSample(interaction, sample.getSample());
-						
-						final var cos_i = matSample.getDirection().normalize()
-								.dotProduct(Vector3D.from(interaction.getNormal()));
-						
-						final var albedo = matSample.getAlbedo().multiply(cos_i);
-						
-						if (!albedo.isBlack() && matSample.getPdf() > 0) {
-							
-							final LightSample toLightSample;
-							final double weight;
-							
-							if (mat.isDelta()) {
-								toLightSample = null;
-								weight = 1d;
-							} else {
-								
-								final var fromMaterialRay = new Ray(interaction.getPoint(), matSample.getDirection());
-								toLightSample = light.sample(interaction, fromMaterialRay, scene);
-								
-								if (toLightSample.getPdf() <= 0d)
-									continue;
-								weight = getPowerHeuristic(1, matSample.getPdf(), 1, toLightSample.getPdf());
-							}
-							
-							boolean isHidden = false;
-							if (toLightSample != null && !light.isVisible(toLightSample.getPoint(), interaction, scene))
-								isHidden = true;
-							
-							final var radiance = toLightSample.getRadiance();
-							if (!isHidden && !radiance.isBlack()) {
-								
-								final var irradiance = albedo.multiply(radiance).multiply(weight / matSample.getPdf());
-								
-								totalIrradiance = totalIrradiance.add(irradiance);
-							}
-						}
-					}
+					final var matSample = mat.pdfReflectionW_i(interaction, sample.getSample(), lightV);
+					if (matSample.getA() <= 0d)
+						continue;
+					
+					final var matAlbedo = matSample.getB();
+					
+					final var irradiance = lightRadiance.multiply(cos_i / lightPDF).multiply(matAlbedo);
+					totalIrradiance = totalIrradiance.add(irradiance);
 				}
 				
 				totalIrradiance = totalIrradiance.multiply(1d / (double) lightSampleCount);
+				
 				result = result.add(totalIrradiance);
 			}
 			
@@ -226,16 +178,26 @@ public class PathTracingRenderer extends Renderer {
 	protected Spectrum estimateIndirectLighting(Interaction<Primitive> interaction, TracedSample sample, Scene scene) {
 		
 		final var mat = interaction.getInteracted().getMaterial();
-		final var reflection = mat.getReflectionSample(interaction, sample.getSample());
-		final var reflectiveV = reflection.getDirection().normalize();
-		final var cos_i = reflectiveV.dotProduct(Vector3D.from(interaction.getNormal()));
 		
+		final var reflection = mat.sampleReflectionW_i(interaction, sample.getSample());
+		final var reflectiveV = reflection.getA().normalize();
+		final var reflectivePdf = reflection.getB();
+		final var reflectionAlbedo = reflection.getC();
+		
+		if (reflectivePdf <= 0d)
+			return SpectralPowerDistribution.BLACK;
+		
+		final var cos_i = reflectiveV.dotProduct(interaction.getNormal());
 		if (cos_i <= 0d)
 			return SpectralPowerDistribution.BLACK;
 		
 		final var reflectiveRay = new Ray(interaction.getPoint(), reflectiveV, 0,
 				interaction.getInteractingRay().getDepth() + 1);
-		return this.estimate(new TracedSample(sample.getSample(), reflectiveRay), scene).getRadiance().multiply(cos_i);
+		
+		final var reflectedRadiance = this.estimate(new TracedSample(sample.getSample(), reflectiveRay), scene)
+				.getRadiance();
+		
+		return reflectedRadiance.multiply(cos_i).multiply(reflectionAlbedo);
 	}
 	
 	protected Spectrum estimateTransmissiveRadiance(Interaction<Primitive> interaction, TracedSample sample,
@@ -245,9 +207,14 @@ public class PathTracingRenderer extends Renderer {
 		Spectrum totalRadiance = SpectralPowerDistribution.BLACK;
 		
 		if (mat.isTransmissive()) {
-			final var transmission = mat.getTransmissionSample(interaction, sample.getSample());
-			final var transmissiveV = transmission.getDirection();
-			final var cos_i = abs(transmissiveV.dotProduct(Vector3D.from(interaction.getNormal())));
+			final var transmission = mat.sampleTransmissionW_i(interaction, sample.getSample());
+			final var transmissiveV = transmission.getA();
+			final var transmissivePdf = transmission.getB();
+			
+			if (transmissivePdf <= 0d)
+				return SpectralPowerDistribution.BLACK;
+			
+			final var cos_i = abs(transmissiveV.dotProduct(interaction.getNormal()));
 			
 			final var transmissiveRay = new Ray(interaction.getPoint(), transmissiveV, 0,
 					interaction.getInteractingRay().getDepth() + 1);

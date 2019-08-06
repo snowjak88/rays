@@ -5,12 +5,12 @@ import static org.apache.commons.math3.util.FastMath.pow;
 import java.lang.reflect.Type;
 
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.Util;
 import org.snowjak.rays.geometry.util.Matrix;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.serialization.IsLoadable;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
+import org.snowjak.rays.util.Util;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;

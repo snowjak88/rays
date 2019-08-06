@@ -19,13 +19,13 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.Util;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.util.Pair;
 import org.snowjak.rays.sample.FixedSample;
 import org.snowjak.rays.sample.Sample;
+import org.snowjak.rays.util.Util;
 
 /**
  * Implements best-candidate sampling, which aims to produce well-distributed

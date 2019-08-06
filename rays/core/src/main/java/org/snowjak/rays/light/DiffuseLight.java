@@ -14,7 +14,9 @@ import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.material.EmissionMaterial;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.shape.Shape;
+import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
+import org.snowjak.rays.util.Trio;
 
 /**
  * A DiffuseLight occupies a definite region of space defined by a
@@ -64,9 +66,9 @@ public class DiffuseLight implements Light {
 	 */
 	public DiffuseLight(Shape shape, SpectralPowerDistribution radiance, boolean visible) {
 		
-		if (shape.getSurfaceArea() < 0d)
+		if (!shape.canSampleSolidAngleFrom())
 			throw new IllegalArgumentException(
-					"Cannot instantiate a DiffuseLight using a Shape with indefinite surface-area!");
+					"Cannot instantiate a DiffuseLight using a Shape that doesn't support sampling its solid-angle!");
 		
 		this.shape = shape;
 		this.radiance = radiance;
@@ -74,24 +76,22 @@ public class DiffuseLight implements Light {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> Trio<Vector3D, Double, Spectrum> sample(Interaction<T> interaction,
+			Sample sample) {
 		
-		final var s = shape.sampleSurfaceFacing(interaction.getPoint(), sample);
-		return new LightSample(s.getPoint(), Vector3D.from(s.getPoint(), interaction.getPoint()).normalize(),
-				shape.sampleSurfaceFacingP(interaction.getPoint(), sample, s), getRadiance());
+		final var s = getPrimitive().sampleSolidAngleFrom(interaction, sample);
+		
+		final var lightIntersect = getPrimitive().getInteraction(new Ray(interaction.getPoint(), s.getA()));
+		final var surfaceDot = s.getA().negate().dotProduct(lightIntersect.getNormal());
+		final var distanceSq = Vector3D.from(lightIntersect.getPoint(), interaction.getPoint()).getMagnitudeSq();
+		
+		return new Trio<>(s.getA(), s.getB(), getRadiance().multiply(surfaceDot / distanceSq));
 	}
 	
 	@Override
-	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Ray sampleDirection,
-			Scene scene) {
+	public <T extends Interactable<T>> double pdf_sample(Interaction<T> interaction, Vector3D w_i, Scene scene) {
 		
-		final var shapeSurface = shape.getSurface(sampleDirection);
-		
-		if (shapeSurface == null)
-			return new LightSample(null, sampleDirection.getDirection().negate(), 0d, getRadiance());
-		
-		return new LightSample(shapeSurface.getPoint(), sampleDirection.getDirection().negate(),
-				shape.sampleSurfaceP(shapeSurface), getRadiance());
+		return getPrimitive().pdf_sampleSolidAngleFrom(interaction, w_i);
 	}
 	
 	/**

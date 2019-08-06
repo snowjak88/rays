@@ -3,16 +3,20 @@
  */
 package org.snowjak.rays.light;
 
-import static org.apache.commons.math3.util.FastMath.*;
+import static org.apache.commons.math3.util.FastMath.PI;
 
 import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Ray;
+import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
+import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
+import org.snowjak.rays.util.Trio;
+import org.snowjak.rays.util.Util;
 
 /**
  * Represents an "infinite" environmental light -- light that contributes the
@@ -38,29 +42,24 @@ public class InfiniteLight implements Light {
 	}
 	
 	@Override
-	public double getFalloff(double distanceSq) {
+	public <T extends Interactable<T>> Trio<Vector3D, Double, Spectrum> sample(Interaction<T> interaction,
+			Sample sample) {
 		
-		return 1d;
+		return new Trio<Vector3D, Double, Spectrum>(Util.sampleHemisphere(interaction.getNormal(), sample),
+				1d / (2d * PI), radiance);
 	}
 	
 	@Override
-	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Sample sample) {
-		
-		return new LightSample(interaction.getPoint(), interaction.getW_e(), 0d, radiance);
-	}
-	
-	@Override
-	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Ray sampleDirection,
-			Scene scene) {
+	public <T extends Interactable<T>> double pdf_sample(Interaction<T> interaction, Vector3D w_i, Scene scene) {
 		
 		final double pdf;
-		final var worldInteraction = scene.getInteraction(sampleDirection);
+		final var worldInteraction = scene.getInteraction(new Ray(interaction.getPoint(), w_i.normalize()));
 		if (worldInteraction != null)
 			pdf = 0d;
 		else
-			pdf = 1d / (4d * PI);
+			pdf = 1d / (2d * PI);
 		
-		return new LightSample(interaction.getPoint(), sampleDirection.getDirection().negate(), pdf, radiance);
+		return pdf;
 	}
 	
 }

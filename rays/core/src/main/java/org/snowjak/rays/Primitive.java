@@ -7,6 +7,7 @@ import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
+import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.interact.SurfaceDescriptor;
@@ -15,6 +16,7 @@ import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.shape.Shape;
 import org.snowjak.rays.transform.Transform;
 import org.snowjak.rays.transform.Transformable;
+import org.snowjak.rays.util.Duo;
 
 @UIType(fields = { @UIField(name = "shape", type = Shape.class), @UIField(name = "material", type = Material.class) })
 public class Primitive implements Interactable<Primitive>, Transformable {
@@ -63,12 +65,6 @@ public class Primitive implements Interactable<Primitive>, Transformable {
 	}
 	
 	@Override
-	public double getSurfaceArea() {
-		
-		return shape.getSurfaceArea();
-	}
-	
-	@Override
 	public SurfaceDescriptor<Primitive> getSurface(Ray ray) {
 		
 		final var sd = shape.getSurface(ray);
@@ -85,33 +81,27 @@ public class Primitive implements Interactable<Primitive>, Transformable {
 	}
 	
 	@Override
-	public SurfaceDescriptor<Primitive> sampleSurface(Sample sample) {
+	public SurfaceDescriptor<Primitive> sampleSurfaceArea(Sample sample) {
 		
-		return new SurfaceDescriptor<>(this, shape.sampleSurface(sample));
-	}
-
-	@Override
-	public double sampleSurfaceP(SurfaceDescriptor<?> surface) {
-		
-		return shape.sampleSurfaceP(surface);
+		return new SurfaceDescriptor<>(this, shape.sampleSurfaceArea(sample));
 	}
 	
 	@Override
-	public SurfaceDescriptor<Primitive> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
+	public double pdf_sampleSurfaceArea(SurfaceDescriptor<?> surface) {
 		
-		return new SurfaceDescriptor<>(this, shape.sampleSurfaceFacing(neighbor, sample));
+		return shape.pdf_sampleSurfaceArea(surface);
 	}
 	
 	@Override
-	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
+	public SurfaceDescriptor<Primitive> sampleSurfaceAreaFacing(Point3D neighbor, Sample sample) {
 		
-		return shape.sampleSurfaceFacingP(neighbor, sample, surface);
+		return new SurfaceDescriptor<>(this, shape.sampleSurfaceAreaFacing(neighbor, sample));
 	}
 	
 	@Override
-	public double computeSolidAngle(Point3D viewedFrom) {
+	public double pdf_sampleSurfaceAreaFacing(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
 		
-		return shape.computeSolidAngle(viewedFrom);
+		return shape.pdf_sampleSurfaceAreaFacing(neighbor, sample, surface);
 	}
 	
 	@Override
@@ -130,4 +120,21 @@ public class Primitive implements Interactable<Primitive>, Transformable {
 		return new Interaction<Primitive>(this, ray, sd);
 	}
 	
+	@Override
+	public boolean canSampleSolidAngleFrom() {
+		
+		return shape.canSampleSolidAngleFrom();
+	}
+	
+	@Override
+	public Duo<Vector3D, Double> sampleSolidAngleFrom(SurfaceDescriptor<?> neighbor, Sample sample) {
+		
+		return shape.sampleSolidAngleFrom(neighbor, sample);
+	}
+	
+	@Override
+	public double pdf_sampleSolidAngleFrom(SurfaceDescriptor<?> neighbor, Vector3D direction) {
+		
+		return shape.pdf_sampleSolidAngleFrom(neighbor, direction);
+	}
 }

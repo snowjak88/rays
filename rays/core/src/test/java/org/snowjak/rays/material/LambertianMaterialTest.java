@@ -4,7 +4,7 @@
 package org.snowjak.rays.material;
 
 import static org.apache.commons.math3.util.FastMath.PI;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 import org.snowjak.rays.Primitive;
@@ -70,8 +70,8 @@ public class LambertianMaterialTest {
 		// Should be equal to ( rho / pi ) * ( Li * pi ) = ( rho * Li ) ( W m^-2 sr^-1 )
 		//
 		final var sampler = new StratifiedSampler(0, 0, 1, 1, 9);
-		final var reflectedSample = material.getReflectionSample(interaction, sampler.getNextSample());
-		final var reflected = reflectedSample.getAlbedo().multiply(totalRadiantFlux);
+		final var reflectedSample = material.sampleReflectionW_i(interaction, sampler.getNextSample());
+		final var reflected = reflectedSample.getC().multiply(totalRadiantFlux);
 		
 		assertEquals("Reflected power is not as expected.",
 				radiantIntensity.multiply(texture.getSpectrum(interaction)).getTotalPower(), reflected.getTotalPower(),

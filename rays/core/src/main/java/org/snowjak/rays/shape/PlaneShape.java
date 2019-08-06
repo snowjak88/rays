@@ -1,6 +1,5 @@
 package org.snowjak.rays.shape;
 
-import static org.apache.commons.math3.util.FastMath.PI;
 import static org.apache.commons.math3.util.FastMath.signum;
 
 import java.util.Collection;
@@ -18,6 +17,7 @@ import org.snowjak.rays.geometry.boundingvolume.AABB;
 import org.snowjak.rays.interact.SurfaceDescriptor;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.transform.Transform;
+import org.snowjak.rays.util.Duo;
 
 /**
  * Represents a plane -- a flat surface of 0 thickness and infinite extent.
@@ -68,12 +68,6 @@ public class PlaneShape extends Shape {
 	}
 	
 	@Override
-	public double getSurfaceArea() {
-		
-		return -1d;
-	}
-	
-	@Override
 	public SurfaceDescriptor<Shape> getSurface(Ray ray) {
 		
 		final Ray localRay = worldToLocal(ray);
@@ -111,7 +105,7 @@ public class PlaneShape extends Shape {
 	}
 	
 	@Override
-	public SurfaceDescriptor<Shape> sampleSurface(Sample sample) {
+	public SurfaceDescriptor<Shape> sampleSurfaceArea(Sample sample) {
 		
 		final Point2D samplePoint = sample.getAdditional2DSample();
 		final double x = (samplePoint.getX() - 0.5) * Double.MAX_VALUE;
@@ -125,15 +119,15 @@ public class PlaneShape extends Shape {
 	}
 	
 	@Override
-	public double sampleSurfaceP(SurfaceDescriptor<?> surface) {
+	public double pdf_sampleSurfaceArea(SurfaceDescriptor<?> surface) {
 		
 		return 1d;
 	}
 	
 	@Override
-	public SurfaceDescriptor<Shape> sampleSurfaceFacing(Point3D neighbor, Sample sample) {
+	public SurfaceDescriptor<Shape> sampleSurfaceAreaFacing(Point3D neighbor, Sample sample) {
 		
-		final SurfaceDescriptor<Shape> sd = sampleSurface(sample);
+		final SurfaceDescriptor<Shape> sd = sampleSurfaceArea(sample);
 		
 		final var localNeighbor = worldToLocal(neighbor);
 		
@@ -144,21 +138,33 @@ public class PlaneShape extends Shape {
 	}
 	
 	@Override
-	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
+	public double pdf_sampleSurfaceAreaFacing(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surface) {
 		
-		return sampleSurfaceP(surface);
-	}
-	
-	@Override
-	public double computeSolidAngle(Point3D viewedFrom) {
-		
-		return 2d * PI;
+		return pdf_sampleSurfaceArea(surface);
 	}
 	
 	@Override
 	public Point2D getParamFromLocalSurface(Point3D point) {
 		
 		return new Point2D(point.getX(), point.getZ());
+	}
+	
+	@Override
+	public boolean canSampleSolidAngleFrom() {
+		
+		return false;
+	}
+	
+	@Override
+	public Duo<Vector3D, Double> sampleSolidAngleFrom(SurfaceDescriptor<?> neighbor, Sample sample) {
+		
+		return new Duo<>(Vector3D.J, 0.0);
+	}
+	
+	@Override
+	public double pdf_sampleSolidAngleFrom(SurfaceDescriptor<?> neighbor, Vector3D direction) {
+		
+		return 0;
 	}
 	
 }

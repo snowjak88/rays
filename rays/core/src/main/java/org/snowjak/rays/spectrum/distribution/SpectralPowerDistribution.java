@@ -17,13 +17,13 @@ import java.util.regex.Pattern;
 import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.Settings.ComponentSpectrumName;
-import org.snowjak.rays.Util;
 import org.snowjak.rays.geometry.util.Point;
 import org.snowjak.rays.serialization.IsLoadable;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.colorspace.RGB;
 import org.snowjak.rays.spectrum.colorspace.RGB_Gammaless;
 import org.snowjak.rays.spectrum.colorspace.XYZ;
+import org.snowjak.rays.util.Util;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
@@ -596,7 +596,7 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	public String toString() {
 		
 		final RGB rgb = this.toRGB(true);
-		return "SpectralPowerDistribution [ " + rgb.toString() + " ]";
+		return "SpectralPowerDistribution [ " + rgb.toString() + " / " + getTotalPower() + " W ]";
 	}
 	
 	public static class Loader implements IsLoadable<SpectralPowerDistribution> {

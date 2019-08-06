@@ -1,10 +1,6 @@
 package org.snowjak.rays.renderer;
 
 import static org.apache.commons.math3.util.FastMath.abs;
-import static org.apache.commons.math3.util.FastMath.max;
-
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.snowjak.rays.Primitive;
 import org.snowjak.rays.Scene;
@@ -13,7 +9,6 @@ import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interaction;
-import org.snowjak.rays.material.Material.MaterialSample;
 import org.snowjak.rays.sample.TracedSample;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
@@ -52,8 +47,7 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 		final var material = interaction.getInteracted().getMaterial();
 		
 		if (material.isEmissive())
-			return estimate(interaction, () -> material.getEmissionSample(interaction, sample.getSample()),
-					MaterialSample::getAlbedo);
+			return material.sampleLe(interaction, sample.getSample()).getB();
 		else
 			return SpectralPowerDistribution.BLACK;
 	}
@@ -63,25 +57,42 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 		
 		final var material = interaction.getInteracted().getMaterial();
 		
-		if (material.isReflective())
-			
-			return estimate(interaction, () -> material.getReflectionSample(interaction, sample.getSample()), (s) -> {
-				if (s.getPdf() <= 0d)
-					return SpectralPowerDistribution.BLACK;
+		if (material.isReflective()) {
+			if (material.isDelta()) {
+				final var matSample = material.sampleReflectionW_i(interaction, sample.getSample());
+				final var matV = matSample.getA();
+				final var matPDF = matSample.getB();
+				final var matAlbedo = matSample.getC();
 				
-				final var cos_i = Vector3D.from(interaction.getNormal()).normalize().dotProduct(s.getDirection());
-				if (cos_i <= 0d)
-					return SpectralPowerDistribution.BLACK;
+				final var cos_i = Vector3D.from(interaction.getNormal()).normalize().dotProduct(matV.normalize());
 				
-				final var radianceEstimate = estimate(
-						new TracedSample(sample.getSample(),
-								new Ray(interaction.getPoint(), s.getDirection(), sample.getRay().getDepth() + 1)),
-						scene).getRadiance();
+				final var reflectedRay = new Ray(interaction.getPoint(), matV, sample.getRay().getDepth() + 1);
 				
-				return radianceEstimate.multiply(cos_i / s.getPdf());
-			}, (material.isDelta() ? 1 : this.n));
-		
-		else
+				final var radiance = estimate(new TracedSample(sample.getSample(), reflectedRay), scene).getRadiance();
+				return radiance.multiply(cos_i / matPDF).multiply(matAlbedo);
+				
+			} else {
+				
+				Spectrum irradiance = SpectralPowerDistribution.BLACK;
+				for (int i = 0; i < n; i++) {
+					final var matSample = material.sampleReflectionW_i(interaction, sample.getSample());
+					final var matV = matSample.getA();
+					final var matPDF = matSample.getB();
+					final var matAlbedo = matSample.getC();
+					
+					final var cos_i = Vector3D.from(interaction.getNormal()).normalize().dotProduct(matV.normalize());
+					
+					final var reflectedRay = new Ray(interaction.getPoint(), matV, sample.getRay().getDepth() + 1);
+					
+					final var radiance = estimate(new TracedSample(sample.getSample(), reflectedRay), scene)
+							.getRadiance();
+					irradiance = irradiance.add(radiance.multiply(cos_i / matPDF).multiply(matAlbedo));
+				}
+				
+				return irradiance.multiply(1d / n);
+				
+			}
+		} else
 			return SpectralPowerDistribution.BLACK;
 	}
 	
@@ -91,46 +102,42 @@ public class MonteCarloRenderer extends PathTracingRenderer {
 		
 		final var material = interaction.getInteracted().getMaterial();
 		
-		if (material.isTransmissive())
-			return estimate(interaction, () -> material.getTransmissionSample(interaction, sample.getSample()), (s) -> {
-				final var cos_i = abs(Vector3D.from(interaction.getNormal()).normalize().dotProduct(s.getDirection()));
-				final var radianceEstimate = estimate(
-						new TracedSample(sample.getSample(),
-								new Ray(interaction.getPoint(), s.getDirection(), sample.getRay().getDepth() + 1)),
-						scene).getRadiance();
-				return radianceEstimate.multiply(cos_i / s.getPdf());
-			});
-		
-		else
-			return SpectralPowerDistribution.BLACK;
-	}
-	
-	private Spectrum estimate(Interaction<Primitive> interaction, Supplier<MaterialSample> sampler,
-			Function<MaterialSample, Spectrum> indirectRadianceFunction) {
-		
-		return estimate(interaction, sampler, indirectRadianceFunction, this.n);
-	}
-	
-	private Spectrum estimate(Interaction<Primitive> interaction, Supplier<MaterialSample> sampler,
-			Function<MaterialSample, Spectrum> indirectRadianceFunction, int n) {
-		
-		Spectrum totalIndirectEnergy = SpectralPowerDistribution.BLACK;
-		
-		if (n > 0) {
-			for (int i = 0; i < n; i++) {
+		if (material.isTransmissive()) {
+			if (material.isDelta()) {
+				final var matSample = material.sampleTransmissionW_i(interaction, sample.getSample());
+				final var matV = matSample.getA();
+				final var matPDF = matSample.getB();
 				
-				final var sample = sampler.get();
-				final var cos_i = max(0d,
-						Vector3D.from(interaction.getNormal()).normalize().dotProduct(sample.getDirection()));
-				final var indirectRadiance = indirectRadianceFunction.apply(sample).multiply(cos_i / sample.getPdf());
+				final var cos_i = abs(Vector3D.from(interaction.getNormal()).normalize().dotProduct(matV.normalize()));
 				
-				totalIndirectEnergy = totalIndirectEnergy.add(indirectRadiance);
+				final var reflectedRay = new Ray(interaction.getPoint(), matV, sample.getRay().getDepth() + 1);
+				
+				final var radiance = estimate(new TracedSample(sample.getSample(), reflectedRay), scene).getRadiance();
+				return radiance.multiply(cos_i / matPDF);
+				
+			} else {
+				
+				Spectrum irradiance = SpectralPowerDistribution.BLACK;
+				for (int i = 0; i < n; i++) {
+					final var matSample = material.sampleTransmissionW_i(interaction, sample.getSample());
+					final var matV = matSample.getA();
+					final var matPDF = matSample.getB();
+					
+					final var cos_i = abs(
+							Vector3D.from(interaction.getNormal()).normalize().dotProduct(matV.normalize()));
+					
+					final var reflectedRay = new Ray(interaction.getPoint(), matV, sample.getRay().getDepth() + 1);
+					
+					final var radiance = estimate(new TracedSample(sample.getSample(), reflectedRay), scene)
+							.getRadiance();
+					irradiance = irradiance.add(radiance.multiply(cos_i / matPDF));
+				}
+				
+				return irradiance.multiply(1d / n);
+				
 			}
-			
-			totalIndirectEnergy = totalIndirectEnergy.multiply(1d / (double) n);
-		}
-		
-		return totalIndirectEnergy;
+		} else
+			return SpectralPowerDistribution.BLACK;
 	}
 	
 }

@@ -77,12 +77,8 @@ public class RenderingTest {
 		final var l = scene.getLights().iterator().next();
 		
 		final var ls = l.sample(interaction, sample);
-		final var lp = ls.getPoint();
-		assertEquals(0, lp.getX(), 0.00001);
-		assertEquals(3, lp.getY(), 0.00001);
-		assertEquals(3d + sin(45d * PI / 180d), lp.getZ(), 0.00001);
 		
-		assertTrue(l.isVisible(lp, interaction, scene));
+		assertTrue(l.isVisible(interaction, ls.getA(), scene));
 		
 		final var estimate = renderer.estimate(tracedSample, scene);
 		
@@ -117,30 +113,37 @@ public class RenderingTest {
 				.estimate(new TracedSample(sample, new Ray(new Point3D(0, 0, -3), new Vector3D(0, 0, 1))), scene);
 		
 		assertEquals(radiance.multiply(texture.getSpectrum(null)).getTotalPower(),
-				estimate.getRadiance().getTotalPower(), 0.01 * radianceWatts);
+				estimate.getRadiance().getTotalPower(), 0.05 * radianceWatts);
 	}
 	
 	@Test
 	public void directLightingDiffuseLightTest() {
 		
-		final var albedo = 0.5;
+		final var albedo = 0.8;
 		final var albedoRGB = new RGB(albedo, albedo, albedo);
 		final var texture = new ConstantTexture(albedoRGB);
 		
 		final Collection<Primitive> primitives = Arrays
 				.asList(new Primitive(new PlaneShape(), new LambertianMaterial(texture)));
 		
+		/** W m^-2 sr^-1 */
 		final var radianceWatts = 100d;
+		/** W m^-2 sr^-1 */
 		final var radiance = (SpectralPowerDistribution) SpectralPowerDistribution.fromRGB(RGB.WHITE)
 				.rescale(radianceWatts);
 		
-		final var lightDistance = 1d;
-		final Collection<Light> lights = Arrays.asList(
-				new DiffuseLight(new SphereShape(0.001, new TranslationTransform(0, lightDistance, 0)), radiance));
+		/** m */
+		final var lightRadius = 1d;
+		
+		final var lightDistance = 4d;
+		final Collection<Light> lights = Arrays.asList(new DiffuseLight(
+				new SphereShape(lightRadius, new TranslationTransform(0, lightDistance, 0)), radiance));
+		
+		final var falloff = 1d / (lightDistance * lightDistance);
 		
 		final var scene = new Scene(primitives, lights);
 		
-		final var sampler = new StratifiedSampler(0, 0, 1, 1, 4, 9, 25);
+		final var sampler = new StratifiedSampler(0, 0, 1, 1, 4, 9, 9);
 		
 		final var renderer = new PathTracingRenderer(1, 1024);
 		
@@ -149,10 +152,10 @@ public class RenderingTest {
 		final var estimate = renderer
 				.estimate(new TracedSample(sample, new Ray(new Point3D(0, 3, -3), new Vector3D(0, -1, 1))), scene);
 		
-		final var falloff = 1d / (lightDistance * lightDistance);
-		
-		assertEquals(radiance.multiply(falloff).multiply(texture.getSpectrum(null)).getTotalPower(),
-				estimate.getRadiance().getTotalPower(), 0.01 * radianceWatts);
+		/** W m^-2 sr^-1 */
+		final var expectedPower = radiance.multiply(falloff).multiply(texture.getSpectrum(null)).getTotalPower();
+		final var estimatedPower = estimate.getRadiance().getTotalPower();
+		assertEquals(expectedPower, estimatedPower, 0.05 * radianceWatts);
 	}
 	
 	@Test
@@ -186,7 +189,7 @@ public class RenderingTest {
 		final var falloff = 1d / (lightDistance * lightDistance);
 		
 		assertEquals(radiance.multiply(falloff).multiply(texture.getSpectrum(null)).getTotalPower(),
-				estimate.getRadiance().getTotalPower(), 0.01 * radianceWatts);
+				estimate.getRadiance().getTotalPower(), 0.05 * radianceWatts);
 	}
 	
 }

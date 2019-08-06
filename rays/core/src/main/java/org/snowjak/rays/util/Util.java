@@ -1,11 +1,20 @@
-package org.snowjak.rays;
+package org.snowjak.rays.util;
+
+import static org.apache.commons.math3.util.FastMath.PI;
+import static org.apache.commons.math3.util.FastMath.cos;
+import static org.apache.commons.math3.util.FastMath.sin;
+import static org.apache.commons.math3.util.FastMath.sqrt;
 
 import java.util.Arrays;
 import java.util.function.DoubleFunction;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.DoubleStream;
 
+import org.snowjak.rays.Settings;
+import org.snowjak.rays.geometry.Normal3D;
+import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.geometry.util.Triplet;
+import org.snowjak.rays.sample.Sample;
 
 /**
  * Various helper methods too trivial to merit their own container classes.
@@ -124,5 +133,48 @@ public class Util {
 			array[i] = array[newIndex];
 			array[newIndex] = temp;
 		}
+	}
+	
+	/**
+	 * Sample a Vector3D in the hemisphere centered around {@code (0,0,0)} and the
+	 * given Normal3D.
+	 * <p>
+	 * This sampling is performed with a uniform PDF of {@code 1 / ( 2 * PI )}.
+	 * </p>
+	 * 
+	 * @param normal
+	 * @param sample
+	 * @return
+	 */
+	public static Vector3D sampleHemisphere(Normal3D normal, Sample sample) {
+		
+		final var sphericalPoint = sample.getAdditional2DSample();
+		
+		final var sin2_theta = sphericalPoint.getX();
+		final var cos2_theta = 1d - sin2_theta;
+		final var sin_theta = sqrt(sin2_theta);
+		final var cos_theta = sqrt(cos2_theta);
+		
+		final var orientation = sphericalPoint.getY() * 2d * PI;
+		//
+		//
+		//
+		final var x = sin_theta * cos(orientation);
+		final var y = cos_theta;
+		final var z = sin_theta * sin(orientation);
+		
+		//
+		//
+		// Construct a coordinate system centered around the surface-normal.
+		final var j = Vector3D.from(normal).normalize();
+		final var i = j.orthogonal();
+		final var k = i.crossProduct(j);
+		//
+		//
+		// Convert the Cartesian coordinates to a Vector in the constructed
+		// coordinate system.
+		final var w_i = i.multiply(x).add(j.multiply(y)).add(k.multiply(z)).normalize();
+		
+		return w_i;
 	}
 }

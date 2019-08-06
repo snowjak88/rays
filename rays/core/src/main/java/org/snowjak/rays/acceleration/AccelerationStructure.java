@@ -26,6 +26,16 @@ public interface AccelerationStructure {
 	public Interaction<Primitive> getInteraction(Ray ray);
 	
 	/**
+	 * Get the closest {@link Interaction} within this acceleration structure with
+	 * this Ray, ignoring the given {@link Primitive}.
+	 * 
+	 * @param ray
+	 * @param ignoring
+	 * @return
+	 */
+	public Interaction<Primitive> getInteraction(Ray ray, Primitive ignoring);
+	
+	/**
 	 * @return all {@link Primitive}s held in this AccelerationStructure
 	 */
 	public Collection<Primitive> getPrimitives();

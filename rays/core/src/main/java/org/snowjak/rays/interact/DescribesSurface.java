@@ -3,7 +3,9 @@ package org.snowjak.rays.interact;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
+import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.sample.Sample;
+import org.snowjak.rays.util.Duo;
 
 /**
  * Denotes that an object can report {@link SurfaceDescriptor}s for various
@@ -24,15 +26,6 @@ public interface DescribesSurface<D extends DescribesSurface<D>> {
 	 * @return
 	 */
 	public boolean isIntersectableWith(Ray ray);
-	
-	/**
-	 * Compute the total surface-area occupied by this surface (after applying all
-	 * local-to-world transforms).
-	 * 
-	 * @return -1 if this surface's area cannot be calculated -- e.g., if it is
-	 *         infinite
-	 */
-	public double getSurfaceArea();
 	
 	/**
 	 * Given a {@link Ray} (considered to be in the global reference-frame),
@@ -59,16 +52,18 @@ public interface DescribesSurface<D extends DescribesSurface<D>> {
 	 * @param sample
 	 * @return
 	 */
-	public SurfaceDescriptor<D> sampleSurface(Sample sample);
-
+	public SurfaceDescriptor<D> sampleSurfaceArea(Sample sample);
+	
 	/**
-	 * Given a sample of this surface (obtained via {@link #sampleSurface(Sample)}),
-	 * compute the probability that this sample would have been chosen.
+	 * Given a sample of this surface (obtained via
+	 * {@link #sampleSurfaceArea(Sample)}), compute the probability that this sample
+	 * would have been chosen.
+	 * 
 	 * @param surface
 	 * 
 	 * @return
 	 */
-	public double sampleSurfaceP(SurfaceDescriptor<?> surface);
+	public double pdf_sampleSurfaceArea(SurfaceDescriptor<?> surface);
 	
 	/**
 	 * Sample a point from the surface of this object such that the sampled point is
@@ -78,28 +73,7 @@ public interface DescribesSurface<D extends DescribesSurface<D>> {
 	 * @param sample
 	 * @return
 	 */
-	public SurfaceDescriptor<D> sampleSurfaceFacing(Point3D neighbor, Sample sample);
-	
-	/**
-	 * Given a sample of this surface (obtained via
-	 * {@link #sampleSurfaceFacing(Point3D, Sample)}), compute the probability that
-	 * this sample would have been chosen.
-	 * 
-	 * @param neighbor
-	 * @param sample
-	 * @param surfaceSample
-	 * @return
-	 */
-	public double sampleSurfaceFacingP(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surfaceSample);
-	
-	/**
-	 * Given a neighboring point <code>viewedFrom</code>, compute the solid-angle
-	 * that this object spans as seen from that point.
-	 * 
-	 * @param viewedFrom
-	 * @return
-	 */
-	public double computeSolidAngle(Point3D viewedFrom);
+	public SurfaceDescriptor<D> sampleSurfaceAreaFacing(Point3D neighbor, Sample sample);
 	
 	/**
 	 * Given a 3-D point (in object-local coordinates) on this surface, compute the
@@ -109,4 +83,43 @@ public interface DescribesSurface<D extends DescribesSurface<D>> {
 	 * @return
 	 */
 	public Point2D getParamFromLocalSurface(Point3D point);
+	
+	/**
+	 * Given a sample of this surface (obtained via
+	 * {@link #sampleSurfaceAreaFacing(Point3D, Sample)}), compute the probability
+	 * that this sample would have been chosen.
+	 * 
+	 * @param neighbor
+	 * @param sample
+	 * @param surfaceSample
+	 * @return
+	 */
+	public double pdf_sampleSurfaceAreaFacing(Point3D neighbor, Sample sample, SurfaceDescriptor<?> surfaceSample);
+	
+	/**
+	 * @return true if calls to {@link #sampleSolidAngleFrom(Point3D, Sample)} are
+	 *         implemented.
+	 */
+	public boolean canSampleSolidAngleFrom();
+	
+	/**
+	 * Given an neighboring point, sample a direction within the solid-angle
+	 * subtended by this surface.
+	 * 
+	 * @param neighbor
+	 * @param sample
+	 * @return {@link Duo}(direction, PDF)
+	 */
+	public Duo<Vector3D, Double> sampleSolidAngleFrom(SurfaceDescriptor<?> neighbor, Sample sample);
+	
+	/**
+	 * Given a direction originating from the neighboring point, within the
+	 * solid-angle subtended by this surface, calculate the probability that this
+	 * direction would have been selected.
+	 * 
+	 * @param neighbor
+	 * @param direction
+	 * @return PDF
+	 */
+	public double pdf_sampleSolidAngleFrom(SurfaceDescriptor<?> neighbor, Vector3D direction);
 }

@@ -1,15 +1,18 @@
 package org.snowjak.rays.light;
 
+import static org.apache.commons.math3.util.FastMath.PI;
+
 import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point3D;
-import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
+import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
+import org.snowjak.rays.util.Trio;
 
 /**
  * Represents a point light-source -- a non-physical {@link Light} with a
@@ -59,17 +62,18 @@ public class PointLight implements Light {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Sample sample) {
+	public <T extends Interactable<T>> Trio<Vector3D, Double, Spectrum> sample(Interaction<T> interaction,
+			Sample sample) {
 		
-		return new LightSample(position, Vector3D.from(position, interaction.getPoint()).normalize(), 1d,
-				getRadiance());
+		final var s = Vector3D.from(interaction.getPoint(), position);
+		final var distanceSq = s.getMagnitudeSq();
+		return new Trio<>(s.normalize(), 1d / PI, getRadiance().multiply(1d / distanceSq));
 	}
 	
 	@Override
-	public <T extends Interactable<T>> LightSample sample(Interaction<T> interaction, Ray sampleDirection,
-			Scene scene) {
+	public <T extends Interactable<T>> double pdf_sample(Interaction<T> interaction, Vector3D w_i, Scene scene) {
 		
-		return new LightSample(getPosition(), sampleDirection.getDirection().negate(), 0.0, getRadiance());
+		return 0.0;
 	}
 	
 }

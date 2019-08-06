@@ -69,14 +69,21 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 	@Override
 	public Interaction<Primitive> getInteraction(Ray ray) {
 		
+		return getInteraction(ray, null);
+	}
+	
+	@Override
+	public Interaction<Primitive> getInteraction(Ray ray, Primitive ignoring) {
+		
 		if (root != null) {
-			final var acceleratedIntersection = getHeldPrimitiveInteraction(root, ray);
+			final var acceleratedIntersection = getHeldPrimitiveInteraction(root, ray, ignoring);
 			if (acceleratedIntersection != null)
 				return acceleratedIntersection;
 		}
 		
 		//@formatter:off
 		return unaccelerated.stream()
+				.filter(p -> (ignoring == null) || (p != ignoring))
 				.filter(p -> p.isIntersectableWith(ray))
 				.map(p -> p.getInteraction(ray))
 				.filter(i -> i != null)
@@ -86,21 +93,24 @@ public class HierarchicalBoundingBox implements AccelerationStructure {
 		//@formatter:on
 	}
 	
-	private Interaction<Primitive> getHeldPrimitiveInteraction(TreeNode node, Ray ray) {
+	private Interaction<Primitive> getHeldPrimitiveInteraction(TreeNode node, Ray ray, Primitive ignoring) {
 		
 		if (!node.getAABB().isIntersecting(ray))
 			return null;
 		
 		if (node.isLeaf())
-			return ((LeafNode) node).getPrimitive().getInteraction(ray);
-		
+			if (ignoring != null && ((LeafNode) node).getPrimitive() == ignoring)
+				return null;
+			else
+				return ((LeafNode) node).getPrimitive().getInteraction(ray);
+			
 		Interaction<Primitive> result1 = null, result2 = null;
 		final BranchNode branchNode = (BranchNode) node;
 		if (branchNode.getBranch1().getAABB().isIntersecting(ray))
-			result1 = getHeldPrimitiveInteraction(branchNode.getBranch1(), ray);
+			result1 = getHeldPrimitiveInteraction(branchNode.getBranch1(), ray, ignoring);
 		
 		if (branchNode.getBranch2().getAABB().isIntersecting(ray))
-			result2 = getHeldPrimitiveInteraction(branchNode.getBranch2(), ray);
+			result2 = getHeldPrimitiveInteraction(branchNode.getBranch2(), ray, ignoring);
 		
 		final var isResult1Good = (result1 != null
 				&& result1.getInteractingRay().getT() > Settings.getInstance().getDoubleEqualityEpsilon());

@@ -5,6 +5,8 @@ import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.spectrum.Spectrum;
+import org.snowjak.rays.util.Duo;
+import org.snowjak.rays.util.Trio;
 
 /**
  * Defines how an object appears. Defines how reflected energy is modified
@@ -35,29 +37,30 @@ public interface Material {
 	public boolean isReflective();
 	
 	/**
-	 * For the given {@link Interaction}, select a reflection-direction from this
-	 * Material's reflection-direction space. (We need the {@link Sample} associated
-	 * with the current interaction, too, as that can help us to select
+	 * For the given {@link Interaction}, select a reflection-direction {@code w_i}
+	 * from this Material's reflection-direction space. (We need the {@link Sample}
+	 * associated with the current interaction, too, as that can help us to select
 	 * suitably-distributed directions.)
 	 * 
 	 * @param interaction
 	 * @param sample
-	 * @return {@link MaterialSample#getPdf()} == 0.0 if no reflection is possible
+	 * @return {@link Trio} ({@code w_i}, PDF, albedo)
 	 */
-	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> Trio<Vector3D, Double, Spectrum> sampleReflectionW_i(Interaction<T> interaction,
+			Sample sample);
 	
 	/**
 	 * For the given {@link Interaction} and previously-selected
-	 * reflection-direction, compute the probability (in {@code [0,1]}) that this
-	 * direction would have been selected out of the whole reflection-direction
-	 * space.
+	 * reflection-direction {@code w_i}, compute the probability (in {@code [0,1]})
+	 * that this direction would have been selected out of the whole
+	 * reflection-direction space.
 	 * 
 	 * @param interaction
-	 * @param direction
-	 * @return {@link MaterialSample#getPdf()} == 0.0 if this direction would never
-	 *         have been chosen
+	 * @param w_i
+	 * @return {@link Duo}(PDF, albedo)
 	 */
-	public <T extends Interactable<T>> MaterialSample getReflectionSample(Interaction<T> interaction, Vector3D direction);
+	public <T extends Interactable<T>> Duo<Double, Spectrum> pdfReflectionW_i(Interaction<T> interaction, Sample sample,
+			Vector3D w_i);
 	
 	/**
 	 * Indicates whether this Material should be queried for transmission.
@@ -67,29 +70,30 @@ public interface Material {
 	public boolean isTransmissive();
 	
 	/**
-	 * For the given {@link Interaction}, select a transmission-direction from this
-	 * Material's transmission-direction space. (We need the {@link Sample}
-	 * associated with the current interaction, too, as that can help us to select
-	 * suitably-distributed directions.)
+	 * For the given {@link Interaction}, select a transmission-direction
+	 * {@code w_i} from this Material's transmission-direction space. (We need the
+	 * {@link Sample} associated with the current interaction, too, as that can help
+	 * us to select suitably-distributed directions.)
 	 * 
 	 * @param interaction
 	 * @param sample
-	 * @return {@link MaterialSample#getPdf()} == 0.0 if no transmission is possible
+	 * @return {@link Duo} ({@code w_i}, PDF)
 	 */
-	public <T extends Interactable<T>> MaterialSample getTransmissionSample(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> Duo<Vector3D, Double> sampleTransmissionW_i(Interaction<T> interaction,
+			Sample sample);
 	
 	/**
 	 * For the given {@link Interaction} and previously-selected
-	 * transmission-direction, compute the probability (in {@code [0,1]}) that this
-	 * direction would have been selected out of the whole transmission-direction
-	 * space.
+	 * transmission-direction {@code w_i}, compute the probability (in
+	 * {@code [0,1]}) that this direction would have been selected out of the whole
+	 * transmission-direction space.
 	 * 
 	 * @param interaction
-	 * @param direction
-	 * @return {@link MaterialSample#getPdf()} == 0.0 if this direction would never
-	 *         have been chosen
+	 * @param w_i
+	 * @return PDF
 	 */
-	public <T extends Interactable<T>> MaterialSample getTransmissionP(Interaction<T> interaction, Vector3D direction);
+	public <T extends Interactable<T>> double pdfTransmissionW_i(Interaction<T> interaction, Sample sample,
+			Vector3D w_i);
 	
 	/**
 	 * Indicates whether this Material should be queried for emission.
@@ -99,87 +103,14 @@ public interface Material {
 	public boolean isEmissive();
 	
 	/**
-	 * For the given {@link Interaction}, select a emission-direction from this
-	 * Material's emission-direction space. (We need the {@link Sample} associated
-	 * with the current interaction, too, as that can help us to select
-	 * suitably-distributed directions.)
-	 * <p>
-	 * Note that {@link MaterialSample#getAlbedo()} will return the Material's
-	 * <strong>radiance</strong>, not its albedo.
-	 * </p>
+	 * For the given {@link Interaction}, sample this Material's emission back along
+	 * that to-eye vector, along with that sample's PDF.
 	 * 
-	 * @param interaction
+	 * @param point
+	 * @param w_o
 	 * @param sample
-	 * @return {@link MaterialSample#getPdf()} == 0.0 if no emission is possible
+	 * @return
 	 */
-	public <T extends Interactable<T>> MaterialSample getEmissionSample(Interaction<T> interaction, Sample sample);
+	public <T extends Interactable<T>> Duo<Double, Spectrum> sampleLe(Interaction<T> interaction, Sample sample);
 	
-	/**
-	 * For the given {@link Interaction} and previously-selected emission-direction,
-	 * compute the probability (in {@code [0,1]}) that this direction would have
-	 * been selected out of the whole emission-direction space.
-	 * <p>
-	 * Note that {@link MaterialSample#getAlbedo()} will return the Material's
-	 * <strong>radiance</strong>, not its albedo.
-	 * </p>
-	 * 
-	 * @param interaction
-	 * @param direction
-	 * @return {@link MaterialSample#getPdf()} == 0.0 if this direction would never
-	 *         have been chosen
-	 */
-	public <T extends Interactable<T>> MaterialSample getEmissionP(Interaction<T> interaction, Vector3D direction);
-	
-	/**
-	 * Data bean holding a sampled direction and its associated PDF for this
-	 * Material.
-	 * 
-	 * @author snowjak88
-	 *
-	 */
-	public static class MaterialSample {
-		
-		private final Vector3D direction;
-		private final double pdf;
-		private final Spectrum albedo;
-		
-		public MaterialSample(Vector3D direction, double pdf, Spectrum albedo) {
-			
-			this.direction = direction.normalize();
-			this.pdf = pdf;
-			this.albedo = albedo;
-		}
-		
-		/**
-		 * Get the normalized direction, extending away from the Material at the sampled
-		 * point.
-		 * 
-		 * @return
-		 */
-		public Vector3D getDirection() {
-			
-			return direction;
-		}
-		
-		/**
-		 * Get the PDF that this particular direction would have been chosen.
-		 * 
-		 * @return
-		 */
-		public double getPdf() {
-			
-			return pdf;
-		}
-		
-		/**
-		 * Get the absorption Spectrum associated with this sample.
-		 * 
-		 * @return
-		 */
-		public Spectrum getAlbedo() {
-			
-			return albedo;
-		}
-		
-	}
 }
