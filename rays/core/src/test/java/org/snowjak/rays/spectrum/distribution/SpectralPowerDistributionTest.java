@@ -2,6 +2,7 @@ package org.snowjak.rays.spectrum.distribution;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -30,6 +31,28 @@ public class SpectralPowerDistributionTest {
 		final var spd = new SpectralPowerDistribution(0d, 2d, new Point[] { new Point(0), new Point(2), new Point(0) });
 		
 		assertFalse(spd.isBlack());
+	}
+	
+	@Test
+	public void testEquals() {
+		
+		final var spd = new SpectralPowerDistribution(new Point[] { new Point(0.1), new Point(0.2), new Point(0.3) });
+		final var spd1 = new SpectralPowerDistribution(new Point[] { new Point(0.1), new Point(0.2), new Point(0.3) });
+		final var spd2 = new SpectralPowerDistribution(new Point[] { new Point(0.3), new Point(0.3), new Point(0.3) });
+		
+		assertTrue(spd.equals(spd1));
+		assertFalse(spd.equals(spd2));
+	}
+	
+	@Test
+	public void testHashcode() {
+		
+		final var spd = new SpectralPowerDistribution(new Point[] { new Point(0.1), new Point(0.2), new Point(0.3) });
+		final var spd1 = new SpectralPowerDistribution(new Point[] { new Point(0.1), new Point(0.2), new Point(0.3) });
+		final var spd2 = new SpectralPowerDistribution(new Point[] { new Point(0.3), new Point(0.3), new Point(0.3) });
+		
+		assertEquals(spd.hashCode(), spd1.hashCode());
+		assertNotEquals(spd.hashCode(), spd2.hashCode());
 	}
 	
 	@Test
@@ -316,18 +339,6 @@ public class SpectralPowerDistributionTest {
 		final var kelvin = 2400;
 		
 		assertEquals(598834.4, SpectralPowerDistribution.getStefanBoltzmannsLaw(kelvin), 1.0);
-	}
-	
-	@Test
-	public void testFromBlackbody2() {
-		
-		final var kelvin = 5500;
-		final var intensity = 1600;
-		
-		final var spd = SpectralPowerDistribution.fromBlackbody(kelvin, intensity);
-		final var spdIntensity = spd.integrate();
-		
-		assertEquals(intensity, spdIntensity, 1.0);
 	}
 	
 	@Test

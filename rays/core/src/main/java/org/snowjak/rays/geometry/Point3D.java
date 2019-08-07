@@ -3,8 +3,8 @@ package org.snowjak.rays.geometry;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.serialization.IsLoadable;
 

@@ -6,7 +6,6 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.geometry.util.Matrix;
 
 public class MatrixTest {
 	

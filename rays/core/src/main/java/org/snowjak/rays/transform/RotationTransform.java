@@ -1,8 +1,8 @@
 package org.snowjak.rays.transform;
 
 import org.apache.commons.math3.util.FastMath;
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;

@@ -5,6 +5,8 @@ package org.snowjak.rays.light;
 
 import static org.apache.commons.math3.util.FastMath.PI;
 
+import java.util.function.Function;
+
 import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
@@ -15,7 +17,7 @@ import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
-import org.snowjak.rays.util.Trio;
+import org.snowjak.rays.util.Quad;
 import org.snowjak.rays.util.Util;
 
 /**
@@ -42,24 +44,20 @@ public class InfiniteLight implements Light {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Trio<Vector3D, Double, Spectrum> sample(Interaction<T> interaction,
-			Sample sample) {
+	public <T extends Interactable<T>> Quad<Vector3D, Double, Spectrum, Function<Scene, Boolean>> sample(
+			Interaction<T> interaction, Sample sample) {
 		
-		return new Trio<Vector3D, Double, Spectrum>(Util.sampleHemisphere(interaction.getNormal(), sample),
-				1d / (2d * PI), radiance);
+		final var v = Util.sampleHemisphere(interaction.getNormal(), sample);
+		final var visibilityRay = new Ray(interaction.getPoint(), v);
+		
+		return new Quad<>(v, 1d / (2d * PI * PI), radiance, (scene) -> (scene.getInteraction(visibilityRay) == null));
+		
 	}
 	
 	@Override
 	public <T extends Interactable<T>> double pdf_sample(Interaction<T> interaction, Vector3D w_i, Scene scene) {
 		
-		final double pdf;
-		final var worldInteraction = scene.getInteraction(new Ray(interaction.getPoint(), w_i.normalize()));
-		if (worldInteraction != null)
-			pdf = 0d;
-		else
-			pdf = 1d / (2d * PI);
-		
-		return pdf;
+		return 1d / (2d * PI * PI);
 	}
 	
 }

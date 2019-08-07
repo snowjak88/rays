@@ -9,8 +9,8 @@ import java.util.Base64;
 
 import javax.imageio.ImageIO;
 
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point2D;
 import org.snowjak.rays.interact.DescribesSurface;
 import org.snowjak.rays.interact.SurfaceDescriptor;

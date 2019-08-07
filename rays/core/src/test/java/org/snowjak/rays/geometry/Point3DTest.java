@@ -5,7 +5,6 @@ import static org.junit.Assert.assertNotNull;
 
 import org.junit.Test;
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.geometry.Point3D;
 
 import com.google.gson.GsonBuilder;
 

@@ -1,7 +1,7 @@
 package org.snowjak.rays.texture;
 
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.interact.DescribesSurface;
 import org.snowjak.rays.interact.SurfaceDescriptor;
 import org.snowjak.rays.spectrum.colorspace.RGB;

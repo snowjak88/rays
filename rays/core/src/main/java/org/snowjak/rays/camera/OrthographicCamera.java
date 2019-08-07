@@ -2,8 +2,8 @@ package org.snowjak.rays.camera;
 
 import java.util.Collection;
 
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point3D;
 import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;

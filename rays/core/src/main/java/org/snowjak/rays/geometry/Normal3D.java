@@ -4,8 +4,8 @@ import java.io.Serializable;
 import java.lang.reflect.Type;
 
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.serialization.IsLoadable;
 

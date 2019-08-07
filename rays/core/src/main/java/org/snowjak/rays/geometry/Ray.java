@@ -4,8 +4,8 @@ import java.io.Serializable;
 import java.lang.reflect.Type;
 
 import org.snowjak.rays.Settings;
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.serialization.IsLoadable;
 
 import com.google.gson.JsonDeserializationContext;

@@ -1,6 +1,7 @@
 package org.snowjak.rays.spectrum.distribution;
 
-import static org.apache.commons.math3.util.FastMath.*;
+import static org.apache.commons.math3.util.FastMath.exp;
+
 import java.util.Optional;
 
 import org.apache.commons.math3.util.Pair;

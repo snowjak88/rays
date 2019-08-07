@@ -2,8 +2,12 @@ package org.snowjak.rays.spectrum.colorspace;
 
 import static org.apache.commons.math3.util.FastMath.pow;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.reflect.Type;
+import java.util.concurrent.ExecutionException;
 
+import org.apache.commons.math3.util.Pair;
 import org.snowjak.rays.Settings;
 import org.snowjak.rays.geometry.util.Matrix;
 import org.snowjak.rays.geometry.util.Triplet;
@@ -12,6 +16,9 @@ import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
 import org.snowjak.rays.util.Util;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonElement;
@@ -36,6 +43,16 @@ import com.google.gson.JsonSerializationContext;
  *
  */
 public class XYZ extends Colorspace<XYZ, Triplet> {
+	
+	private static final Logger LOG = System.getLogger(XYZ.class.getName());
+	
+	private static final LoadingCache<SpectralPowerDistribution, Triplet> INTEGRATION_NUMERATOR_CACHE = CacheBuilder
+			.newBuilder().maximumSize(Settings.getInstance().getSpectrumIntegrationCacheSize())
+			.build(new SpectrumIntegrationNumeratorLoader());
+	
+	private static final LoadingCache<Pair<Double, Double>, Double> INTEGRATION_DENOMINATOR_CACHE = CacheBuilder
+			.newBuilder().maximumSize(Settings.getInstance().getSpectrumIntegrationCacheSize())
+			.build(new SpectrumIntegrationDenominatorLoader());
 	
 	//@formatter:off
 	private static final Matrix __CONVERSION_TO_RGB =
@@ -88,34 +105,31 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 	 * @param spectrum
 	 * @param isRelative
 	 * @return
+	 * @throws ExecutionException
 	 */
 	public static XYZ fromSpectrum(Spectrum spectrum, boolean isRelative) {
-		
-		final var cmf = Settings.getInstance().getColorMappingFunctions();
-		final var illuminant = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
 		
 		if (!(spectrum instanceof SpectralPowerDistribution))
 			throw new IllegalArgumentException(
 					"Cannot create an XYZ triplet from the given Spectrum -- cannot handle Spectrum implementation.");
 		
 		final var spd = (SpectralPowerDistribution) spectrum;
-		
-		final double lowLambda = spd.getBounds().get().getFirst();
-		final double highLambda = spd.getBounds().get().getSecond();
-		
-		final var numerator = Util.integrateTriplet(lowLambda, highLambda,
-				Settings.getInstance().getCieXyzIntegrationStepCount(),
-				(lambda) -> cmf.get(lambda).multiply(spd.get(lambda).get(0)));
-		
-		if (!isRelative)
-			return new XYZ(numerator);
-		else {
+		try {
+			final var numerator = INTEGRATION_NUMERATOR_CACHE.get(spd);
 			
-			final var denominator = Util.integrate(lowLambda, highLambda,
-					Settings.getInstance().getCieXyzIntegrationStepCount(),
-					(lambda) -> cmf.get(lambda).get(1) * illuminant.get(lambda).get(0));
-			
-			return new XYZ(numerator.divide(denominator));
+			if (!isRelative)
+				return new XYZ(numerator);
+			else {
+				
+				final var denominator = INTEGRATION_DENOMINATOR_CACHE
+						.get(spd.getBounds().orElse(Settings.getInstance().getSpectrumRange()));
+				
+				return new XYZ(numerator.divide(denominator));
+			}
+		} catch (ExecutionException e) {
+			LOG.log(Level.ERROR, "Could not calculate an XYZ from a SpectralPowerDistribution -- unexpected exception!",
+					e);
+			return null;
 		}
 	}
 	
@@ -217,6 +231,41 @@ public class XYZ extends Colorspace<XYZ, Triplet> {
 			array.add(new JsonPrimitive(src.getZ()));
 			
 			return array;
+		}
+		
+	}
+	
+	public static class SpectrumIntegrationNumeratorLoader extends CacheLoader<SpectralPowerDistribution, Triplet> {
+		
+		@Override
+		public Triplet load(SpectralPowerDistribution spectrum) throws Exception {
+			
+			final var cmf = Settings.getInstance().getColorMappingFunctions();
+			
+			final var spd = (SpectralPowerDistribution) spectrum;
+			
+			final double lowLambda = spd.getBounds().get().getFirst();
+			final double highLambda = spd.getBounds().get().getSecond();
+			
+			return Util.integrateTriplet(lowLambda, highLambda, Settings.getInstance().getCieXyzIntegrationStepCount(),
+					(lambda) -> cmf.get(lambda).multiply(spd.get(lambda).get(0)));
+		}
+		
+	}
+	
+	public static class SpectrumIntegrationDenominatorLoader extends CacheLoader<Pair<Double, Double>, Double> {
+		
+		@Override
+		public Double load(Pair<Double, Double> bounds) throws Exception {
+			
+			final var cmf = Settings.getInstance().getColorMappingFunctions();
+			final var illuminant = Settings.getInstance().getIlluminatorSpectralPowerDistribution();
+			
+			final double lowLambda = bounds.getFirst();
+			final double highLambda = bounds.getSecond();
+			
+			return Util.integrate(lowLambda, highLambda, Settings.getInstance().getCieXyzIntegrationStepCount(),
+					(lambda) -> cmf.get(lambda).get(1) * illuminant.get(lambda).get(0));
 		}
 		
 	}

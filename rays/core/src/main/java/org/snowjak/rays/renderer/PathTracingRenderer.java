@@ -154,21 +154,19 @@ public class PathTracingRenderer extends Renderer {
 					final var lightPDF = lightSample.getB();
 					final var lightRadiance = lightSample.getC();
 					
+					//
+					// Compute (w` .dot. n)
+					//
 					final var cos_i = lightV.dotProduct(interaction.getNormal());
 					
-					//
-					// We clamp (w` .dot. n) to [0,)
-					// It follows that if we clamped it to 0,
-					// we don't need to bother computing the rest. We know it will
-					// all multiply out to 0.
-					//
 					if (cos_i <= 0d)
 						continue;
 						
 					//
-					// Compute the g(X,X`) term.
+					// Compute g(X,X`)
 					//
-					if (!light.isVisible(interaction, lightV, scene))
+					final var visible = lightSample.getD().apply(scene);
+					if (!visible)
 						continue;
 					
 					final var matSample = mat.pdfReflectionW_i(interaction, sample.getSample(), lightV);
@@ -176,6 +174,16 @@ public class PathTracingRenderer extends Renderer {
 						continue;
 					
 					final var matAlbedo = matSample.getB();
+					
+					//
+					// Light.sample() already handles computing the terms for:
+					// ( w` .dot. n` )
+					// || X -> X` ||^2
+					//
+					// So we complete the rest of the equation:
+					//
+					// L_d( X, w ) = ( g(X, X`) p(X, w, w`) Le(X`, w`) (-w` .dot. n) ) / pdf( X` )
+					//
 					
 					final var irradiance = lightRadiance.multiply(cos_i / lightPDF).multiply(matAlbedo);
 					totalIrradiance = totalIrradiance.add(irradiance);

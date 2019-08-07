@@ -60,11 +60,11 @@ public class LambertianMaterialTest {
 		final var interaction = primitive.getInteraction(ray);
 		
 		//
-		// 1 W m^-2 sr^-1
-		final Spectrum radiantIntensity = SpectralPowerDistribution.fromRGB(RGB.WHITE).rescale(1d);
+		// 1 cd
+		final Spectrum radiance = SpectralPowerDistribution.fromRGB(RGB.WHITE).rescale(1d);
 		//
 		// ( Li * pi ) ( W m^-2 )
-		final Spectrum totalRadiantFlux = radiantIntensity.multiply(PI);
+		final Spectrum totalRadiantFlux = radiance.multiply(PI);
 		
 		//
 		// Should be equal to ( rho / pi ) * ( Li * pi ) = ( rho * Li ) ( W m^-2 sr^-1 )
@@ -74,11 +74,9 @@ public class LambertianMaterialTest {
 		final var reflected = reflectedSample.getC().multiply(totalRadiantFlux);
 		
 		assertEquals("Reflected power is not as expected.",
-				radiantIntensity.multiply(texture.getSpectrum(interaction)).getTotalPower(), reflected.getTotalPower(),
-				0.001);
+				radiance.multiply(texture.getSpectrum(interaction)).getTotalPower(), reflected.getTotalPower(), 0.001);
 		
-		final var expectedRGB = SpectralPowerDistribution.fromRGB(materialRGB).rescale(reflected.getTotalPower())
-				.toRGB();
+		final var expectedRGB = radiance.multiply(texture.getSpectrum(interaction)).toRGB();
 		
 		assertEquals("Reflected RGB(R) is not as expected.", expectedRGB.getRed(), reflected.toRGB().getRed(), 0.05);
 		assertEquals("Reflected RGB(G) is not as expected.", expectedRGB.getGreen(), reflected.toRGB().getGreen(),

@@ -141,15 +141,15 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 	 * Planck's Law for blackbody radiation, for a body of the given temperature.
 	 *
 	 * <p>
-	 * This SPD's power is scaled to {@code intensity} W / m^2 sr.
+	 * This SPD's power is scaled to {@code luminance} in candela ( lm/sr ).
 	 * </p>
 	 * 
 	 * @param kelvin
-	 * @param intensity
+	 * @param luminance
 	 *            if < 0, then no power-scaling is applied
 	 * @return
 	 */
-	public static SpectralPowerDistribution fromBlackbody(double kelvin, double intensity) {
+	public static SpectralPowerDistribution fromBlackbody(double kelvin, double luminance) {
 		
 		final double wavelengthStepSizeNM = (Settings.getInstance().getSpectrumRangeHigh()
 				- Settings.getInstance().getSpectrumRangeLow())
@@ -172,10 +172,10 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 		
 		final var spd = new SpectralPowerDistribution(values);
 		
-		if (intensity < 0.0)
+		if (luminance < 0.0)
 			return spd;
 		
-		return (SpectralPowerDistribution) spd.rescale(intensity);
+		return (SpectralPowerDistribution) spd.rescale(luminance);
 	}
 	
 	/**
@@ -599,6 +599,30 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 		return "SpectralPowerDistribution [ " + rgb.toString() + " / " + getTotalPower() + " W ]";
 	}
 	
+	@Override
+	public int hashCode() {
+		
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + Arrays.hashCode(getEntries());
+		return result;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		SpectralPowerDistribution other = (SpectralPowerDistribution) obj;
+		if (!Arrays.deepEquals(this.getEntries(), other.getEntries()))
+			return false;
+		return true;
+	}
+	
 	public static class Loader implements IsLoadable<SpectralPowerDistribution> {
 		
 		@Override
@@ -615,6 +639,8 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 				throw new JsonParseException("Cannot parse SpectralPowerDistribution: missing [type]!");
 			
 			final SpectralPowerDistribution result;
+			
+			final double luminance;
 			
 			switch (obj.get("type").getAsString()) {
 			case "data":
@@ -644,13 +670,13 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 				if (!obj.has("rgb"))
 					throw new JsonParseException("Cannot parse RGB-SpectralPowerDistribution: missing [rgb]!");
 				
-				if (!obj.has("radiance"))
-					throw new JsonParseException("Cannot parse RGB-SpectralPowerDistribution: missing [radiance]!");
+				if (!obj.has("luminance"))
+					throw new JsonParseException("Cannot parse RGB-SpectralPowerDistribution: missing [luminance]!");
 				
 				final RGB rgb = context.deserialize(obj.get("rgb").getAsJsonObject(), RGB.class);
-				final double radiantPower = obj.get("radiance").getAsDouble();
+				luminance = obj.get("luminance").getAsDouble();
 				
-				result = (SpectralPowerDistribution) SpectralPowerDistribution.fromRGB(rgb).rescale(radiantPower);
+				result = (SpectralPowerDistribution) SpectralPowerDistribution.fromRGB(rgb).rescale(luminance);
 				break;
 			
 			case "blackbody":
@@ -658,13 +684,12 @@ public class SpectralPowerDistribution extends TabulatedDistribution<SpectralPow
 					throw new JsonParseException("Cannot parse blackbody SpectralPowerDistribution: missing [kelvin]!");
 				
 				final double kelvin = obj.get("kelvin").getAsDouble();
-				final double radiance;
-				if (obj.has("radiance"))
-					radiance = obj.get("radiance").getAsDouble();
+				if (obj.has("luminance"))
+					luminance = obj.get("luminance").getAsDouble();
 				else
-					radiance = -1.0;
+					luminance = -1.0;
 				
-				result = SpectralPowerDistribution.fromBlackbody(kelvin, radiance);
+				result = SpectralPowerDistribution.fromBlackbody(kelvin, luminance);
 				break;
 			
 			default:

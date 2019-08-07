@@ -1,13 +1,14 @@
 package org.snowjak.rays.light;
 
+import java.util.function.Function;
+
 import org.snowjak.rays.Scene;
-import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.spectrum.Spectrum;
-import org.snowjak.rays.util.Trio;
+import org.snowjak.rays.util.Quad;
 
 /**
  * Defines a light-source.
@@ -79,10 +80,10 @@ public interface Light {
 	 * </p>
 	 * 
 	 * @param interaction
-	 * @return {@link Trio}({@code w_i}, PDF, radiance}
+	 * @return {@link Quad}({@code w_i}, PDF, radiance, visibility-checker}
 	 */
-	public <T extends Interactable<T>> Trio<Vector3D, Double, Spectrum> sample(Interaction<T> interaction,
-			Sample sample);
+	public <T extends Interactable<T>> Quad<Vector3D, Double, Spectrum, Function<Scene, Boolean>> sample(
+			Interaction<T> interaction, Sample sample);
 	
 	/**
 	 * Given an {@link Interaction} somewhere in the {@link Scene}, and a direction
@@ -95,41 +96,4 @@ public interface Light {
 	 * @return
 	 */
 	public <T extends Interactable<T>> double pdf_sample(Interaction<T> interaction, Vector3D w_i, Scene scene);
-	
-	/**
-	 * Determines if the given {@link Interaction} can view this Light along the
-	 * given direction {@code w_i} -- i.e., if anything in this {@link Scene}
-	 * interferes with direct line-of-sight.
-	 * 
-	 * @param interaction
-	 * @param scene
-	 * @return
-	 */
-	public default <T extends Interactable<T>> boolean isVisible(Interaction<T> interaction, Vector3D w_i,
-			Scene scene) {
-		
-		//
-		// Set up a Ray from the Interaction along the direction.
-		//
-		final var iPoint = interaction.getPoint();
-		
-		final var lightRay = new Ray(iPoint, w_i.normalize());
-		
-		final DiffuseLight ignore;
-		if (DiffuseLight.class.isAssignableFrom(getClass()))
-			ignore = (DiffuseLight) this;
-		else
-			ignore = null;
-		
-		final var lightInteraction = scene.getInteraction(lightRay, ignore);
-		//
-		// If there was an interaction along that ray,
-		// and the occluding object is not this same light,
-		// then the interaction is occluding the light.
-		//
-		if (lightInteraction != null)
-			return false;
-		
-		return true;
-	}
 }

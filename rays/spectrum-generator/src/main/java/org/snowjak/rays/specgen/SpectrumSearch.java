@@ -1,6 +1,6 @@
 package org.snowjak.rays.specgen;
 
-import static org.apache.commons.math3.util.FastMath.pow;
+import static org.apache.commons.math3.util.FastMath.abs;
 
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -28,10 +28,10 @@ public interface SpectrumSearch {
 		final Point[] spdPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
 				.toArray(len -> new Point[len]);
 		final double bumpinessDistance = IntStream.range(0, spdPoints.length - 1)
-				.mapToDouble(i -> pow(spdPoints[i + 1].get(0) - spdPoints[i].get(0), 2)).sum();
+				.mapToDouble(i -> abs(spdPoints[i + 1].get(0) - spdPoints[i].get(0))).sum() / (double) spdPoints.length;
 		
 		return new Result(targetResult.getDistance(), bumpinessDistance, targetResult.getXyz(), targetResult.getRgb(),
-				spd);
+				targetResult.getSrgb(), spd);
 	}
 	
 	public static class Result {
@@ -39,14 +39,17 @@ public interface SpectrumSearch {
 		private final double distance, bumpiness;
 		private final XYZ xyz;
 		private final RGB_Gammaless rgb;
+		private final RGB srgb;
 		private final SpectralPowerDistribution spd;
 		
-		public Result(double distance, double bumpiness, XYZ xyz, RGB_Gammaless rgb, SpectralPowerDistribution spd) {
+		public Result(double distance, double bumpiness, XYZ xyz, RGB_Gammaless rgb, RGB srgb,
+				SpectralPowerDistribution spd) {
 			
 			this.distance = distance;
 			this.bumpiness = bumpiness;
 			this.xyz = xyz;
 			this.rgb = rgb;
+			this.srgb = srgb;
 			this.spd = spd;
 		}
 		
@@ -68,6 +71,11 @@ public interface SpectrumSearch {
 		public RGB_Gammaless getRgb() {
 			
 			return rgb;
+		}
+		
+		public RGB getSrgb() {
+			
+			return srgb;
 		}
 		
 		public SpectralPowerDistribution getSpd() {

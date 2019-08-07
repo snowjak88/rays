@@ -105,6 +105,8 @@ public class SpectrumGenerator implements CommandLineRunner {
 	@Autowired
 	private BruteForceSpectrumSearch bruteForce;
 	@Autowired
+	private UniformSpectrumSearch uniformSearch;
+	@Autowired
 	private SpectrumResultViewer viewResult;
 	
 	@Autowired
@@ -170,11 +172,12 @@ public class SpectrumGenerator implements CommandLineRunner {
 		distanceCalculator = (spd, targetColor) -> {
 			final XYZ xyz = XYZ.fromSpectrum(spd, true);
 			final RGB_Gammaless rgb = xyz.to(RGB_Gammaless.class);
+			final RGB srgb = xyz.to(RGB.class);
 			
 			final var targetRGB = targetColor.to(RGB_Gammaless.class);
 			
 			return new Result(pow(rgb.getRed() - targetRGB.getRed(), 2) + pow(rgb.getGreen() - targetRGB.getGreen(), 2)
-					+ pow(rgb.getBlue() - targetRGB.getBlue(), 2), 0, xyz, rgb, spd);
+					+ pow(rgb.getBlue() - targetRGB.getBlue(), 2), 0, xyz, rgb, srgb, spd);
 		};
 		
 		switch (colorModel.toLowerCase()) {
@@ -182,11 +185,26 @@ public class SpectrumGenerator implements CommandLineRunner {
 			distanceCalculator = (spd, targetColor) -> {
 				final XYZ xyz = XYZ.fromSpectrum(spd, true);
 				final RGB_Gammaless rgb = xyz.to(RGB_Gammaless.class);
+				final RGB srgb = xyz.to(RGB.class);
 				
 				final var targetXYZ = targetColor.to(XYZ.class);
 				
 				return new Result(pow(xyz.getX() - targetXYZ.getX(), 2) + pow(xyz.getY() - targetXYZ.getY(), 2)
-						+ pow(xyz.getZ() - targetXYZ.getZ(), 2), 0, xyz, rgb, spd);
+						+ pow(xyz.getZ() - targetXYZ.getZ(), 2), 0, xyz, rgb, srgb, spd);
+			};
+			break;
+		case "srgb":
+			distanceCalculator = (spd, targetColor) -> {
+				final XYZ xyz = XYZ.fromSpectrum(spd, true);
+				final RGB srgb = xyz.to(RGB.class);
+				final RGB_Gammaless rgb = xyz.to(RGB_Gammaless.class);
+				
+				final var targetSRGB = targetColor.to(RGB.class);
+				
+				return new Result(
+						pow(srgb.getRed() - targetSRGB.getRed(), 2) + pow(srgb.getGreen() - targetSRGB.getGreen(), 2)
+								+ pow(srgb.getBlue() - targetSRGB.getBlue(), 2),
+						0, xyz, rgb, srgb, spd);
 			};
 			break;
 		case "rgb":
@@ -295,8 +313,13 @@ public class SpectrumGenerator implements CommandLineRunner {
 			result = bruteForce.doSearch(distanceCalculator, rgb, () -> startingSpd.apply(name),
 					new StatusReporter(name));
 			break;
+		case "UNIFORM":
+			result = uniformSearch.doSearch(distanceCalculator, rgb, () -> startingSpd.apply(name),
+					new StatusReporter(name));
+			break;
 		case "VIEW":
-			viewResult.doSearch(distanceCalculator, rgb, () -> startingSpd.apply(name), new StatusReporter(name));
+			result = viewResult.doSearch(distanceCalculator, rgb, () -> startingSpd.apply(name), new StatusReporter(name));
+			break;
 		default:
 			result = null;
 			return;
@@ -326,6 +349,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		
 		private double bestDistance, bestBumpiness;
 		private XYZ bestXYZ;
+		private RGB bestSRGB;
 		private RGB_Gammaless bestRGB;
 		private SpectralPowerDistribution bestSPD = null;
 		
@@ -357,11 +381,13 @@ public class SpectrumGenerator implements CommandLineRunner {
 					bestBumpiness = result.getBumpiness();
 					bestXYZ = result.getXyz();
 					bestRGB = result.getRgb();
+					bestSRGB = result.getSrgb();
 					bestSPD = result.getSpd();
 					
 					LOG.info("{}: Best SPD: Distance: {} / Bumpiness: {}", name, bestDistance, bestBumpiness);
 					LOG.info("{}: XYZ: {}", name, bestXYZ.toString());
 					LOG.info("{}: RGB: {}", name, bestRGB.toString());
+					LOG.info("{}: sRGB: {}", name, bestSRGB.toString());
 					
 					if (this.graphEnabled) {
 						final double lowBound = bestSPD.getBounds().get().getFirst(),

@@ -66,18 +66,18 @@ public interface Spectrum extends Serializable {
 	public double getPower(double lambda);
 	
 	/**
-	 * Rescale this Spectrum's total power ({@code W / m^2}) to the given power-level.
+	 * Rescale this Spectrum's total luminance ({@code lm / sr}).
 	 * 
-	 * @param power
+	 * @param luminance
 	 * @return
 	 */
-	public default Spectrum rescale(double power) {
+	public default Spectrum rescale(double luminance) {
 		
-		final var thisPower = getTotalPower();
-		if (thisPower == 0d)
+		final var currentLuminance = XYZ.fromSpectrum(this).getY();
+		if (currentLuminance == 0d)
 			return this;
 		
-		final var multiplier = power / thisPower;
+		final var multiplier = luminance / currentLuminance;
 		
 		return multiply(multiplier);
 	}

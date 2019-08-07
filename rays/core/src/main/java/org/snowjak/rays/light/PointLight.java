@@ -2,17 +2,20 @@ package org.snowjak.rays.light;
 
 import static org.apache.commons.math3.util.FastMath.PI;
 
+import java.util.function.Function;
+
 import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
 import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.Point3D;
+import org.snowjak.rays.geometry.Ray;
 import org.snowjak.rays.geometry.Vector3D;
 import org.snowjak.rays.interact.Interactable;
 import org.snowjak.rays.interact.Interaction;
 import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
-import org.snowjak.rays.util.Trio;
+import org.snowjak.rays.util.Quad;
 
 /**
  * Represents a point light-source -- a non-physical {@link Light} with a
@@ -62,12 +65,19 @@ public class PointLight implements Light {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Trio<Vector3D, Double, Spectrum> sample(Interaction<T> interaction,
-			Sample sample) {
+	public <T extends Interactable<T>> Quad<Vector3D, Double, Spectrum, Function<Scene, Boolean>> sample(
+			Interaction<T> interaction, Sample sample) {
 		
-		final var s = Vector3D.from(interaction.getPoint(), position);
+		final var point = interaction.getPoint();
+		
+		final var s = Vector3D.from(point, position);
 		final var distanceSq = s.getMagnitudeSq();
-		return new Trio<>(s.normalize(), 1d / PI, getRadiance().multiply(1d / distanceSq));
+		
+		final var visibilityRay = new Ray(point, s);
+		return new Quad<>(s.normalize(), 1d / PI, getRadiance().multiply(1d / distanceSq), (scene) -> {
+			final var isect = scene.getInteraction(visibilityRay);
+			return (isect == null || Vector3D.from(point, isect.getPoint()).getMagnitudeSq() > distanceSq);
+		});
 	}
 	
 	@Override

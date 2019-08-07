@@ -1,14 +1,18 @@
 package org.snowjak.rays.geometry;
 
-import static org.apache.commons.math3.util.FastMath.*;
+import static org.apache.commons.math3.util.FastMath.acos;
+import static org.apache.commons.math3.util.FastMath.atan2;
+import static org.apache.commons.math3.util.FastMath.cos;
+import static org.apache.commons.math3.util.FastMath.pow;
+import static org.apache.commons.math3.util.FastMath.sin;
 import static org.apache.commons.math3.util.FastMath.sqrt;
 
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.Random;
 
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.geometry.util.Triplet;
 import org.snowjak.rays.serialization.IsLoadable;
 

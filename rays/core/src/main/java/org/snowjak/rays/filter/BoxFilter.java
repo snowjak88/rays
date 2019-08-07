@@ -1,7 +1,7 @@
 package org.snowjak.rays.filter;
 
-import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.annotations.UIField;
+import org.snowjak.rays.annotations.UIType;
 import org.snowjak.rays.sample.Sample;
 
 /**

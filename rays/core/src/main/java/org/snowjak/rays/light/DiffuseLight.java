@@ -3,6 +3,8 @@
  */
 package org.snowjak.rays.light;
 
+import java.util.function.Function;
+
 import org.snowjak.rays.Primitive;
 import org.snowjak.rays.Scene;
 import org.snowjak.rays.annotations.UIField;
@@ -16,7 +18,7 @@ import org.snowjak.rays.sample.Sample;
 import org.snowjak.rays.shape.Shape;
 import org.snowjak.rays.spectrum.Spectrum;
 import org.snowjak.rays.spectrum.distribution.SpectralPowerDistribution;
-import org.snowjak.rays.util.Trio;
+import org.snowjak.rays.util.Quad;
 
 /**
  * A DiffuseLight occupies a definite region of space defined by a
@@ -76,16 +78,23 @@ public class DiffuseLight implements Light {
 	}
 	
 	@Override
-	public <T extends Interactable<T>> Trio<Vector3D, Double, Spectrum> sample(Interaction<T> interaction,
-			Sample sample) {
+	public <T extends Interactable<T>> Quad<Vector3D, Double, Spectrum, Function<Scene, Boolean>> sample(
+			Interaction<T> interaction, Sample sample) {
 		
 		final var s = getPrimitive().sampleSolidAngleFrom(interaction, sample);
 		
 		final var lightIntersect = getPrimitive().getInteraction(new Ray(interaction.getPoint(), s.getA()));
 		final var surfaceDot = s.getA().negate().dotProduct(lightIntersect.getNormal());
-		final var distanceSq = Vector3D.from(lightIntersect.getPoint(), interaction.getPoint()).getMagnitudeSq();
+		final var fromLightV = Vector3D.from(lightIntersect.getPoint(), interaction.getPoint());
+		final var distanceSq = fromLightV.getMagnitudeSq();
 		
-		return new Trio<>(s.getA(), s.getB(), getRadiance().multiply(surfaceDot / distanceSq));
+		final var visibilityRay = new Ray(interaction.getPoint(), s.getA());
+		
+		return new Quad<>(s.getA(), s.getB(), getRadiance().multiply(surfaceDot / distanceSq), (scene) -> {
+			final var isect = scene.getInteraction(visibilityRay, this);
+			return (isect == null
+					|| Vector3D.from(interaction.getPoint(), isect.getPoint()).getMagnitudeSq() > distanceSq);
+		});
 	}
 	
 	@Override
@@ -103,7 +112,7 @@ public class DiffuseLight implements Light {
 	public Primitive getPrimitive() {
 		
 		if (primitive == null)
-			primitive = new Primitive(shape, new EmissionMaterial(getRadiance()));
+			primitive = new Primitive(shape, new EmissionMaterial(SpectralPowerDistribution.BLACK));
 		
 		return primitive;
 	}

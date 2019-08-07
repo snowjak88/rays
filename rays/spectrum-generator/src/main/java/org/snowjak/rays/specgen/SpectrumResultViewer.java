@@ -20,10 +20,10 @@ public class SpectrumResultViewer implements SpectrumSearch {
 	public Result doSearch(BiFunction<SpectralPowerDistribution, RGB, Result> distanceCalculator, RGB targetColor,
 			Supplier<SpectralPowerDistribution> startingSpdSupplier, StatusReporter reporter) {
 		
-		final var result = distanceCalculator.apply(startingSpdSupplier.get(), targetColor);
+		final var result = evaluateSPD(startingSpdSupplier.get(), targetColor, distanceCalculator);
 		reporter.reportResult(result);
 		
-		return null;
+		return result;
 	}
 	
 }

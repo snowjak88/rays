@@ -1,12 +1,15 @@
 package org.snowjak.rays.material;
 
-import static org.apache.commons.math3.util.FastMath.*;
-import static org.junit.Assert.*;
+import static org.apache.commons.math3.util.FastMath.PI;
+import static org.apache.commons.math3.util.FastMath.cos;
+import static org.apache.commons.math3.util.FastMath.sin;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 import org.snowjak.rays.geometry.Normal3D;
 import org.snowjak.rays.geometry.Vector3D;
-import org.snowjak.rays.material.Fresnel;
 
 public class FresnelTest {
 	

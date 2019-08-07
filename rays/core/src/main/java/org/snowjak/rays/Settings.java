@@ -113,6 +113,8 @@ public class Settings {
 	 */
 	private double spectrumRangeHigh = 830.0;
 	
+	private long spectrumIntegrationCacheSize = 1024l;
+	
 	/**
 	 * @see #getSpectrumRange()
 	 */
@@ -199,6 +201,10 @@ public class Settings {
 			
 			spectrumRangeHigh = Double.parseDouble(coreSettings.getProperty("org.snowjak.rays.spectrum-range-high",
 					Double.toString(getSpectrumRangeHigh())));
+			
+			spectrumIntegrationCacheSize = Long
+					.parseLong(coreSettings.getProperty("org.snowjak.rays.spectrum-integration-cache-size",
+							Long.toString(getSpectrumIntegrationCacheSize())));
 			
 			cieXyzIntegrationStepCount = Integer
 					.parseInt(coreSettings.getProperty("org.snowjak.rays.cie-xyz-integration-step-count",
@@ -412,6 +418,18 @@ public class Settings {
 			spectrumRange = new Pair<>(getSpectrumRangeLow(), getSpectrumRangeHigh());
 		
 		return spectrumRange;
+	}
+	
+	/**
+	 * Converting {@link SpectralPowerDistribution}s to {@link XYZ} triplets
+	 * consumes a large amount of run-time. We have the option to cache these values
+	 * in an attempt to save time. This value controls the size of that cache.
+	 * 
+	 * @return
+	 */
+	public long getSpectrumIntegrationCacheSize() {
+		
+		return spectrumIntegrationCacheSize;
 	}
 	
 	/**

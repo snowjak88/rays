@@ -3,7 +3,9 @@
  */
 package org.snowjak.rays.light;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 import org.snowjak.rays.Settings;
@@ -19,7 +21,7 @@ public class PointLightTest {
 	@Test
 	public void testDeserialize() {
 		
-		final var json = "{\"type\":\"point\", \"position\":{\"x\":0.0,\"y\":1.0,\"z\":2.0}, \"radiance\":{\"type\":\"blackbody\",\"kelvin\":2500,\"radiance\":100}}";
+		final var json = "{\"type\":\"point\", \"position\":{\"x\":0.0,\"y\":1.0,\"z\":2.0}, \"radiance\":{\"type\":\"blackbody\",\"kelvin\":2500,\"luminance\":100}}";
 		final var expected = new PointLight(new Point3D(0.0, 1.0, 2.0),
 				SpectralPowerDistribution.fromBlackbody(2500, 100));
 		
