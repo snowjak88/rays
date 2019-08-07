@@ -28,7 +28,7 @@ public interface SpectrumSearch {
 		final Point[] spdPoints = spdTable.navigableKeySet().stream().map(k -> spdTable.get(k))
 				.toArray(len -> new Point[len]);
 		final double bumpinessDistance = IntStream.range(0, spdPoints.length - 1)
-				.mapToDouble(i -> abs(spdPoints[i + 1].get(0) - spdPoints[i].get(0))).sum() / (double) spdPoints.length;
+				.mapToDouble(i -> abs(spdPoints[i + 1].get(0) - spdPoints[i].get(0))).sum();
 		
 		return new Result(targetResult.getDistance(), bumpinessDistance, targetResult.getXyz(), targetResult.getRgb(),
 				targetResult.getSrgb(), spd);
