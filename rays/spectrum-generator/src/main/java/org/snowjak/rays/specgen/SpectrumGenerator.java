@@ -170,7 +170,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		}
 		
 		distanceCalculator = (spd, targetColor) -> {
-			final XYZ xyz = XYZ.fromSpectrum(spd, true);
+			final XYZ xyz = XYZ.fromSpectrum(spd);
 			final RGB_Gammaless rgb = xyz.to(RGB_Gammaless.class);
 			final RGB srgb = xyz.to(RGB.class);
 			
@@ -183,7 +183,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 		switch (colorModel.toLowerCase()) {
 		case "xyz":
 			distanceCalculator = (spd, targetColor) -> {
-				final XYZ xyz = XYZ.fromSpectrum(spd, true);
+				final XYZ xyz = XYZ.fromSpectrum(spd);
 				final RGB_Gammaless rgb = xyz.to(RGB_Gammaless.class);
 				final RGB srgb = xyz.to(RGB.class);
 				
@@ -195,7 +195,7 @@ public class SpectrumGenerator implements CommandLineRunner {
 			break;
 		case "srgb":
 			distanceCalculator = (spd, targetColor) -> {
-				final XYZ xyz = XYZ.fromSpectrum(spd, true);
+				final XYZ xyz = XYZ.fromSpectrum(spd);
 				final RGB srgb = xyz.to(RGB.class);
 				final RGB_Gammaless rgb = xyz.to(RGB_Gammaless.class);
 				
